@@ -4,12 +4,7 @@ import json
 from pathlib import Path
 from openai import OpenAI
 from anki_note import AnkiNote
-
-try:
-    import morfeusz2
-except ImportError:
-    print("Warning: morfeusz2 not installed. Install with: pip install morfeusz2")
-    morfeusz2 = None
+import morfeusz2
 
 
 class LLMCache:
