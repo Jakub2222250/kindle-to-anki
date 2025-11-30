@@ -53,7 +53,7 @@ def write_anki_import_file(vocab_data):
                 language = lang if lang else ""
                 location = pos if pos else ""
                 tags = f"kindle_to_anki {language}" if language else "kindle_to_anki"
-                f.write(f"{stem}\t{word}\tnot_set\t{glosbe_url}\t{formatted_usage}\t{book_name}\t{location}\t{tags}\n")
+                f.write(f"{stem}\t{word}\tpart_of_speech_not_set\t{glosbe_url}\tsecondary_definition_not_set\t{formatted_usage}\tcontext_translation_not_set\tnotes_not_set\t{book_name}\tkindle_{location}\t{tags}\n")
 
     print(f"Created Anki import file with {len(vocab_data)} records at {anki_path}")
 
