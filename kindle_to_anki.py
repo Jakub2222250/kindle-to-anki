@@ -93,6 +93,10 @@ def analyze_with_morfeusz(word):
                         'prep': 'preposition',
                         'conj': 'conjunction',
                         'qub': 'particle',
+                        'fin': 'finite verb',
+                        'ger': 'gerund',
+                        'prate': 'present active participle',
+                        'ppas': 'past passive participle',
                         'xxx': 'unknown',
                         'ign': 'ignored'
                     }
