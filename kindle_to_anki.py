@@ -56,7 +56,7 @@ def make_llm_call(word, stem, usage_context):
 
     client = OpenAI()
     response = client.chat.completions.create(
-        model="gpt-5",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -218,7 +218,7 @@ def create_anki_notes(vocab_data):
             process_morfeusz_enrichment(note)
 
             # Process LLM enrichment externally after note construction
-            process_llm_enrichment(note, cache, skip=True)
+            process_llm_enrichment(note, cache, skip=False)
 
             notes.append(note)
 
