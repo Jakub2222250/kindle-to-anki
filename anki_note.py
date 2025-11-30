@@ -7,12 +7,14 @@ class AnkiNote:
                  definition="", secondary_definition="", 
                  usage="", context_translation="", 
                  notes="", book_name="", status="raw",
-                 language=None, pos=None):
+                 language=None, pos=None, collocations="", original_language_hint=""):
         self.word = word or ""
         self.definition = definition  # Main definition field for CSV output
         self.secondary_definition = secondary_definition
         self.usage = usage or ""
         self.context_translation = context_translation
+        self.collocations = collocations
+        self.original_language_hint = original_language_hint
         self.notes = notes
         self.book_name = book_name or ""
         self.status = status
@@ -61,6 +63,17 @@ class AnkiNote:
             else:
                 self.notes = str(llm_data['secondary_definitions'])
             enriched_fields.append('secondary_definitions')
+
+        if llm_data.get('collocations') and not self.collocations:
+            if isinstance(llm_data['collocations'], list):
+                self.collocations = '; '.join(llm_data['collocations'])
+            else:
+                self.collocations = str(llm_data['collocations'])
+            enriched_fields.append('collocations')
+
+        if llm_data.get('original_language_hint') and not self.original_language_hint:
+            self.original_language_hint = llm_data['original_language_hint']
+            enriched_fields.append('original_language_hint')
 
         return enriched_fields
 
@@ -133,4 +146,7 @@ class AnkiNote:
 
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
-        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{self.context_translation}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{self.tags}\n"
+        # Create context_sentence_cloze by replacing the word with [...] in usage
+        context_cloze = self.usage.replace(self.word, "[...]") if self.usage and self.word else ""
+
+        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\n"
