@@ -7,7 +7,8 @@ class AnkiNote:
                  definition="", secondary_definition="", 
                  usage="", context_translation="", 
                  notes="", book_name="", status="raw",
-                 language=None, pos=None, collocations="", original_language_hint=""):
+                 language=None, pos=None, collocations="", original_language_hint="",
+                 cloze_enabled=False):
         self.word = word or ""
         self.definition = definition  # Main definition field for CSV output
         self.secondary_definition = secondary_definition
@@ -18,6 +19,7 @@ class AnkiNote:
         self.notes = notes
         self.book_name = book_name or ""
         self.status = status
+        self.cloze_enabled = cloze_enabled
         self.glosbe_url = ""  # Will be generated later
 
         # Initialize stem and part_of_speech (may be updated by morfeusz enrichment)
@@ -146,7 +148,12 @@ class AnkiNote:
 
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
-        # Create context_sentence_cloze by replacing the word with [...] in usage
-        context_cloze = self.usage.replace(self.word, "[...]") if self.usage and self.word else ""
+        # Create context_sentence_cloze by replacing the first occurrence of the word with [...] in usage
+        context_cloze = ""
+        if self.usage and self.word:
+            context_cloze = self.usage.replace(self.word, "[...]", 1)  # Replace only first occurrence
 
-        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\n"
+        # Cloze_Enabled field - output blank if False, otherwise output the boolean value
+        cloze_enabled_output = "" if not self.cloze_enabled else str(self.cloze_enabled)
+
+        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{cloze_enabled_output}\n"

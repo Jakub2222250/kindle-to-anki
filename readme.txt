@@ -20,3 +20,4 @@ Notes
 Source_Book
 Location
 Status
+Cloze_Enabled
