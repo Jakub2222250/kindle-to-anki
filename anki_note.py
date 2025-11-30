@@ -156,4 +156,4 @@ class AnkiNote:
         # Cloze_Enabled field - output blank if False, otherwise output the boolean value
         cloze_enabled_output = "" if not self.cloze_enabled else str(self.cloze_enabled)
 
-        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{cloze_enabled_output}\n"
+        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{cloze_enabled_output}\t{self.tags}\n"
