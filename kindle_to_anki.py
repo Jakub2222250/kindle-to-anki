@@ -9,9 +9,11 @@ def read_vocab_from_db(db_path):
     cur = conn.cursor()
 
     query = """
-    SELECT WORDS.stem, LOOKUPS.usage
+    SELECT WORDS.word, WORDS.stem, LOOKUPS.usage, WORDS.lang, 
+           BOOK_INFO.title, LOOKUPS.pos
     FROM LOOKUPS
     JOIN WORDS ON LOOKUPS.word_key = WORDS.id
+    LEFT JOIN BOOK_INFO ON LOOKUPS.book_key = BOOK_INFO.id
     ORDER BY LOOKUPS.timestamp;
     """
 
@@ -25,7 +27,7 @@ def write_vocab_to_file(vocab_data):
     txt_path = Path("outputs/words.txt")
 
     with open(txt_path, "w", encoding="utf-8") as f:
-        for stem, usage in vocab_data:
+        for word, stem, usage, lang, book_title, pos in vocab_data:
             if stem:
                 encoded_word = quote(stem.strip().lower())
                 glosbe_url = f"https://glosbe.com/pl/en/{encoded_word}"
@@ -42,11 +44,16 @@ def write_anki_import_file(vocab_data):
         f.write("#separator:tab\n")
         f.write("#html:true\n")
         f.write("#tags:kindle_to_anki\n")
-        for stem, usage in vocab_data:
+        for word, stem, usage, lang, book_title, pos in vocab_data:
             if stem:
                 encoded_word = quote(stem.strip().lower())
                 glosbe_url = f"https://glosbe.com/pl/en/{encoded_word}"
-                f.write(f"{stem}\t{glosbe_url}\t<br>{usage}\n")
+                formatted_usage = usage.replace('\n', '<br>').replace('\r', '') if usage else ""
+                book_name = book_title if book_title else ""
+                language = lang if lang else ""
+                location = pos if pos else ""
+                tags = f"kindle_to_anki {language}" if language else "kindle_to_anki"
+                f.write(f"{stem}\t{word}\tnot_set\t{glosbe_url}\t{formatted_usage}\t{book_name}\t{location}\t{tags}\n")
 
     print(f"Created Anki import file with {len(vocab_data)} records at {anki_path}")
 
