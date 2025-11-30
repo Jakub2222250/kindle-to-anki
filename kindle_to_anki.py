@@ -195,9 +195,8 @@ def make_llm_call(word, stem, usage_context):
 
     client = OpenAI()
     response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
+        model="gpt-5",
+        messages=[{"role": "user", "content": prompt}]
     )
 
     return json.loads(response.choices[0].message.content)
