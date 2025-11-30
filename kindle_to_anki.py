@@ -15,18 +15,19 @@ except ImportError:
 
 class AnkiNote:
     def __init__(self, stem, word, part_of_speech="", 
-                 glosbe_url="", secondary_definition="", 
+                 definition="", secondary_definition="", 
                  usage="", context_translation="", 
                  notes="", book_name="", status="raw",
                  language=None, pos=None):
         self.word = word or ""
-        self.glosbe_url = glosbe_url
+        self.definition = definition  # Main definition field for CSV output
         self.secondary_definition = secondary_definition
         self.usage = usage or ""
         self.context_translation = context_translation
         self.notes = notes
         self.book_name = book_name or ""
         self.status = status
+        self.glosbe_url = ""  # Will be generated later
 
         # Use morfeusz2 for lemmatization and POS detection if available
         morfeusz_stem, morfeusz_pos = self.analyze_with_morfeusz(self.word)
@@ -67,11 +68,14 @@ class AnkiNote:
             llm_data = self.enrich_with_llm(self.word, self.stem, self.usage)
 
             # Update fields with LLM results if they're currently empty or have default values
-            if llm_data.get('definition') and not self.secondary_definition:
-                self.secondary_definition = llm_data['definition']
+            enriched_fields = []
+            if llm_data.get('definition'):
+                self.definition = llm_data['definition']  # Override glosbe_url with LLM definition
+                enriched_fields.append('definition')
 
             if llm_data.get('translation') and not self.context_translation:
                 self.context_translation = llm_data['translation']
+                enriched_fields.append('translation')
 
             if llm_data.get('secondary_definitions') and not self.notes:
                 # Join multiple definitions into notes
@@ -79,10 +83,12 @@ class AnkiNote:
                     self.notes = '; '.join(llm_data['secondary_definitions'])
                 else:
                     self.notes = str(llm_data['secondary_definitions'])
+                enriched_fields.append('secondary_definitions')
+
+            print(f"  LLM enrichment: SUCCESS - enriched {', '.join(enriched_fields) if enriched_fields else 'no new fields'}")
 
         except Exception as e:
-            print(e)
-            exit()
+            print(f"  LLM enrichment: FAILED - {str(e)}")
             pass
 
     def enrich_with_llm(self, word, stem, usage_context):
@@ -96,6 +102,9 @@ class AnkiNote:
 
         Respond only with valid JSON, no additional text.
         """
+
+        print("About to talk to AI")
+        print(prompt)
 
         client = OpenAI()
         response = client.chat.completions.create(
@@ -119,8 +128,8 @@ class AnkiNote:
                 # where interpretation is a tuple: (lemma, tag, name_list)
                 for start_pos, end_pos, interpretation in analysis:
                     if interpretation and len(interpretation) >= 2:
-                        lemma = interpretation[0]
-                        tag = interpretation[1]
+                        lemma = interpretation[1]
+                        tag = interpretation[2]
 
                         # Extract main POS from tag (first part before colon)
                         pos = tag.split(':')[0] if ':' in tag else tag
@@ -191,10 +200,14 @@ class AnkiNote:
         return f"{stem_part}_{self.book_abbrev}_{location_part}"
 
     def generate_glosbe_url(self, language="pl", target_language="en"):
-        """Generate Glosbe URL for the stem word"""
+        """Generate Glosbe URL for the stem word and set as backup definition"""
         if self.stem:
             encoded_word = quote(self.stem.strip().lower())
             self.glosbe_url = f"https://glosbe.com/{language}/{target_language}/{encoded_word}"
+
+            # Set glosbe_url as backup definition if no definition exists
+            if not self.definition:
+                self.definition = self.glosbe_url
 
     def format_usage(self):
         """Format usage text for HTML display"""
@@ -215,7 +228,7 @@ class AnkiNote:
 
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
-        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.glosbe_url}\t{self.secondary_definition}\t{self.usage}\t{self.context_translation}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{self.tags}\n"
+        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{self.context_translation}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{self.tags}\n"
 
 
 def read_vocab_from_db(db_path):
