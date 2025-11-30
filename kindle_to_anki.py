@@ -1,3 +1,4 @@
+from ast import List
 import sqlite3
 import sys
 import json
@@ -188,46 +189,54 @@ def read_vocab_from_db(db_path):
     return rows
 
 
-def write_anki_import_file(vocab_data):
-    Path("outputs").mkdir(exist_ok=True)
-    anki_path = Path("outputs/anki_import.txt")
-
-    # Initialize LLM cache at start of program
+def create_anki_notes(vocab_data):
+    """Create AnkiNotes from vocab_data with enrichment processing"""
+    # Initialize LLM cache
     cache = LLMCache()
     print(f"Loaded LLM cache with {len(cache.cache)} entries")
 
+    notes = []
+    total_words = len([row for row in vocab_data if row[1]])  # Count words with stems
+    processed_count = 0
+
+    for word, stem, usage, lang, book_title, pos in vocab_data:
+        if stem:
+            processed_count += 1
+            print(f"\n[{processed_count}/{total_words}]")
+
+            # Create AnkiNote with all data - setup is handled in constructor
+            note = AnkiNote(
+                stem=stem,
+                word=word,
+                usage=usage,
+                book_name=book_title,
+                language=lang,
+                pos=pos
+            )
+
+            # Process morfeusz enrichment externally after note construction
+            process_morfeusz_enrichment(note)
+
+            # Process LLM enrichment externally after note construction
+            process_llm_enrichment(note, cache, skip=True)
+
+            notes.append(note)
+
+    return notes
+
+
+def write_anki_import_file(notes):
+    Path("outputs").mkdir(exist_ok=True)
+    anki_path = Path("outputs/anki_import.txt")
+
+    # Write notes to file
     with open(anki_path, "w", encoding="utf-8") as f:
         f.write("#separator:tab\n")
         f.write("#html:true\n")
         f.write("#tags:kindle_to_anki\n")
 
-        notes = []
-        total_words = len([row for row in vocab_data if row[1]])  # Count words with stems
-        processed_count = 0
-
-        for word, stem, usage, lang, book_title, pos in vocab_data:
-            if stem:
-                processed_count += 1
-                print(f"\n[{processed_count}/{total_words}]")
-
-                # Create AnkiNote with all data - setup is handled in constructor
-                note = AnkiNote(
-                    stem=stem,
-                    word=word,
-                    usage=usage,
-                    book_name=book_title,
-                    language=lang,
-                    pos=pos
-                )
-
-                # Process morfeusz enrichment externally after note construction
-                process_morfeusz_enrichment(note)
-
-                # Process LLM enrichment externally after note construction
-                process_llm_enrichment(note, cache, skip=True)
-
-                notes.append(note)
-                f.write(note.to_csv_line())
+        for note in notes:
+            f.write(note.to_csv_line())
 
     print(f"Created Anki import file with {len(notes)} records at {anki_path}")
 
@@ -243,8 +252,8 @@ def export_kindle_vocab():
         sys.exit(1)
 
     vocab_data = read_vocab_from_db(db_path)
-
-    write_anki_import_file(vocab_data)
+    notes = create_anki_notes(vocab_data)
+    write_anki_import_file(notes)
 
 
 if __name__ == "__main__":
