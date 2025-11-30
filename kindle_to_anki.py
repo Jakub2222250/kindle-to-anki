@@ -76,10 +76,10 @@ def analyze_with_morfeusz(word):
             # where interpretation is a tuple: (lemma, tag, name_list)
             for start_pos, end_pos, interpretation in analysis:
                 if interpretation and len(interpretation) >= 2:
-                    lemma = interpretation[1]
+                    lemma_raw = interpretation[1]
                     tag = interpretation[2]
 
-                    # Extract main POS from tag (first part before colon)
+                    lemma = lemma_raw.split(':')[0] if ':' in lemma_raw else lemma_raw
                     pos = tag.split(':')[0] if ':' in tag else tag
 
                     # Map morfeusz2 tags to more readable forms
