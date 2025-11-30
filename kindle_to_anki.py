@@ -4,6 +4,53 @@ from pathlib import Path
 from urllib.parse import quote
 
 
+class AnkiNote:
+    def __init__(self, stem, word, part_of_speech="part_of_speech_not_set", 
+                 glosbe_url="", secondary_definition="secondary_definition_not_set", 
+                 usage="", context_translation="context_translation_not_set", 
+                 notes="notes_not_set", book_name="", location="", tags="kindle_to_anki"):
+        self.stem = stem or ""
+        self.word = word or ""
+        self.part_of_speech = part_of_speech
+        self.glosbe_url = glosbe_url
+        self.secondary_definition = secondary_definition
+        self.usage = usage
+        self.context_translation = context_translation
+        self.notes = notes
+        self.book_name = book_name
+        self.location = location
+        self.tags = tags
+
+    def generate_glosbe_url(self, language="pl", target_language="en"):
+        """Generate Glosbe URL for the stem word"""
+        if self.stem:
+            encoded_word = quote(self.stem.strip().lower())
+            self.glosbe_url = f"https://glosbe.com/{language}/{target_language}/{encoded_word}"
+
+    def format_usage(self):
+        """Format usage text for HTML display"""
+        if self.usage:
+            self.usage = self.usage.replace('\n', '<br>').replace('\r', '')
+
+    def set_tags(self, language=None):
+        """Set tags based on language"""
+        if language:
+            self.tags = f"kindle_to_anki {language}"
+        else:
+            self.tags = "kindle_to_anki"
+
+    def set_location_with_prefix(self, pos):
+        """Set location with kindle_ prefix"""
+        if pos:
+            self.location = f"kindle_{pos}"
+        else:
+            self.location = ""
+
+    def to_csv_line(self):
+        """Convert the note to a tab-separated CSV line"""
+        return f"{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.glosbe_url}\t{self.secondary_definition}\t{self.usage}\t{self.context_translation}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.tags}\n"
+
+
 def read_vocab_from_db(db_path):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -22,20 +69,6 @@ def read_vocab_from_db(db_path):
     return rows
 
 
-def write_vocab_to_file(vocab_data):
-    Path("outputs").mkdir(exist_ok=True)
-    txt_path = Path("outputs/words.txt")
-
-    with open(txt_path, "w", encoding="utf-8") as f:
-        for word, stem, usage, lang, book_title, pos in vocab_data:
-            if stem:
-                encoded_word = quote(stem.strip().lower())
-                glosbe_url = f"https://glosbe.com/pl/en/{encoded_word}"
-                f.write(f"{stem}\n{usage}\n{glosbe_url}\n\n")
-
-    print(f"Exported {len(vocab_data)} records to {txt_path}")
-
-
 def write_anki_import_file(vocab_data):
     Path("outputs").mkdir(exist_ok=True)
     anki_path = Path("outputs/anki_import.txt")
@@ -44,23 +77,32 @@ def write_anki_import_file(vocab_data):
         f.write("#separator:tab\n")
         f.write("#html:true\n")
         f.write("#tags:kindle_to_anki\n")
+
+        notes = []
         for word, stem, usage, lang, book_title, pos in vocab_data:
             if stem:
-                encoded_word = quote(stem.strip().lower())
-                glosbe_url = f"https://glosbe.com/pl/en/{encoded_word}"
-                formatted_usage = usage.replace('\n', '<br>').replace('\r', '') if usage else ""
-                book_name = book_title if book_title else ""
-                language = lang if lang else ""
-                location = pos if pos else ""
-                tags = f"kindle_to_anki {language}" if language else "kindle_to_anki"
-                f.write(f"{stem}\t{word}\tpart_of_speech_not_set\t{glosbe_url}\tsecondary_definition_not_set\t{formatted_usage}\tcontext_translation_not_set\tnotes_not_set\t{book_name}\tkindle_{location}\t{tags}\n")
+                # Create AnkiNote with data from database
+                note = AnkiNote(
+                    stem=stem,
+                    word=word,
+                    usage=usage or "",
+                    book_name=book_title or ""
+                )
 
-    print(f"Created Anki import file with {len(vocab_data)} records at {anki_path}")
+                # Configure the note
+                note.generate_glosbe_url()
+                note.format_usage()
+                note.set_tags(lang)
+                note.set_location_with_prefix(pos)
+
+                notes.append(note)
+                f.write(note.to_csv_line())
+
+    print(f"Created Anki import file with {len(notes)} records at {anki_path}")
 
 
 def export_kindle_vocab(db_path):
     vocab_data = read_vocab_from_db(db_path)
-    write_vocab_to_file(vocab_data)
     write_anki_import_file(vocab_data)
 
 
