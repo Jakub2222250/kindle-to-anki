@@ -95,7 +95,7 @@ def analyze_with_morfeusz(word):
                         'qub': 'particle',
                         'fin': 'finite verb',
                         'ger': 'gerund',
-                        'prate': 'present active participle',
+                        'praet': 'preterite/past tense',
                         'ppas': 'past passive participle',
                         'xxx': 'unknown',
                         'ign': 'ignored'
