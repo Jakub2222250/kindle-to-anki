@@ -1,16 +1,15 @@
 import sqlite3
 import sys
-import time
 import unicodedata
 from pathlib import Path
 from urllib.parse import quote
 
 
 class AnkiNote:
-    def __init__(self, stem, word, part_of_speech="part_of_speech_not_set", 
-                 glosbe_url="", secondary_definition="secondary_definition_not_set", 
-                 usage="", context_translation="context_translation_not_set", 
-                 notes="notes_not_set", book_name="", location="", status="raw",
+    def __init__(self, stem, word, part_of_speech="", 
+                 glosbe_url="", secondary_definition="", 
+                 usage="", context_translation="", 
+                 notes="", book_name="", status="raw",
                  language=None, pos=None):
         self.stem = stem or ""
         self.word = word or ""
@@ -73,14 +72,13 @@ class AnkiNote:
         return result if result else "unknown"
 
     def generate_uid(self):
-        """Generate unique ID based on stem, book_abbrev, location, and timestamp"""
-        timestamp = int(time.time())
+        """Generate unique ID based on stem, book_abbrev, and location"""
         # Normalize stem part similar to book_abbrev
         stem_normalized = unicodedata.normalize('NFD', self.stem or "unknown")
         stem_part = ''.join(char for char in stem_normalized if unicodedata.category(char) != 'Mn')[:10]
         stem_part = stem_part.lower().replace(' ', '_')
         location_part = str(self.location).replace('kindle_', '') if self.location else "0"
-        return f"{stem_part}_{self.book_abbrev}_{location_part}_{timestamp}"
+        return f"{stem_part}_{self.book_abbrev}_{location_part}"
 
     def generate_glosbe_url(self, language="pl", target_language="en"):
         """Generate Glosbe URL for the stem word"""
