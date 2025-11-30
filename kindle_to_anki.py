@@ -188,7 +188,7 @@ def make_llm_call(word, stem, usage_context):
     output JSON with:
     1. definition: meaning of the word in this specific context (as a concise gloss without making reference to the context)
     2. translation: English translation of the entire sentence
-    3. secondary_definitions: The other most known meanings of the lemma (as a list of concise glosses excluding the definition used in this context)
+    3. secondary_definitions: The other most known meanings of the lemma (as a list of concise glosses excluding the definition used in this context. Prioritize uniqueness over quantity)
 
     Respond only with valid JSON, no additional text.
     """
