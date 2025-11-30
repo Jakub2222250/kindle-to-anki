@@ -76,8 +76,8 @@ def analyze_with_morfeusz(word):
             # where interpretation is a tuple: (lemma, tag, name_list)
             for start_pos, end_pos, interpretation in analysis:
                 if interpretation and len(interpretation) >= 2:
-                    lemma = interpretation[0]
-                    tag = interpretation[1]
+                    lemma = interpretation[1]
+                    tag = interpretation[2]
 
                     # Extract main POS from tag (first part before colon)
                     pos = tag.split(':')[0] if ':' in tag else tag
@@ -134,7 +134,7 @@ def process_morfeusz_enrichment(note):
         print("  Morfeusz enrichment: No new information")
 
 
-def process_llm_enrichment(note, cache):
+def process_llm_enrichment(note: AnkiNote, cache, skip=False):
     """Process LLM enrichment for a note using external cache management"""
     if not note.usage or not note.stem:
         print("  LLM enrichment: SKIPPED - no usage context or stem")
@@ -147,6 +147,10 @@ def process_llm_enrichment(note, cache):
         enriched_fields = note.apply_llm_enrichment(cached_result)
         if enriched_fields:
             print(f"  Applied cached enrichment: {', '.join(enriched_fields)}")
+        return
+
+    if skip:
+        print("  LLM enrichment: SKIPPED by flag")
         return
 
     # Make LLM call if not cached
@@ -220,7 +224,7 @@ def write_anki_import_file(vocab_data):
                 process_morfeusz_enrichment(note)
 
                 # Process LLM enrichment externally after note construction
-                process_llm_enrichment(note, cache)
+                process_llm_enrichment(note, cache, skip=True)
 
                 notes.append(note)
                 f.write(note.to_csv_line())

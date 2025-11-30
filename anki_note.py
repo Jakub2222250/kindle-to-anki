@@ -57,7 +57,7 @@ class AnkiNote:
         if llm_data.get('secondary_definitions') and not self.notes:
             # Join multiple definitions into notes
             if isinstance(llm_data['secondary_definitions'], list):
-                self.notes = '; '.join(llm_data['secondary_definitions'])
+                self.secondary_definition = '; '.join(llm_data['secondary_definitions'])
             else:
                 self.notes = str(llm_data['secondary_definitions'])
             enriched_fields.append('secondary_definitions')
