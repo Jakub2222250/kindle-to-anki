@@ -1,8 +1,11 @@
 1. Copy "Internal Storage/system/vocabulary/vocab.db" from Kindle to "./inputs/vocab.db"
 2. Run kindle_to_anki.py
 3. Import "outputs/anki_import.txt" into Anki
-4. Finish fixing up the cards and set status to "ready"
-5. Delete "Internal Storage/system/vocabulary/vocab.db" off of the kindle to avoid duplicates
+4. Manually review new cards
+    a. Read through and fix generated "Definition", "Context_Translation"
+    b. Decide if "Cloze_Enabled" should be set to True
+6. Delete "Internal Storage/system/vocabulary/vocab.db" on of the kindle
+
 
 Fields to write out in order:
 UID
