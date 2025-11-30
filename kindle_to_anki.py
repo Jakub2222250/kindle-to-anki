@@ -154,14 +154,19 @@ def write_anki_import_file(vocab_data):
     print(f"Created Anki import file with {len(notes)} records at {anki_path}")
 
 
-def export_kindle_vocab(db_path):
+def export_kindle_vocab():
+    # Get script directory and construct path to inputs/vocab.db
+    script_dir = Path(__file__).parent
+    db_path = script_dir / "inputs" / "vocab.db"
+
+    if not db_path.exists():
+        print(f"Error: vocab.db not found at {db_path}")
+        print("Please place your Kindle vocab.db file in the 'inputs' folder relative to this script.")
+        sys.exit(1)
+
     vocab_data = read_vocab_from_db(db_path)
     write_anki_import_file(vocab_data)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python kindle_to_anki.py /path/to/vocab.db")
-        sys.exit(1)
-
-    export_kindle_vocab(sys.argv[1])
+    export_kindle_vocab()
