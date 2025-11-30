@@ -50,7 +50,7 @@ def make_llm_call(word, stem, usage_context):
     1. definition: meaning of the word in this specific context (as a concise gloss without making reference to the context)
     2. translation: English translation of the entire sentence
     3. secondary_definitions: The other most known meanings of the lemma (as a list of concise glosses excluding the definition used in this context. Prioritize uniqueness over quantity)
-    4. collocations: The most common Polish collocations or phrases that include this word (as a list of 3-5 short phrases in Polish)
+    4. collocations: The most common Polish collocations or phrases that include this word (as a list of 0-4 short phrases in Polish)
     5. original_language_hint: A short Polish definition or explanation that is relevant to how the word is used in the given context (monolingual definition in Polish)
 
     Respond only with valid JSON, no additional text.

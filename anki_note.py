@@ -61,14 +61,14 @@ class AnkiNote:
         if llm_data.get('secondary_definitions') and not self.notes:
             # Join multiple definitions into notes
             if isinstance(llm_data['secondary_definitions'], list):
-                self.secondary_definition = '; '.join(llm_data['secondary_definitions'])
+                self.secondary_definition = ', '.join(llm_data['secondary_definitions'])
             else:
                 self.notes = str(llm_data['secondary_definitions'])
             enriched_fields.append('secondary_definitions')
 
         if llm_data.get('collocations') and not self.collocations:
             if isinstance(llm_data['collocations'], list):
-                self.collocations = '; '.join(llm_data['collocations'])
+                self.collocations = ', '.join(llm_data['collocations'])
             else:
                 self.collocations = str(llm_data['collocations'])
             enriched_fields.append('collocations')
