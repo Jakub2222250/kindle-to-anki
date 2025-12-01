@@ -11,7 +11,7 @@ FALLBACK_LLM = "gpt-5-mini"
 
 # Common LLM instructions
 LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
-1. definition: English definition of the lemma pertaining to the usage of the word in the sample sentence as a concise gloss without referring to the sample sentence)
+1. definition: English definition of the lemma pertaining to the usage of the word in the sample sentence as a short, minimal gloss without referring to the sample sentence)
 2. translation: English translation of the sentence
 3. secondary_definitions: Any different common definitions of the lemma in English as a JSON list of concise glosses. Prioritize uniqueness over quantity.
 4. collocations: The most common Polish collocations or phrases that include this word as a JSON list of 0-3 short collocations in Polish. Always include the word itself.
@@ -62,7 +62,8 @@ def make_llm_call(word, stem, usage_context):
     Respond only with valid JSON, no additional text.
     """
 
-    print(f"    Making individual API call for {word}...")
+    input_chars = len(prompt)
+    print(f"    Making individual API call for {word} ({input_chars} input chars)...")
     start_time = time.time()
 
     client = OpenAI()
@@ -72,7 +73,8 @@ def make_llm_call(word, stem, usage_context):
     )
 
     elapsed = time.time() - start_time
-    print(f"    API call completed in {elapsed:.2f}s")
+    output_chars = len(response.choices[0].message.content)
+    print(f"    API call completed in {elapsed:.2f}s ({output_chars} output chars)")
 
     return json.loads(response.choices[0].message.content)
 
@@ -94,7 +96,8 @@ For each item, {LLM_ANALYSIS_INSTRUCTIONS}
 
 Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
 
-    print(f"  Making batch API call for {len(batch_notes)} notes...")
+    input_chars = len(prompt)
+    print(f"  Making batch API call for {len(batch_notes)} notes ({input_chars} input chars)...")
     start_time = time.time()
 
     client = OpenAI()
@@ -104,7 +107,8 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
     )
 
     elapsed = time.time() - start_time
-    print(f"  Batch API call completed in {elapsed:.2f}s")
+    output_chars = len(response.choices[0].message.content)
+    print(f"  Batch API call completed in {elapsed:.2f}s ({output_chars} output chars)")
 
     return json.loads(response.choices[0].message.content)
 
