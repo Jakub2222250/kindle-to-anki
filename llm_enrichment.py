@@ -60,6 +60,25 @@ class LLMCache:
         self.save_cache()
 
 
+def estimate_cost(input_chars, output_chars, model):
+    pricing = {
+        "gpt-5": {"input_cost_per_1m_tokens": 1.25, "output_cost_per_1m_tokens": 10.00},
+        "gpt-4.1": {"input_cost_per_1m_tokens": 2.00, "output_cost_per_1m_tokens": 8.00},
+        "gpt-5-mini": {"input_cost_per_1m_tokens": 0.25, "output_cost_per_1m_tokens": 2.00},
+    }
+
+    input_tokens = input_chars / 4
+    output_tokens = output_chars / 4
+
+    if model not in pricing:
+        return None
+
+    input_cost = (input_tokens / 1_000_000) * pricing[model]["input_cost_per_1m_tokens"]
+    output_cost = (output_tokens / 1_000_000) * pricing[model]["output_cost_per_1m_tokens"]
+
+    return input_cost + output_cost
+
+
 def make_llm_call(word, stem, usage_context, processing_timestamp):
     """Make actual LLM API call"""
     prompt = f"""
@@ -70,7 +89,9 @@ def make_llm_call(word, stem, usage_context, processing_timestamp):
     """
 
     input_chars = len(prompt)
-    print(f"    Making individual API call for {word} ({input_chars} input chars)...")
+    estimate_cost_value = estimate_cost(input_chars, 0, FALLBACK_LLM)
+    estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
+    print(f"    Making individual API call for {word} ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
     start_time = time.time()
 
     client = OpenAI()
@@ -104,7 +125,9 @@ For each item, {LLM_ANALYSIS_INSTRUCTIONS}
 Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
 
     input_chars = len(prompt)
-    print(f"  Making batch API call for {len(batch_notes)} notes ({input_chars} input chars)...")
+    estimate_cost_value = estimate_cost(input_chars, 0, BATCH_LLM)
+    estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
+    print(f"  Making batch API call for {len(batch_notes)} notes ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
     start_time = time.time()
 
     client = OpenAI()
