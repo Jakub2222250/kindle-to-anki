@@ -15,7 +15,7 @@ LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
 2. translation: English translation of the sentence
 3. secondary_definitions: Any different common definitions of the lemma in English as a JSON list of concise glosses. Prioritize uniqueness over quantity.
 4. collocations: The most common Polish collocations or phrases that include this word as a JSON list of 0-3 short collocations in Polish. Always include the word itself.
-5. original_language_hint: A short definition or explanation that is relevant to how the word is used in the given sentence a as monolingual gloss in Polish
+5. original_language_hint: A short definition that is relevant to how the word is used in the given sentence as a short, minimal monolingual gloss in Polish
 6. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable this word is for cloze deletion in Anki based on its importance in the sentence and context. 0 means not suitable at all, 10 means very suitable."""
 
 
