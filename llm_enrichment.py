@@ -6,16 +6,16 @@ from anki_note import AnkiNote
 
 # Configuration
 BATCH_SIZE = 20
-BATCH_LLM = "gpt-5-mini"
-FALLBACK_LLM = "gpt-5-mini"
+BATCH_LLM = "gpt-5"
+FALLBACK_LLM = "gpt-5"
 
 # Common LLM instructions
 LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
-1. definition: English definition of the lemma pertaining to the usage of the word in the sample sentence as a short, minimal gloss without referring to the sample sentence
+1. definition: Definition of the input lemma based on the usage of the input word in the input sentence as a short gloss in English
 2. translation: English translation of the sentence
-3. collocations: The most common Polish collocations or phrases that include this word as a JSON list of 0-3 short collocations in Polish. Always include the word itself.
-4. original_language_definition: Polish definition of the lemma pertaining to the usage of the word in the sample sentence as a short, minimal gloss without referring to the sample sentence
-5. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable this word is for cloze deletion in Anki based on its importance in the sentence and context. 0 means not suitable at all, 10 means very suitable."""
+3. collocations: Any common Polish collocations or phrases that include the input word as a JSON list of 0-3 short collocations in Polish
+4. original_language_definition: Definition of the input lemma based on the usage of the input word in the input sentence as a short gloss in Polish
+5. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
 
 
 class LLMCache:
