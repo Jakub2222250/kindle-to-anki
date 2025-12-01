@@ -5,8 +5,8 @@ from anki_note import AnkiNote
 
 # Configuration
 BATCH_SIZE = 20
-BATCH_LLM = "gpt-5 mini"
-FALLBACK_LLM = "gpt-5"
+BATCH_LLM = "gpt-5-nano"
+FALLBACK_LLM = "gpt-5-mini"
 
 
 class LLMCache:
