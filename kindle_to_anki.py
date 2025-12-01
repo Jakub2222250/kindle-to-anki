@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from anki_note import AnkiNote
 import morfeusz2
-from llm_enrichment import batch_llm_enrichment
+from llm_enrichment import enrich_notes_with_llm
 
 
 def analyze_with_morfeusz(word):
@@ -147,7 +147,7 @@ def export_kindle_vocab():
 
     vocab_data = read_vocab_from_db(db_path)
     notes = create_anki_notes(vocab_data)
-    batch_llm_enrichment(notes, skip=False)
+    enrich_notes_with_llm(notes, skip=False)
     write_anki_import_file(notes)
 
 
