@@ -49,14 +49,11 @@ class AnkiNote:
         if not llm_data:
             return []
 
-        enriched_fields = []
         if llm_data.get('definition'):
             self.definition = llm_data['definition']  # Override glosbe_url with LLM definition
-            enriched_fields.append('definition')
 
         if llm_data.get('translation') and not self.context_translation:
             self.context_translation = llm_data['translation']
-            enriched_fields.append('translation')
 
         if llm_data.get('secondary_definitions') and not self.notes:
             # Join multiple definitions into notes
@@ -64,20 +61,15 @@ class AnkiNote:
                 self.secondary_definition = ', '.join(llm_data['secondary_definitions'])
             else:
                 self.notes = str(llm_data['secondary_definitions'])
-            enriched_fields.append('secondary_definitions')
 
         if llm_data.get('collocations') and not self.collocations:
             if isinstance(llm_data['collocations'], list):
                 self.collocations = ', '.join(llm_data['collocations'])
             else:
                 self.collocations = str(llm_data['collocations'])
-            enriched_fields.append('collocations')
 
         if llm_data.get('original_language_hint') and not self.original_language_hint:
             self.original_language_hint = llm_data['original_language_hint']
-            enriched_fields.append('original_language_hint')
-
-        return enriched_fields
 
     def generate_book_abbrev(self, book_name):
         """Generate book abbreviation for use as tag"""
