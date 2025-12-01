@@ -58,28 +58,18 @@ def analyze_with_morfeusz(word):
 def process_morfeusz_enrichment(note):
     """Process morfeusz enrichment for a note"""
     if not note.word:
-        print("  Morfeusz enrichment: SKIPPED - no word to analyze")
         return
 
     # Analyze word with morfeusz2
     morfeusz_stem, morfeusz_pos = analyze_with_morfeusz(note.word)
 
-    enriched_fields = []
-
     # Prioritize morfeusz2 stem if available and different from current stem
     if morfeusz_stem and morfeusz_stem != note.stem:
         note.stem = morfeusz_stem
-        enriched_fields.append('stem')
 
     # Use morfeusz2 POS if available and no POS was previously set
     if morfeusz_pos and not note.part_of_speech:
         note.part_of_speech = morfeusz_pos
-        enriched_fields.append('part_of_speech')
-
-    if enriched_fields:
-        print(f"  Morfeusz enrichment: SUCCESS - enriched {', '.join(enriched_fields)}")
-    else:
-        print("  Morfeusz enrichment: No new information")
 
 
 def read_vocab_from_db(db_path):
@@ -109,7 +99,7 @@ def create_anki_notes(vocab_data):
     for word, stem, usage, lang, book_title, pos in vocab_data:
         if stem:
             processed_count += 1
-            print(f"\n[{processed_count}/{total_words}]")
+            print(f"[{processed_count}/{total_words}] Found word: {word}")
 
             # Create AnkiNote with all data - setup is handled in constructor
             note = AnkiNote(
@@ -157,7 +147,7 @@ def export_kindle_vocab():
 
     vocab_data = read_vocab_from_db(db_path)
     notes = create_anki_notes(vocab_data)
-    batch_llm_enrichment(notes)
+    batch_llm_enrichment(notes, skip=False)
     write_anki_import_file(notes)
 
 
