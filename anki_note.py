@@ -8,7 +8,7 @@ class AnkiNote:
                  usage="", context_translation="", 
                  notes="", book_name="", status="raw",
                  language=None, pos=None, collocations="", original_language_hint="",
-                 cloze_enabled=False):
+                 cloze_enabled=0):
         self.word = word or ""
         self.definition = definition  # Main definition field for CSV output
         self.secondary_definition = secondary_definition
@@ -70,6 +70,11 @@ class AnkiNote:
 
         if llm_data.get('original_language_hint') and not self.original_language_hint:
             self.original_language_hint = llm_data['original_language_hint']
+
+        if llm_data.get('cloze_deletion_score') is not None:
+            score = llm_data['cloze_deletion_score']
+            # Enable cloze if score is 7 or higher
+            self.cloze_enabled = score if score >= 7 else None
 
     def generate_book_abbrev(self, book_name):
         """Generate book abbreviation for use as tag"""
