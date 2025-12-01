@@ -8,6 +8,14 @@ BATCH_SIZE = 20
 BATCH_LLM = "gpt-5-nano"
 FALLBACK_LLM = "gpt-5-mini"
 
+# Common LLM instructions
+LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
+1. definition: English definition of the lemma pertaining to the usage of the word in the sample sentence as a concise gloss without referring to the sample sentence)
+2. translation: English translation of the sentence
+3. secondary_definitions: Any different common definitions of the lemma in English as a JSON list of concise glosses. Prioritize uniqueness over quantity.
+4. collocations: The most common Polish collocations or phrases that include this word as a JSON list of 0-3 short collocations in Polish. Always include the word itself.
+5. original_language_hint: A short definition or explanation that is relevant to how the word is used in the given sentence a as monolingual gloss in Polish"""
+
 
 class LLMCache:
     def __init__(self, cache_dir="cache"):
@@ -47,12 +55,7 @@ def make_llm_call(word, stem, usage_context):
     """Make actual LLM API call"""
     prompt = f"""
     Given the Polish sentence: "{usage_context}" and the word "{word}" (lemma: {stem}), 
-    output JSON with:
-    1. definition: meaning of the word in this specific context (as a concise gloss without making reference to the context)
-    2. translation: English translation of the entire sentence
-    3. secondary_definitions: The other most known meanings of the lemma (as a list of concise glosses excluding the definition used in this context. Prioritize uniqueness over quantity)
-    4. collocations: The most common Polish collocations or phrases that include this word (as a list of 0-4 short phrases in Polish)
-    5. original_language_hint: A short Polish definition or explanation that is relevant to how the word is used in the given context (monolingual definition in Polish)
+    {LLM_ANALYSIS_INSTRUCTIONS}
 
     Respond only with valid JSON, no additional text.
     """
@@ -79,12 +82,7 @@ def make_batch_llm_call(batch_notes):
 Items to process:
 {items_json}
 
-For each item, output JSON with:
-1. definition: meaning of the word in this specific context (as a concise gloss without making reference to the context)
-2. translation: English translation of the entire sentence
-3. secondary_definitions: The other most known meanings of the lemma (as a list of concise glosses excluding the definition used in this context. Prioritize uniqueness over quantity)
-4. collocations: The most common Polish collocations or phrases that include this word (as a list of 0-4 short phrases in Polish)
-5. original_language_hint: A short Polish definition or explanation that is relevant to how the word is used in the given context (monolingual definition in Polish)
+For each item, {LLM_ANALYSIS_INSTRUCTIONS}
 
 Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
 
