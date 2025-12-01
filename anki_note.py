@@ -141,7 +141,7 @@ class AnkiNote:
         # Create context_sentence_cloze by replacing the first occurrence of the word with [...] in usage
         context_cloze = ""
         if self.usage and self.word:
-            context_cloze = self.usage.replace(self.word, "[...]", 1)  # Replace only first occurrence
+            context_cloze = self.usage.replace(self.word, "<b>[...]</b>", 1)  # Replace only first occurrence
 
         # Create context_sentence_bold_word by replacing the first occurrence of the word with <b>word</b> in usage
         context_sentence_bold_word = self.usage.replace(self.word, f"<b>{self.word}</b>", 1)
