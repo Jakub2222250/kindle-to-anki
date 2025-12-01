@@ -1,11 +1,12 @@
 import json
+import time
 from pathlib import Path
 from openai import OpenAI
 from anki_note import AnkiNote
 
 # Configuration
 BATCH_SIZE = 20
-BATCH_LLM = "gpt-5-nano"
+BATCH_LLM = "gpt-5-mini"
 FALLBACK_LLM = "gpt-5-mini"
 
 # Common LLM instructions
@@ -60,11 +61,17 @@ def make_llm_call(word, stem, usage_context):
     Respond only with valid JSON, no additional text.
     """
 
+    print(f"    Making individual API call for {word}...")
+    start_time = time.time()
+
     client = OpenAI()
     response = client.chat.completions.create(
         model=FALLBACK_LLM,
         messages=[{"role": "user", "content": prompt}]
     )
+
+    elapsed = time.time() - start_time
+    print(f"    API call completed in {elapsed:.2f}s")
 
     return json.loads(response.choices[0].message.content)
 
@@ -86,11 +93,17 @@ For each item, {LLM_ANALYSIS_INSTRUCTIONS}
 
 Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
 
+    print(f"  Making batch API call for {len(batch_notes)} notes...")
+    start_time = time.time()
+
     client = OpenAI()
     response = client.chat.completions.create(
         model=BATCH_LLM,
         messages=[{"role": "user", "content": prompt}]
     )
+
+    elapsed = time.time() - start_time
+    print(f"  Batch API call completed in {elapsed:.2f}s")
 
     return json.loads(response.choices[0].message.content)
 
