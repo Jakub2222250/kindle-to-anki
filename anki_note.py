@@ -55,21 +55,14 @@ class AnkiNote:
         if llm_data.get('translation') and not self.context_translation:
             self.context_translation = llm_data['translation']
 
-        if llm_data.get('secondary_definitions') and not self.notes:
-            # Join multiple definitions into notes
-            if isinstance(llm_data['secondary_definitions'], list):
-                self.secondary_definition = ', '.join(llm_data['secondary_definitions'])
-            else:
-                self.notes = str(llm_data['secondary_definitions'])
-
         if llm_data.get('collocations') and not self.collocations:
             if isinstance(llm_data['collocations'], list):
                 self.collocations = ', '.join(llm_data['collocations'])
             else:
                 self.collocations = str(llm_data['collocations'])
 
-        if llm_data.get('original_language_hint') and not self.original_language_hint:
-            self.original_language_hint = llm_data['original_language_hint']
+        if llm_data.get('original_language_definition') and not self.original_language_hint:
+            self.original_language_hint = llm_data['original_language_definition']
 
         if llm_data.get('cloze_deletion_score') is not None:
             score = llm_data['cloze_deletion_score']
@@ -150,7 +143,10 @@ class AnkiNote:
         if self.usage and self.word:
             context_cloze = self.usage.replace(self.word, "[...]", 1)  # Replace only first occurrence
 
+        # Create context_sentence_bold_word by replacing the first occurrence of the word with <b>word</b> in usage
+        context_sentence_bold_word = self.usage.replace(self.word, f"<b>{self.word}</b>", 1)
+
         # Cloze_Enabled field - output blank if False, otherwise output the boolean value
         cloze_enabled_output = "" if not self.cloze_enabled else str(self.cloze_enabled)
 
-        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.usage}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{cloze_enabled_output}\t{self.tags}\n"
+        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{context_sentence_bold_word}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{cloze_enabled_output}\t{self.tags}\n"

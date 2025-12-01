@@ -11,12 +11,11 @@ FALLBACK_LLM = "gpt-5-mini"
 
 # Common LLM instructions
 LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
-1. definition: English definition of the lemma pertaining to the usage of the word in the sample sentence as a short, minimal gloss without referring to the sample sentence)
+1. definition: English definition of the lemma pertaining to the usage of the word in the sample sentence as a short, minimal gloss without referring to the sample sentence
 2. translation: English translation of the sentence
-3. secondary_definitions: Any different common definitions of the lemma in English as a JSON list of concise glosses. Prioritize uniqueness over quantity.
-4. collocations: The most common Polish collocations or phrases that include this word as a JSON list of 0-3 short collocations in Polish. Always include the word itself.
-5. original_language_hint: A short definition that is relevant to how the word is used in the given sentence as a short, minimal monolingual gloss in Polish
-6. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable this word is for cloze deletion in Anki based on its importance in the sentence and context. 0 means not suitable at all, 10 means very suitable."""
+3. collocations: The most common Polish collocations or phrases that include this word as a JSON list of 0-3 short collocations in Polish. Always include the word itself.
+4. original_language_definition: Polish definition of the lemma pertaining to the usage of the word in the sample sentence as a short, minimal gloss without referring to the sample sentence
+5. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable this word is for cloze deletion in Anki based on its importance in the sentence and context. 0 means not suitable at all, 10 means very suitable."""
 
 
 class LLMCache:
@@ -45,15 +44,23 @@ class LLMCache:
 
     def get(self, uid):
         """Get cached LLM result for UID"""
-        return self.cache.get(uid)
+        cache_entry = self.cache.get(uid)
+        if cache_entry and isinstance(cache_entry, dict) and "llm_data" in cache_entry:
+            return cache_entry["llm_data"]
+        return None
 
-    def set(self, uid, llm_result):
+    def set(self, uid, llm_result, model_used=None, timestamp=None):
         """Set cached LLM result for UID"""
-        self.cache[uid] = llm_result
+        cache_entry = {
+            "llm_data": llm_result,
+            "model_used": model_used,
+            "timestamp": timestamp
+        }
+        self.cache[uid] = cache_entry
         self.save_cache()
 
 
-def make_llm_call(word, stem, usage_context):
+def make_llm_call(word, stem, usage_context, processing_timestamp):
     """Make actual LLM API call"""
     prompt = f"""
     Given the Polish sentence: "{usage_context}" and the word "{word}" (lemma: {stem}), 
@@ -76,10 +83,10 @@ def make_llm_call(word, stem, usage_context):
     output_chars = len(response.choices[0].message.content)
     print(f"    API call completed in {elapsed:.2f}s ({output_chars} output chars)")
 
-    return json.loads(response.choices[0].message.content)
+    return json.loads(response.choices[0].message.content), FALLBACK_LLM, processing_timestamp
 
 
-def make_batch_llm_call(batch_notes):
+def make_batch_llm_call(batch_notes, processing_timestamp):
     """Make batch LLM API call for multiple notes"""
     items_list = []
     for note in batch_notes:
@@ -110,10 +117,10 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
     output_chars = len(response.choices[0].message.content)
     print(f"  Batch API call completed in {elapsed:.2f}s ({output_chars} output chars)")
 
-    return json.loads(response.choices[0].message.content)
+    return json.loads(response.choices[0].message.content), BATCH_LLM, processing_timestamp
 
 
-def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache):
+def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache, processing_timestamp: str):
     total_batches = (len(notes_needing_llm) + BATCH_SIZE - 1) // BATCH_SIZE
     for i in range(0, len(notes_needing_llm), BATCH_SIZE):
         batch = notes_needing_llm[i:i + BATCH_SIZE]
@@ -122,12 +129,12 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache)
         print(f"\nProcessing batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
         try:
-            batch_results = make_batch_llm_call(batch)
+            batch_results, model_used, timestamp = make_batch_llm_call(batch, processing_timestamp)
 
             for note in batch:
                 if note.uid in batch_results:
                     llm_data = batch_results[note.uid]
-                    cache.set(note.uid, llm_data)
+                    cache.set(note.uid, llm_data, model_used, timestamp)
                     note.apply_llm_enrichment(llm_data)
                     print(f"  SUCCESS - enriched {note.word}")
                 else:
@@ -138,8 +145,8 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache)
             # Fallback to individual calls for this batch
             for note in batch:
                 try:
-                    llm_data = make_llm_call(note.word, note.stem, note.usage)
-                    cache.set(note.uid, llm_data)
+                    llm_data, model_used, timestamp = make_llm_call(note.word, note.stem, note.usage, processing_timestamp)
+                    cache.set(note.uid, llm_data, model_used, timestamp)
                     note.apply_llm_enrichment(llm_data)
                     print(f"  FALLBACK SUCCESS - enriched {note.word}")
                 except Exception as individual_error:
@@ -148,6 +155,9 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache)
 
 def enrich_notes_with_llm(notes: list[AnkiNote], skip=False):
     """Process LLM enrichment for all notes"""
+    # Capture timestamp at the start of LLM processing
+    processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
     cache = LLMCache()
     print(f"\nLoaded LLM cache with {len(cache.cache)} entries")
 
@@ -170,9 +180,10 @@ def enrich_notes_with_llm(notes: list[AnkiNote], skip=False):
 
     if skip:
         print("LLM enrichment skipped as per user request.")
+        return
 
     if not notes_needing_llm:
         return
 
     # Phase 2: Process notes in batches
-    process_notes_in_batches(notes_needing_llm, cache)
+    process_notes_in_batches(notes_needing_llm, cache, processing_timestamp)
