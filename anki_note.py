@@ -7,7 +7,7 @@ class AnkiNote:
                  definition="", secondary_definition="", 
                  usage="", context_translation="", 
                  notes="", book_name="", status="raw",
-                 language=None, pos=None, collocations="", original_language_hint="",
+                 language=None, pos=None, timestamp=None, collocations="", original_language_hint="",
                  cloze_enabled=0):
         self.word = word or ""
         self.definition = definition  # Main definition field for CSV output
@@ -21,6 +21,7 @@ class AnkiNote:
         self.status = status
         self.cloze_enabled = cloze_enabled
         self.glosbe_url = ""  # Will be generated later
+        self.timestamp = timestamp
 
         # Initialize stem and part_of_speech (may be updated by morfeusz enrichment)
         self.stem = stem or ""
