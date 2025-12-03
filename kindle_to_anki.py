@@ -1,6 +1,7 @@
 import sqlite3
 import sys
 import json
+import time
 from pathlib import Path
 from anki_note import AnkiNote
 import morfeusz2
@@ -34,6 +35,13 @@ def save_metadata(metadata):
         json.dump(metadata, f, indent=2)
 
     print(f"Metadata saved to {metadata_path}")
+
+
+def save_script_run_timestamp(metadata):
+    """Save the current timestamp as script run time to metadata"""
+    current_time_ms = int(time.time() * 1000)
+    metadata['last_script_run'] = current_time_ms
+    save_metadata(metadata)
 
 
 def get_card_counts(db_path, timestamp=None):
@@ -266,6 +274,9 @@ def export_kindle_vocab():
     notes = create_anki_notes(vocab_data)
     enrich_notes_with_llm(notes, skip=False)
     write_anki_import_file(notes)
+
+    # Save script run timestamp
+    save_script_run_timestamp(metadata)
 
     # Offer to save timestamp for future incremental imports
     offer_to_save_timestamp(vocab_data, metadata)
