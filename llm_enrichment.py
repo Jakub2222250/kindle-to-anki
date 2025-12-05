@@ -5,7 +5,7 @@ from openai import OpenAI
 from anki_note import AnkiNote
 
 # Configuration
-BATCH_SIZE = 20
+BATCH_SIZE = 40
 BATCH_LLM = "gpt-5"
 FALLBACK_LLM = "gpt-5"
 

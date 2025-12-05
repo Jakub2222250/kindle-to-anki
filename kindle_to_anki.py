@@ -6,6 +6,7 @@ from pathlib import Path
 from anki_note import AnkiNote
 import morfeusz2
 from llm_enrichment import enrich_notes_with_llm
+import datetime
 
 
 def load_metadata():
@@ -75,7 +76,9 @@ def handle_incremental_import_choice(db_path, last_timestamp):
     """Handle user choice for incremental vs full import"""
     new_count, total_count = get_card_counts(db_path, last_timestamp)
 
-    print(f"Found previous import timestamp: {last_timestamp}")
+    last_time = datetime.datetime.fromtimestamp(last_timestamp / 1000)
+
+    print(f"Found previous import timestamp: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"New cards since last import: {new_count}")
     print(f"Total cards available: {total_count}")
 
