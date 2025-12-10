@@ -205,7 +205,7 @@ def manually_prune_existing_notes(notes, existing_notes):
     for note in notes:
         if note.expression in map_existing_expressions_to_definitions:
             existing_definitions = map_existing_expressions_to_definitions[note.expression]
-            print("These expressions already exist in Anki:")
+            print("\nThese expressions already exist in Anki:")
             for definition in existing_definitions:
                 print(f"- {note.expression}: {definition}")
             print("This is the candidate new word:")
@@ -216,6 +216,8 @@ def manually_prune_existing_notes(notes, existing_notes):
                 continue  # Skip adding this note
             else:
                 pruned_notes.append(note)
+        else:
+            pruned_notes.append(note)
 
     return pruned_notes
 
