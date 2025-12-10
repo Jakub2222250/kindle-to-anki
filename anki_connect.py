@@ -45,7 +45,7 @@ class AnkiConnect:
         except Exception:
             return False
 
-    def get_notes(self):
+    def get_notes(self, language=None):
         """Get all notes from the specified deck with Expression, Context_Sentence, and Definition fields"""
         try:
             # Find all note IDs in the deck with the specified note type
