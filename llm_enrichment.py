@@ -81,34 +81,6 @@ def estimate_cost(input_chars, notes_count, model):
     return input_cost + output_cost
 
 
-def make_llm_call(word, expression, context_sentence, processing_timestamp):
-    """Make actual LLM API call"""
-    prompt = f"""
-    Given the Polish sentence: "{context_sentence}" and the word "{word}" (lemma: {expression}), 
-    {LLM_ANALYSIS_INSTRUCTIONS}
-
-    Respond only with valid JSON, no additional text.
-    """
-
-    input_chars = len(prompt)
-    estimate_cost_value = estimate_cost(input_chars, 1, FALLBACK_LLM)
-    estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
-    print(f"    Making individual API call for {word} ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
-    start_time = time.time()
-
-    client = OpenAI()
-    response = client.chat.completions.create(
-        model=FALLBACK_LLM,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    elapsed = time.time() - start_time
-    output_chars = len(response.choices[0].message.content)
-    print(f"    API call completed in {elapsed:.2f}s ({output_chars} output chars)")
-
-    return json.loads(response.choices[0].message.content), FALLBACK_LLM, processing_timestamp
-
-
 def make_batch_llm_call(batch_notes, processing_timestamp):
     """Make batch LLM API call for multiple notes"""
     items_list = []
@@ -147,6 +119,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
 
 def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache, processing_timestamp: str):
     total_batches = (len(notes_needing_llm) + BATCH_SIZE - 1) // BATCH_SIZE
+    failing_notes = []
     for i in range(0, len(notes_needing_llm), BATCH_SIZE):
         batch = notes_needing_llm[i:i + BATCH_SIZE]
         batch_num = (i // BATCH_SIZE) + 1
@@ -164,18 +137,16 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache,
                     print(f"  SUCCESS - enriched {note.kindle_word}")
                 else:
                     print(f"  FAILED - no result for {note.kindle_word}")
+                    failing_notes.append(note)
 
         except Exception as e:
             print(f"  BATCH FAILED - {str(e)}")
-            # Fallback to individual calls for this batch
-            for note in batch:
-                try:
-                    llm_data, model_used, timestamp = make_llm_call(note.kindle_word, note.expression, note.kindle_usage, processing_timestamp)
-                    cache.set(note.uid, llm_data, model_used, timestamp)
-                    note.apply_llm_enrichment(llm_data)
-                    print(f"  FALLBACK SUCCESS - enriched {note.kindle_word}")
-                except Exception as individual_error:
-                    print(f"  FALLBACK FAILED - {note.kindle_word}: {str(individual_error)}")
+            failing_notes.extend(batch)
+
+    if len(failing_notes) > 0:
+        print(f"{len(failing_notes)} notes failed LLM enrichment.")
+        print("All successful LLM results already saved to cache. Running script again usually fixes the issue. Exiting.")
+        exit()
 
 
 def enrich_notes_with_llm(notes: list[AnkiNote]):
