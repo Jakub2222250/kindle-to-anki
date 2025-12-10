@@ -178,7 +178,7 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache,
                     print(f"  FALLBACK FAILED - {note.word}: {str(individual_error)}")
 
 
-def enrich_notes_with_llm(notes: list[AnkiNote], skip=False):
+def enrich_notes_with_llm(notes: list[AnkiNote]):
     """Process LLM enrichment for all notes"""
     # Capture timestamp at the start of LLM processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -202,10 +202,6 @@ def enrich_notes_with_llm(notes: list[AnkiNote], skip=False):
             notes_needing_llm.append(note)
 
     print(f"Found {cached_count} cached results, {len(notes_needing_llm)} notes need LLM calls")
-
-    if skip:
-        print("LLM enrichment skipped as per user request.")
-        return
 
     if not notes_needing_llm:
         return
