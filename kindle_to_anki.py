@@ -1,4 +1,5 @@
 import sqlite3
+import subprocess
 import sys
 import json
 import time
@@ -249,6 +250,18 @@ def write_anki_import_file(notes):
 
 
 def export_kindle_vocab():
+
+    # Attempt to copy vocab.db via batch script call
+    response = input(f"Copy vocab.db from connected Kindle device? (y/n): ").strip().lower()
+    if response == 'y' or response == 'yes':
+        result = subprocess.run(["copy_vocab.bat"], check=True)
+
+        if result.returncode != 0:
+            print(f"Error: Failed to copy vocab.db from Kindle device with error {result.returncode}.")
+            exit(1)
+        else:
+            print(f'vocab.db copied from Kindle device successfully.')
+
     # Get script directory and construct path to inputs/vocab.db
     script_dir = Path(__file__).parent
     db_path = script_dir / "inputs" / "vocab.db"
