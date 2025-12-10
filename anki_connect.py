@@ -74,7 +74,7 @@ class AnkiConnect:
         except Exception as e:
             raise Exception(f"Failed to get deck cards: {e}")
 
-    def create_notes_batch(self, anki_notes, language=None):
+    def create_notes_batch(self, anki_notes, lang=None):
         """Create multiple notes in Anki from a list of AnkiNote objects"""
         try:
             notes_data = []

@@ -264,7 +264,8 @@ def prune_existing_notes(notes, anki_connect_instance):
 
 def write_anki_import_file(notes, language):
     Path("outputs").mkdir(exist_ok=True)
-    anki_path = Path(f"outputs/{language}_anki_import.txt")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    anki_path = Path(f"outputs/{language}_anki_import_{timestamp}.txt")
 
     # Write notes to file
     with open(anki_path, "w", encoding="utf-8") as f:
@@ -335,6 +336,7 @@ def export_kindle_vocab():
         print(f"Processing {len(notes)} new notes for {lang}...")
         enrich_notes_with_llm(notes, skip=False)
         write_anki_import_file(notes, lang)
+        anki_connect_instance.create_notes_batch(notes, lang=lang)
 
     # Save script run timestamp
     save_script_run_timestamp(metadata)
