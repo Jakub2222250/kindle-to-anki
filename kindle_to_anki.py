@@ -7,6 +7,7 @@ from pathlib import Path
 from anki_note import AnkiNote
 import morfeusz2
 from llm_enrichment import enrich_notes_with_llm
+from anki_connect import AnkiConnect
 import datetime
 
 
@@ -236,6 +237,31 @@ def create_anki_notes(vocab_data):
     return notes_by_language
 
 
+def prune_existing_notes(notes, anki_connect_instance):
+    """Remove notes that already exist in Anki based on UID"""
+
+    if len(notes) == 0:
+        return notes
+
+    try:
+        # Get existing cards from Anki
+        existing_cards = anki_connect_instance.get_deck_cards()
+        existing_uids = {card['UID'] for card in existing_cards if card['UID']}
+
+        # Filter out notes that already exist
+        new_notes = [note for note in notes if note.uid not in existing_uids]
+
+        pruned_count = len(notes) - len(new_notes)
+        if pruned_count > 0:
+            print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
+
+        return new_notes
+
+    except Exception as e:
+        print(f"Error: Could not check for existing notes in Anki: {e}")
+        exit(0)
+
+
 def write_anki_import_file(notes, language):
     Path("outputs").mkdir(exist_ok=True)
     anki_path = Path(f"outputs/{language}_anki_import.txt")
@@ -253,6 +279,12 @@ def write_anki_import_file(notes, language):
 
 
 def export_kindle_vocab():
+
+    anki_connect_instance = AnkiConnect()
+    if not anki_connect_instance.is_reachable():
+        print("AnkiConnect not reachable. Exiting.")
+        exit(0)
+    print("AnkiConnect is reachable.")
 
     # Attempt to copy vocab.db via batch script call
     response = input(f"Copy vocab.db from connected Kindle device? (y/n): ").strip().lower()
@@ -291,7 +323,16 @@ def export_kindle_vocab():
         return
 
     notes_by_language = create_anki_notes(vocab_data)
+
     for lang, notes in notes_by_language.items():
+        # Prune existing notes before expensive LLM enrichment
+        notes = prune_existing_notes(notes, anki_connect_instance)
+
+        if not notes:
+            print(f"No new notes to process for language: {lang}")
+            continue
+
+        print(f"Processing {len(notes)} new notes for {lang}...")
         enrich_notes_with_llm(notes, skip=False)
         write_anki_import_file(notes, lang)
 

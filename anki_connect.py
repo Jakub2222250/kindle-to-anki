@@ -62,6 +62,7 @@ class AnkiConnect:
             for note in notes_info:
                 fields = note.get('fields', {})
                 card_data = {
+                    'UID': fields.get('UID', {}).get('value', ''),
                     'Expression': fields.get('Expression', {}).get('value', ''),
                     'Context_Sentence': fields.get('Context_Sentence', {}).get('value', ''),
                     'Definition': fields.get('Definition', {}).get('value', '')
@@ -73,7 +74,7 @@ class AnkiConnect:
         except Exception as e:
             raise Exception(f"Failed to get deck cards: {e}")
 
-    def create_notes_batch(self, anki_notes):
+    def create_notes_batch(self, anki_notes, language=None):
         """Create multiple notes in Anki from a list of AnkiNote objects"""
         try:
             notes_data = []
