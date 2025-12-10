@@ -205,7 +205,7 @@ def read_vocab_from_db(db_path, timestamp=None):
 
 def create_anki_notes(vocab_data):
     """Create AnkiNotes from vocab_data with morfeusz enrichment only"""
-    notes = []
+    notes_by_language = {}
     total_words = len([row for row in vocab_data if row[1]])  # Count words with stems
     processed_count = 0
 
@@ -228,14 +228,17 @@ def create_anki_notes(vocab_data):
             # Process morfeusz enrichment externally after note construction
             process_morfeusz_enrichment(note)
 
-            notes.append(note)
+            # Group by language
+            if lang not in notes_by_language:
+                notes_by_language[lang] = []
+            notes_by_language[lang].append(note)
 
-    return notes
+    return notes_by_language
 
 
-def write_anki_import_file(notes):
+def write_anki_import_file(notes, language):
     Path("outputs").mkdir(exist_ok=True)
-    anki_path = Path("outputs/anki_import.txt")
+    anki_path = Path(f"outputs/{language}_anki_import.txt")
 
     # Write notes to file
     with open(anki_path, "w", encoding="utf-8") as f:
@@ -287,9 +290,10 @@ def export_kindle_vocab():
         print("No new notes to import.")
         return
 
-    notes = create_anki_notes(vocab_data)
-    enrich_notes_with_llm(notes, skip=False)
-    write_anki_import_file(notes)
+    notes_by_language = create_anki_notes(vocab_data)
+    for lang, notes in notes_by_language.items():
+        enrich_notes_with_llm(notes, skip=False)
+        write_anki_import_file(notes, lang)
 
     # Save script run timestamp
     save_script_run_timestamp(metadata)
