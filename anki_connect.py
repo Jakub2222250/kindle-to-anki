@@ -8,8 +8,8 @@ class AnkiConnect:
 
     def __init__(self):
         self.anki_url = "http://localhost:8765"
-        self.parent_deck_name = "Polish Vocab Discovery"
-        self.target_deck_name = "Polish Vocab Discovery::Import"
+        self.ready_deck_name = "Polish Vocab Discovery::Ready"
+        self.staging_deck_name = "Polish Vocab Discovery::Import"
         self.note_type = "My Foreign Language Reading Words Note Type"
 
     def _invoke(self, action, params=None):
@@ -49,7 +49,7 @@ class AnkiConnect:
         """Get all notes from the specified deck with Expression, Context_Sentence, and Definition fields"""
         try:
             # Find all note IDs in the deck with the specified note type
-            query = f'"deck:{self.parent_deck_name}" "note:{self.note_type}"'
+            query = f'"deck:{self.ready_deck_name}" "note:{self.note_type}"'
             note_ids = self._invoke("findNotes", {"query": query})
 
             if not note_ids:
@@ -103,7 +103,7 @@ class AnkiConnect:
                 }
 
                 note_data = {
-                    "deckName": self.target_deck_name,
+                    "deckName": self.staging_deck_name,
                     "modelName": self.note_type,
                     "fields": fields,
                     "tags": anki_note.tags.split() if anki_note.tags else ["kindle_to_anki"]
