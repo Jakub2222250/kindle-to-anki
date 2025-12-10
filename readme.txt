@@ -8,20 +8,20 @@
 
 
 Fields to write out in order:
-UID
-Expression
-Original_Form
-Part_Of_Speech
-Definition
-Secondary_Definition
-Context_Sentence
-Context_Sentence_Cloze (NEW)
-Context_Translation
-Collocations (NEW)
-Original_Language_Hint (NEW)
-Notes
-Source_Book
-Location
-Status
-Cloze_Enabled
+1: UID
+2: Expression
+3: Original_Form
+4: Part_Of_Speech
+5: Definition
+6: Secondary_Definitions
+7: Context_Sentence
+8: Context_Sentence_Cloze
+9: Context_Translation
+10: Collocations
+11: Original_Language_Hint
+12: Notes
+13: Source_Book
+14: Location
+15: Status
+16: Cloze_Enabled
 Tags

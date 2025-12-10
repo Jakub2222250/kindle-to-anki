@@ -137,17 +137,22 @@ class AnkiNote:
 
         self.tags = " ".join(base_tags)
 
+    def get_context_sentence_cloze(self):
+        """Get context sentence with word replaced by [...]"""
+        if self.usage and self.word:
+            return self.usage.replace(self.word, "<b>[...]</b>", 1)
+        return ""
+
+    def get_context_sentence_bold_word(self):
+        """Get context sentence with word in bold"""
+        if self.usage and self.word:
+            return self.usage.replace(self.word, f"<b>{self.word}</b>", 1)
+        return self.usage or ""
+
+    def get_cloze_enabled_output(self):
+        """Get cloze enabled field formatted for output"""
+        return "" if not self.cloze_enabled else str(self.cloze_enabled)
+
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
-        # Create context_sentence_cloze by replacing the first occurrence of the word with [...] in usage
-        context_cloze = ""
-        if self.usage and self.word:
-            context_cloze = self.usage.replace(self.word, "<b>[...]</b>", 1)  # Replace only first occurrence
-
-        # Create context_sentence_bold_word by replacing the first occurrence of the word with <b>word</b> in usage
-        context_sentence_bold_word = self.usage.replace(self.word, f"<b>{self.word}</b>", 1)
-
-        # Cloze_Enabled field - output blank if False, otherwise output the boolean value
-        cloze_enabled_output = "" if not self.cloze_enabled else str(self.cloze_enabled)
-
-        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{context_sentence_bold_word}\t{context_cloze}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{cloze_enabled_output}\t{self.tags}\n"
+        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.get_context_sentence_bold_word()}\t{self.get_context_sentence_cloze()}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{self.get_cloze_enabled_output()}\t{self.tags}\n"
