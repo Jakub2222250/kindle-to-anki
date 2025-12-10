@@ -45,8 +45,8 @@ class AnkiConnect:
         except Exception:
             return False
 
-    def get_deck_cards(self):
-        """Get all cards from the specified deck with Expression, Context_Sentence, and Definition fields"""
+    def get_notes(self):
+        """Get all notes from the specified deck with Expression, Context_Sentence, and Definition fields"""
         try:
             # Find all note IDs in the deck with the specified note type
             query = f'"deck:{self.parent_deck_name}" "note:{self.note_type}"'
@@ -59,21 +59,21 @@ class AnkiConnect:
             notes_info = self._invoke("notesInfo", {"notes": note_ids})
 
             # Extract the requested fields
-            cards_data = []
+            notes_data = []
             for note in notes_info:
                 fields = note.get('fields', {})
-                card_data = {
+                note_data = {
                     'UID': fields.get('UID', {}).get('value', ''),
                     'Expression': fields.get('Expression', {}).get('value', ''),
                     'Context_Sentence': fields.get('Context_Sentence', {}).get('value', ''),
                     'Definition': fields.get('Definition', {}).get('value', '')
                 }
-                cards_data.append(card_data)
+                notes_data.append(note_data)
 
-            return cards_data
+            return notes_data
 
         except Exception as e:
-            raise Exception(f"Failed to get deck cards: {e}")
+            raise Exception(f"Failed to get deck notes: {e}")
 
     def create_notes_batch(self, anki_notes, lang=None):
         """Create multiple notes in Anki from a list of AnkiNote objects"""
@@ -82,7 +82,7 @@ class AnkiConnect:
             notes_data = []
 
             for anki_note in anki_notes:
-                # Map AnkiNote fields to Anki card fields based on readme field order
+                # Map AnkiNote fields to Anki note fields based on readme field order
                 fields = {
                     "UID": anki_note.uid,
                     "Expression": anki_note.expression,
@@ -128,20 +128,19 @@ if __name__ == "__main__":
     if anki.is_reachable():
         print("AnkiConnect is reachable!")
 
-        # Get cards
+        # Get notes
         try:
-            cards = anki.get_deck_cards()
-            print(f"Found {len(cards)} cards in deck")
+            notes = anki.get_notes()
+            print(f"Found {len(notes)} notes in deck")
 
-            # Show first few cards as example
-            for i, card in enumerate(cards[:3]):
-                print(f"\nCard {i + 1}:")
-                print(f"  Expression: {card['Expression']}")
-                print(f"  Context: {card['Context_Sentence']}")
-                print(f"  Definition: {card['Definition']}")
-
+            # Show first few notes as example
+            for i, note in enumerate(notes[:3]):
+                print(f"\nNote {i + 1}:")
+                print(f"  Expression: {note['Expression']}")
+                print(f"  Context: {note['Context_Sentence']}")
+                print(f"  Definition: {note['Definition']}")
         except Exception as e:
-            print(f"Error getting cards: {e}")
+            print(f"Error getting notes: {e}")
 
     else:
         print("AnkiConnect is not reachable. Make sure Anki is running with AnkiConnect addon installed.")

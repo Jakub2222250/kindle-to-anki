@@ -47,8 +47,8 @@ def save_script_run_timestamp(metadata):
     save_metadata(metadata)
 
 
-def get_card_counts(db_path, timestamp=None):
-    """Get count of cards available for import"""
+def get_kindle_vocab_count(db_path, timestamp=None):
+    """Get count of kindle vocab builder entries available for import"""
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
@@ -76,20 +76,20 @@ def get_card_counts(db_path, timestamp=None):
 
 def handle_incremental_import_choice(db_path, last_timestamp):
     """Handle user choice for incremental vs full import"""
-    new_count, total_count = get_card_counts(db_path, last_timestamp)
+    new_count, total_count = get_kindle_vocab_count(db_path, last_timestamp)
 
     last_time = datetime.datetime.fromtimestamp(last_timestamp / 1000)
 
     print(f"\nFound previous import timestamp: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"New cards since last import: {new_count}")
-    print(f"Total cards available: {total_count}")
+    print(f"New kindle vocab builder entries since last import: {new_count}")
+    print(f"Total kindle vocab builder entries available: {total_count}")
 
-    response = input(f"Import only {new_count} new cards since last import? (y/n): ").strip().lower()
+    response = input(f"Import only {new_count} new kindle vocab builder entries since last import? (y/n): ").strip().lower()
     if response == 'y' or response == 'yes':
-        print("Importing only new notes...")
+        print("Importing only new kindle vocab builder entries...")
         return read_vocab_from_db(db_path, last_timestamp)
     else:
-        print(f"Importing all {total_count} notes...")
+        print(f"Importing all {total_count} kindle vocab builder entries...")
         return read_vocab_from_db(db_path)
 
 
@@ -169,31 +169,55 @@ def create_anki_notes(kindle_vocab_data):
     return notes_by_language
 
 
-def prune_existing_notes(notes, anki_connect_instance):
+def prune_existing_notes(notes, existing_notes):
     """Remove notes that already exist in Anki based on UID"""
 
     if len(notes) == 0:
         return notes
 
-    try:
-        # Get existing cards from Anki
-        print("\nChecking for existing notes in Anki...")
-        existing_cards = anki_connect_instance.get_deck_cards()
-        print(f"Retrieved {len(existing_cards)} existing cards from Anki.")
-        existing_uids = {card['UID'] for card in existing_cards if card['UID']}
+    existing_uids = {note['UID'] for note in existing_notes if note['UID']}
 
-        # Filter out notes that already exist
-        new_notes = [note for note in notes if note.uid not in existing_uids]
+    # Filter out notes that already exist
+    new_notes = [note for note in notes if note.uid not in existing_uids]
 
-        pruned_count = len(notes) - len(new_notes)
-        if pruned_count > 0:
-            print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
+    pruned_count = len(notes) - len(new_notes)
+    if pruned_count > 0:
+        print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
 
-        return new_notes
+    return new_notes
 
-    except Exception as e:
-        print(f"Error: Could not check for existing notes in Anki: {e}")
-        exit(0)
+
+def manually_prune_existing_notes(notes, existing_notes):
+    """Offer user to manually prune notes that exist in Anki based on Expression field"""
+    if len(notes) == 0:
+        return notes
+
+    map_existing_expressions_to_definitions = {}
+    for note in existing_notes:
+        expr = note['Expression']
+        definition = note['Definition']
+        if expr not in map_existing_expressions_to_definitions:
+            map_existing_expressions_to_definitions[expr] = set()
+        map_existing_expressions_to_definitions[expr].add(definition)
+
+    pruned_notes = []
+
+    for note in notes:
+        if note.expression in map_existing_expressions_to_definitions:
+            existing_definitions = map_existing_expressions_to_definitions[note.expression]
+            print("These expressions already exist in Anki:")
+            for definition in existing_definitions:
+                print(f"- {note.expression}: {definition}")
+            print("This is the candidate new word:")
+            print(f"- {note.expression}: {note.definition}")
+            response = input("Omit adding this word to Anki? (y/n): ").strip().lower()
+            if response == 'y' or response == 'yes':
+                print(f"Omitting word: {note.expression}")
+                continue  # Skip adding this note
+            else:
+                pruned_notes.append(note)
+
+    return pruned_notes
 
 
 def write_anki_import_file(notes, language):
@@ -254,7 +278,7 @@ def export_kindle_vocab():
     if last_timestamp:
         kindle_vocab_data = handle_incremental_import_choice(db_path, last_timestamp)
     else:
-        _, total_count = get_card_counts(db_path)
+        _, total_count = get_kindle_vocab_count(db_path)
         print(f"No previous import found, importing all {total_count} notes...")
         kindle_vocab_data = read_vocab_from_db(db_path)
 
@@ -266,16 +290,24 @@ def export_kindle_vocab():
 
     for lang, notes in notes_by_language.items():
 
+        print("\nChecking for existing notes in Anki...")
+        existing_notes = anki_connect_instance.get_notes(language=lang)
+        print(f"Retrieved {len(existing_notes)} existing notes from Anki for language: {lang}")
+
         # Prune existing notes before expensive LLM enrichment
-        notes = prune_existing_notes(notes, anki_connect_instance)
+        notes = prune_existing_notes(notes, existing_notes)
 
         if not notes:
             print(f"No new notes to process for language: {lang}")
             continue
 
-        # Enrich notes with morphological analysis. All need to succeed to continue.
+        # Enrich notes with morphological and LLM analysis
         process_morphological_enrichment(notes, lang)
         enrich_notes_with_llm(notes)
+
+        # Offer user to omit saving words that are already represented in Anki
+        notes = manually_prune_existing_notes(notes, existing_notes)
+
         write_anki_import_file(notes, lang)
         anki_connect_instance.create_notes_batch(notes, lang=lang)
 
