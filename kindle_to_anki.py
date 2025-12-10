@@ -28,6 +28,9 @@ def load_metadata():
 
 def save_metadata(metadata):
     """Save metadata to cache/metadata.json"""
+
+    print("\nSaving last run time to metadata...")
+
     script_dir = Path(__file__).parent
     cache_dir = script_dir / "cache"
     cache_dir.mkdir(exist_ok=True)
@@ -100,7 +103,7 @@ def offer_to_save_timestamp(vocab_data, metadata):
 
     max_timestamp = max(row[6] for row in vocab_data)  # timestamp is at index 6
     human_readable_time = datetime.datetime.fromtimestamp(max_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
-    print(f"Max timestamp from this import: {human_readable_time}")
+    print(f"\nMax timestamp from this import: {human_readable_time}")
 
     response = input("Save this timestamp for future incremental imports? (y/n): ").strip().lower()
     if response == 'y' or response == 'yes':
