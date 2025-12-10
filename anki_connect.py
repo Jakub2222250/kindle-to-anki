@@ -76,6 +76,7 @@ class AnkiConnect:
 
     def create_notes_batch(self, anki_notes, lang=None):
         """Create multiple notes in Anki from a list of AnkiNote objects"""
+        print(f"\nCreating {len(anki_notes)} notes in Anki...")
         try:
             notes_data = []
 
@@ -83,18 +84,18 @@ class AnkiConnect:
                 # Map AnkiNote fields to Anki card fields based on readme field order
                 fields = {
                     "UID": anki_note.uid,
-                    "Expression": anki_note.stem,
-                    "Original_Form": anki_note.word,
+                    "Expression": anki_note.expression,
+                    "Original_Form": anki_note.original_form,
                     "Part_Of_Speech": anki_note.part_of_speech,
                     "Definition": anki_note.definition,
-                    "Secondary_Definitions": anki_note.secondary_definition,
+                    "Secondary_Definitions": anki_note.secondary_definitions,
                     "Context_Sentence": anki_note.get_context_sentence_bold_word(),
                     "Context_Sentence_Cloze": anki_note.get_context_sentence_cloze(),
                     "Context_Translation": anki_note.context_translation,
                     "Collocations": anki_note.collocations,
                     "Original_Language_Hint": anki_note.original_language_hint,
                     "Notes": anki_note.notes,
-                    "Source_Book": anki_note.book_name,
+                    "Source_Book": anki_note.source_book,
                     "Location": anki_note.location,
                     "Status": anki_note.status,
                     "Cloze_Enabled": anki_note.get_cloze_enabled_output()
@@ -111,6 +112,7 @@ class AnkiConnect:
 
             # Use addNotes action for batch creation
             result = self._invoke("addNotes", {"notes": notes_data})
+            print("Notes creation completed.")
             return result  # Returns list of note IDs (or null for failed notes)
 
         except Exception as e:

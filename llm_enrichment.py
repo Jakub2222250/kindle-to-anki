@@ -81,10 +81,10 @@ def estimate_cost(input_chars, notes_count, model):
     return input_cost + output_cost
 
 
-def make_llm_call(word, stem, usage_context, processing_timestamp):
+def make_llm_call(word, expression, context_sentence, processing_timestamp):
     """Make actual LLM API call"""
     prompt = f"""
-    Given the Polish sentence: "{usage_context}" and the word "{word}" (lemma: {stem}), 
+    Given the Polish sentence: "{context_sentence}" and the word "{word}" (lemma: {expression}), 
     {LLM_ANALYSIS_INSTRUCTIONS}
 
     Respond only with valid JSON, no additional text.
@@ -113,7 +113,7 @@ def make_batch_llm_call(batch_notes, processing_timestamp):
     """Make batch LLM API call for multiple notes"""
     items_list = []
     for note in batch_notes:
-        items_list.append(f'{{"uid": "{note.uid}", "word": "{note.word}", "lemma": "{note.stem}", "sentence": "{note.usage}"}}')
+        items_list.append(f'{{"uid": "{note.uid}", "word": "{note.kindle_word}", "lemma": "{note.expression}", "sentence": "{note.kindle_usage}"}}')
 
     items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
@@ -161,25 +161,27 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache,
                     llm_data = batch_results[note.uid]
                     cache.set(note.uid, llm_data, model_used, timestamp)
                     note.apply_llm_enrichment(llm_data)
-                    print(f"  SUCCESS - enriched {note.word}")
+                    print(f"  SUCCESS - enriched {note.kindle_word}")
                 else:
-                    print(f"  FAILED - no result for {note.word}")
+                    print(f"  FAILED - no result for {note.kindle_word}")
 
         except Exception as e:
             print(f"  BATCH FAILED - {str(e)}")
             # Fallback to individual calls for this batch
             for note in batch:
                 try:
-                    llm_data, model_used, timestamp = make_llm_call(note.word, note.stem, note.usage, processing_timestamp)
+                    llm_data, model_used, timestamp = make_llm_call(note.kindle_word, note.expression, note.kindle_usage, processing_timestamp)
                     cache.set(note.uid, llm_data, model_used, timestamp)
                     note.apply_llm_enrichment(llm_data)
-                    print(f"  FALLBACK SUCCESS - enriched {note.word}")
+                    print(f"  FALLBACK SUCCESS - enriched {note.kindle_word}")
                 except Exception as individual_error:
-                    print(f"  FALLBACK FAILED - {note.word}: {str(individual_error)}")
+                    print(f"  FALLBACK FAILED - {note.kindle_word}: {str(individual_error)}")
 
 
 def enrich_notes_with_llm(notes: list[AnkiNote]):
     """Process LLM enrichment for all notes"""
+    print("\nStarting LLM enrichment process...")
+
     # Capture timestamp at the start of LLM processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
@@ -191,7 +193,7 @@ def enrich_notes_with_llm(notes: list[AnkiNote]):
     cached_count = 0
 
     for note in notes:
-        if not note.usage or not note.stem:
+        if not note.kindle_usage or not note.expression:
             continue
 
         cached_result = cache.get(note.uid)
@@ -208,3 +210,5 @@ def enrich_notes_with_llm(notes: list[AnkiNote]):
 
     # Phase 2: Process notes in batches
     process_notes_in_batches(notes_needing_llm, cache, processing_timestamp)
+
+    print("LLM enrichment process completed.")

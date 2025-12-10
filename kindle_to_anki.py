@@ -5,8 +5,8 @@ import json
 import time
 from pathlib import Path
 from anki_note import AnkiNote
-import morfeusz2
 from llm_enrichment import enrich_notes_with_llm
+from morphological_analyzer import process_morphological_enrichment
 from anki_connect import AnkiConnect
 import datetime
 
@@ -80,7 +80,7 @@ def handle_incremental_import_choice(db_path, last_timestamp):
 
     last_time = datetime.datetime.fromtimestamp(last_timestamp / 1000)
 
-    print(f"Found previous import timestamp: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\nFound previous import timestamp: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"New cards since last import: {new_count}")
     print(f"Total cards available: {total_count}")
 
@@ -99,79 +99,14 @@ def offer_to_save_timestamp(vocab_data, metadata):
         return
 
     max_timestamp = max(row[6] for row in vocab_data)  # timestamp is at index 6
-    print(f"Max timestamp from this import: {max_timestamp}")
+    human_readable_time = datetime.datetime.fromtimestamp(max_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
+    print(f"Max timestamp from this import: {human_readable_time}")
 
     response = input("Save this timestamp for future incremental imports? (y/n): ").strip().lower()
     if response == 'y' or response == 'yes':
         metadata['last_timestamp_import'] = max_timestamp
         save_metadata(metadata)
         print("Timestamp saved. Future runs will offer to import only newer notes.")
-
-
-def analyze_with_morfeusz(word):
-    """Analyze word with morfeusz2 to get lemma and part of speech"""
-    if not morfeusz2 or not word:
-        return None, None
-
-    try:
-        morf = morfeusz2.Morfeusz()
-        analysis = morf.analyse(word.lower())
-
-        if analysis:
-            # morfeusz2 returns list of tuples: (start_pos, end_pos, interpretation)
-            # where interpretation is a tuple: (lemma, tag, name_list)
-            for start_pos, end_pos, interpretation in analysis:
-                if interpretation and len(interpretation) >= 2:
-                    lemma_raw = interpretation[1]
-                    tag = interpretation[2]
-
-                    lemma = lemma_raw.split(':')[0] if ':' in lemma_raw else lemma_raw
-                    pos = tag.split(':')[0] if ':' in tag else tag
-
-                    # Map morfeusz2 tags to more readable forms
-                    pos_mapping = {
-                        'subst': 'noun',
-                        'adj': 'adjective', 
-                        'adv': 'adverb',
-                        'verb': 'verb',
-                        'num': 'numeral',
-                        'prep': 'preposition',
-                        'conj': 'conjunction',
-                        'qub': 'particle',
-                        'fin': 'finite verb',
-                        'ger': 'gerund',
-                        'praet': 'preterite/past tense',
-                        'ppas': 'past passive participle',
-                        'xxx': 'unknown',
-                        'ign': 'ignored'
-                    }
-
-                    readable_pos = pos_mapping.get(pos, pos)
-                    return lemma, readable_pos
-
-    except Exception as e:
-        # If morfeusz2 analysis fails, return None values
-        print(f"Morfeusz2 analysis error: {e}")
-        pass
-
-    return None, None
-
-
-def process_morfeusz_enrichment(note):
-    """Process morfeusz enrichment for a note"""
-    if not note.word:
-        return
-
-    # Analyze word with morfeusz2
-    morfeusz_stem, morfeusz_pos = analyze_with_morfeusz(note.word)
-
-    # Prioritize morfeusz2 stem if available and different from current stem
-    if morfeusz_stem and morfeusz_stem != note.stem:
-        note.stem = morfeusz_stem
-
-    # Use morfeusz2 POS if available and no POS was previously set
-    if morfeusz_pos and not note.part_of_speech:
-        note.part_of_speech = morfeusz_pos
 
 
 def read_vocab_from_db(db_path, timestamp=None):
@@ -204,30 +139,27 @@ def read_vocab_from_db(db_path, timestamp=None):
     return rows
 
 
-def create_anki_notes(vocab_data):
+def create_anki_notes(kindle_vocab_data):
     """Create AnkiNotes from vocab_data with morfeusz enrichment only"""
     notes_by_language = {}
-    total_words = len([row for row in vocab_data if row[1]])  # Count words with stems
+    total_words = len([row for row in kindle_vocab_data if row[1]])  # Count words with stems
     processed_count = 0
 
-    for word, stem, usage, lang, book_title, pos, timestamp in vocab_data:
+    for word, stem, usage, lang, book_title, pos, timestamp in kindle_vocab_data:
         if stem:
             processed_count += 1
             print(f"[{processed_count}/{total_words}] Found word: {word}")
 
             # Create AnkiNote with all data - setup is handled in constructor
             note = AnkiNote(
-                stem=stem,
                 word=word,
+                stem=stem,
                 usage=usage,
-                book_name=book_title,
                 language=lang,
-                pos=pos,
+                book_name=book_title,
+                position=pos,
                 timestamp=timestamp
             )
-
-            # Process morfeusz enrichment externally after note construction
-            process_morfeusz_enrichment(note)
 
             # Group by language
             if lang not in notes_by_language:
@@ -245,7 +177,9 @@ def prune_existing_notes(notes, anki_connect_instance):
 
     try:
         # Get existing cards from Anki
+        print("\nChecking for existing notes in Anki...")
         existing_cards = anki_connect_instance.get_deck_cards()
+        print(f"Retrieved {len(existing_cards)} existing cards from Anki.")
         existing_uids = {card['UID'] for card in existing_cards if card['UID']}
 
         # Filter out notes that already exist
@@ -263,6 +197,7 @@ def prune_existing_notes(notes, anki_connect_instance):
 
 
 def write_anki_import_file(notes, language):
+    print("\nWriting Anki import file...")
     Path("outputs").mkdir(exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     anki_path = Path(f"outputs/{language}_anki_import_{timestamp}.txt")
@@ -281,6 +216,9 @@ def write_anki_import_file(notes, language):
 
 def export_kindle_vocab():
 
+    print("Starting Kindle to Anki export process.")
+
+    print("\nChecking AnkiConnect reachability...")
     anki_connect_instance = AnkiConnect()
     if not anki_connect_instance.is_reachable():
         print("AnkiConnect not reachable. Exiting.")
@@ -288,8 +226,9 @@ def export_kindle_vocab():
     print("AnkiConnect is reachable.")
 
     # Attempt to copy vocab.db via batch script call
-    response = input(f"Copy vocab.db from connected Kindle device? (y/n): ").strip().lower()
+    response = input(f"\nCopy vocab.db from connected Kindle device? (y/n): ").strip().lower()
     if response == 'y' or response == 'yes':
+        print("Copying vocab.db from Kindle device...")
         result = subprocess.run(["copy_vocab.bat"], check=True)
 
         if result.returncode != 0:
@@ -313,19 +252,20 @@ def export_kindle_vocab():
 
     # Handle import choice (incremental vs full)
     if last_timestamp:
-        vocab_data = handle_incremental_import_choice(db_path, last_timestamp)
+        kindle_vocab_data = handle_incremental_import_choice(db_path, last_timestamp)
     else:
         _, total_count = get_card_counts(db_path)
         print(f"No previous import found, importing all {total_count} notes...")
-        vocab_data = read_vocab_from_db(db_path)
+        kindle_vocab_data = read_vocab_from_db(db_path)
 
-    if not vocab_data:
+    if not kindle_vocab_data:
         print("No new notes to import.")
         return
 
-    notes_by_language = create_anki_notes(vocab_data)
+    notes_by_language = create_anki_notes(kindle_vocab_data)
 
     for lang, notes in notes_by_language.items():
+
         # Prune existing notes before expensive LLM enrichment
         notes = prune_existing_notes(notes, anki_connect_instance)
 
@@ -333,8 +273,9 @@ def export_kindle_vocab():
             print(f"No new notes to process for language: {lang}")
             continue
 
-        print(f"Processing {len(notes)} new notes for {lang}...")
-        enrich_notes_with_llm(notes, skip=False)
+        # Enrich notes with morphological analysis. All need to succeed to continue.
+        process_morphological_enrichment(notes, lang)
+        enrich_notes_with_llm(notes)
         write_anki_import_file(notes, lang)
         anki_connect_instance.create_notes_batch(notes, lang=lang)
 
@@ -342,7 +283,9 @@ def export_kindle_vocab():
     save_script_run_timestamp(metadata)
 
     # Offer to save timestamp for future incremental imports
-    offer_to_save_timestamp(vocab_data, metadata)
+    offer_to_save_timestamp(kindle_vocab_data, metadata)
+
+    print("\nKindle to Anki export process completed successfully.")
 
 
 if __name__ == "__main__":

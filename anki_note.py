@@ -3,44 +3,43 @@ from urllib.parse import quote
 
 
 class AnkiNote:
-    def __init__(self, stem, word, part_of_speech="", 
-                 definition="", secondary_definition="", 
-                 usage="", context_translation="", 
-                 notes="", book_name="", status="raw",
-                 language=None, pos=None, timestamp=None, collocations="", original_language_hint="",
-                 cloze_enabled=0):
-        self.word = word or ""
-        self.definition = definition  # Main definition field for CSV output
-        self.secondary_definition = secondary_definition
-        self.usage = usage or ""
-        self.context_translation = context_translation
-        self.collocations = collocations
-        self.original_language_hint = original_language_hint
-        self.notes = notes
-        self.book_name = book_name or ""
-        self.status = status
-        self.cloze_enabled = cloze_enabled
-        self.glosbe_url = ""  # Will be generated later
-        self.timestamp = timestamp
+    def __init__(self, word, stem, usage, language, book_name, position, timestamp):
 
-        # Initialize stem and part_of_speech (may be updated by morfeusz enrichment)
-        self.stem = stem or ""
-        self.part_of_speech = part_of_speech
+        # Save off all original kindle fields that will not be modified
+        self.kindle_word = word
+        self.kindle_stem = stem
+        self.kindle_usage = usage
+        self.kindle_language = language
+        self.kindle_book_name = book_name
+        self.kindle_location = position
+        self.kindle_timestamp = timestamp
+
+        # Output fields
+        self.uid = ""
+        self.expression = self.kindle_stem or ""
+        self.original_form = self.kindle_word or ""
+        self.part_of_speech = ""
+        self.definition = ""
+        self.secondary_definitions = ""
+        self.context_sentence = self.kindle_usage or ""
+        self.context_sentence_cloze = ""
+        self.context_translation = ""
+        self.collocations = ""
+        self.original_language_hint = ""
+        self.notes = ""
+        self.source_book = self.kindle_book_name or ""
+        self.location = f"kindle_{position}" if position else ""
+        self.status = "raw"
+        self.cloze_enabled = None
 
         # Generate book abbreviation
-        self.book_abbrev = self.generate_book_abbrev(self.book_name)
+        self.book_abbrev = self.generate_book_abbrev(self.kindle_book_name)
 
-        # Set location with kindle_ prefix
-        self.location = f"kindle_{pos}" if pos else ""
-
-        # Generate UID (needs location to be set first)
+        # Generate UID (requires book abbreviation and location to be set first)
         self.uid = self.generate_uid()
 
-        # Generate Glosbe URL
-        self.generate_glosbe_url()
-
         # Format usage text for HTML
-        self.format_usage()
+        self.format_context_sentence()
 
         # Set tags based on language and book abbreviation
         self.set_tags(language)
@@ -53,16 +52,16 @@ class AnkiNote:
         if llm_data.get('definition'):
             self.definition = llm_data['definition']  # Override glosbe_url with LLM definition
 
-        if llm_data.get('translation') and not self.context_translation:
+        if llm_data.get('translation'):
             self.context_translation = llm_data['translation']
 
-        if llm_data.get('collocations') and not self.collocations:
+        if llm_data.get('collocations'):
             if isinstance(llm_data['collocations'], list):
                 self.collocations = ', '.join(llm_data['collocations'])
             else:
                 self.collocations = str(llm_data['collocations'])
 
-        if llm_data.get('original_language_definition') and not self.original_language_hint:
+        if llm_data.get('original_language_definition'):
             self.original_language_hint = llm_data['original_language_definition']
 
         if llm_data.get('cloze_deletion_score') is not None:
@@ -104,26 +103,15 @@ class AnkiNote:
     def generate_uid(self):
         """Generate unique ID based on stem, book_abbrev, and location"""
         # Normalize stem part similar to book_abbrev
-        stem_normalized = unicodedata.normalize('NFD', self.stem or "unknown")
+        stem_normalized = unicodedata.normalize('NFD', self.expression or "unknown")
         stem_part = ''.join(char for char in stem_normalized if unicodedata.category(char) != 'Mn')[:10]
         stem_part = stem_part.lower().replace(' ', '_')
         location_part = str(self.location).replace('kindle_', '') if self.location else "0"
         return f"{stem_part}_{self.book_abbrev}_{location_part}"
 
-    def generate_glosbe_url(self, language="pl", target_language="en"):
-        """Generate Glosbe URL for the stem word and set as backup definition"""
-        if self.stem:
-            encoded_word = quote(self.stem.strip().lower())
-            self.glosbe_url = f"https://glosbe.com/{language}/{target_language}/{encoded_word}"
-
-            # Set glosbe_url as backup definition if no definition exists
-            if not self.definition:
-                self.definition = self.glosbe_url
-
-    def format_usage(self):
+    def format_context_sentence(self):
         """Format usage text for HTML display"""
-        if self.usage:
-            self.usage = self.usage.replace('\n', '<br>').replace('\r', '')
+        self.context_sentence = self.context_sentence.replace('\n', '<br>').replace('\r', '')
 
     def set_tags(self, language=None):
         """Set tags based on language and book abbreviation"""
@@ -139,15 +127,15 @@ class AnkiNote:
 
     def get_context_sentence_cloze(self):
         """Get context sentence with word replaced by [...]"""
-        if self.usage and self.word:
-            return self.usage.replace(self.word, "<b>[...]</b>", 1)
+        if self.context_sentence and self.kindle_word:
+            return self.context_sentence.replace(self.kindle_word, "<b>[...]</b>", 1)
         return ""
 
     def get_context_sentence_bold_word(self):
         """Get context sentence with word in bold"""
-        if self.usage and self.word:
-            return self.usage.replace(self.word, f"<b>{self.word}</b>", 1)
-        return self.usage or ""
+        if self.context_sentence and self.kindle_word:
+            return self.context_sentence.replace(self.kindle_word, f"<b>{self.kindle_word}</b>", 1)
+        return self.context_sentence or ""
 
     def get_cloze_enabled_output(self):
         """Get cloze enabled field formatted for output"""
@@ -155,4 +143,4 @@ class AnkiNote:
 
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
-        return f"{self.uid}\t{self.stem}\t{self.word}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definition}\t{self.get_context_sentence_bold_word()}\t{self.get_context_sentence_cloze()}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.book_name}\t{self.location}\t{self.status}\t{self.get_cloze_enabled_output()}\t{self.tags}\n"
+        return f"{self.uid}\t{self.expression}\t{self.original_form}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definitions}\t{self.get_context_sentence_bold_word()}\t{self.get_context_sentence_cloze()}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.source_book}\t{self.location}\t{self.status}\t{self.get_cloze_enabled_output()}\t{self.tags}\n"
