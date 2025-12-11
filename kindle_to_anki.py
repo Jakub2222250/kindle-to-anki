@@ -189,7 +189,9 @@ def prune_existing_notes(notes, existing_notes):
     if pruned_count > 0:
         print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
 
-    response = input("Skip all notes with pre-existing notes of same expression without checking definition via LLM? (y/n): ").strip().lower()
+    num_of_new_notes_that_are_duplicates = sum(1 for note in new_notes if note.expression in existing_expressions)
+
+    response = input(f"Skip {num_of_new_notes_that_are_duplicates} notes with pre-existing notes of same expression without checking definition via LLM? (y/n): ").strip().lower()
     if response == 'y' or response == 'yes':
         print("Skipping all notes with pre-existing notes of same expression without checking definition via LLM.")
         new_notes = [note for note in new_notes if note.expression not in existing_expressions]
