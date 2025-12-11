@@ -180,6 +180,7 @@ def prune_existing_notes(notes, existing_notes):
         return notes
 
     existing_uids = {note['UID'] for note in existing_notes if note['UID']}
+    existing_expressions = {note['Expression'] for note in existing_notes if note['Expression']}
 
     # Filter out notes that already exist
     new_notes = [note for note in notes if note.uid not in existing_uids]
@@ -187,6 +188,11 @@ def prune_existing_notes(notes, existing_notes):
     pruned_count = len(notes) - len(new_notes)
     if pruned_count > 0:
         print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
+
+    response = input("Skip all notes with pre-existing notes of same expression without checking definition via LLM? (y/n): ").strip().lower()
+    if response == 'y' or response == 'yes':
+        print("Skipping all notes with pre-existing notes of same expression without checking definition via LLM.")
+        new_notes = [note for note in new_notes if note.expression not in existing_expressions]
 
     return new_notes
 
