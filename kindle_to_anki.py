@@ -195,28 +195,30 @@ def manually_prune_existing_notes(notes, existing_notes):
     if len(notes) == 0:
         return notes
 
-    map_existing_expressions_to_definitions = {}
-    for note in existing_notes:
-        expr = note['Expression']
-        definition = note['Definition']
-        if expr not in map_existing_expressions_to_definitions:
-            map_existing_expressions_to_definitions[expr] = set()
-        map_existing_expressions_to_definitions[expr].add(definition)
+    map_existing_expressions_to_notes = {}
+    for existing_note in existing_notes:
+        expr = existing_note['Expression']
+        if expr not in map_existing_expressions_to_notes:
+            map_existing_expressions_to_notes[expr] = []
+        map_existing_expressions_to_notes[expr].append(existing_note)
 
     pruned_notes = []
 
     for note in notes:
-        if note.expression in map_existing_expressions_to_definitions:
-            existing_definitions = map_existing_expressions_to_definitions[note.expression]
-            print("\nThese expressions already exist in Anki:")
-            for definition in existing_definitions:
-                print(f"- {note.expression}: {definition}")
-            print("This is the candidate new word:")
-            print(f"- {note.expression}: {note.definition}")
+        if note.expression in map_existing_expressions_to_notes:
+            existing_notes = map_existing_expressions_to_notes[note.expression]
+            print(f"\nThese notes already exist in Anki for {note.expression}:")
+            for existing_note in existing_notes:
+                print(f"\t{note.uid}")
+                print(f"\t\tDefinition      : {existing_note['Definition']}")
+                print(f"\t\tContext Sentence: {existing_note['Context_Sentence']}")
+            print("This is the candidate note:")
+            print(f"\t\tDefinition      : {note.definition}")
+            print(f"\t\tContext Sentence: {note.context_sentence}")
             response = input("Omit adding this word to Anki? (y/n): ").strip().lower()
             if response == 'y' or response == 'yes':
                 print(f"Omitting word: {note.expression}")
-                continue  # Skip adding this note
+                continue
             else:
                 pruned_notes.append(note)
         else:

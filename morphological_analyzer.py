@@ -51,8 +51,11 @@ def analyze_with_morfeusz(word):
 
 
 def process_notes_with_morfeusz(notes):
-    for note in notes:
 
+    stem_changes = []
+    pos_changes = []
+
+    for note in notes:
         # Analyze word with morfeusz2
         morfeusz_lemma, morfeusz_pos = analyze_with_morfeusz(note.kindle_word)
 
@@ -62,13 +65,19 @@ def process_notes_with_morfeusz(notes):
 
         # Prioritize morfeusz2 lemma if available and different from current expression
         if morfeusz_lemma != note.expression:
-            print(f"Updating stem for '{note.kindle_word}': '{note.expression}' -> '{morfeusz_lemma}'")
+            stem_changes.append((note.kindle_word, note.expression, morfeusz_lemma))
             note.expression = morfeusz_lemma
 
         # Use morfeusz2 POS if available and no POS was previously set
         if morfeusz_pos != note.part_of_speech:
-            print(f"Updating part of speech for '{note.kindle_word}': '{note.part_of_speech}' -> '{morfeusz_pos}'")
+            pos_changes.append((note.kindle_word, note.part_of_speech, morfeusz_pos))
             note.part_of_speech = morfeusz_pos
+
+    # Print changes grouped by type
+    for stem_change in stem_changes:
+        print(f"Stem change: {stem_change[0]} -> {stem_change[1]} -> {stem_change[2]}")
+    for pos_change in pos_changes:
+        print(f"POS change: {pos_change[0]} -> {pos_change[1]} -> {pos_change[2]}")
 
 
 def process_morphological_enrichment(notes, language):
