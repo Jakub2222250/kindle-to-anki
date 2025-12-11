@@ -3,6 +3,7 @@ import subprocess
 import sys
 import json
 import time
+import textwrap
 from pathlib import Path
 from anki_note import AnkiNote
 from llm_enrichment import enrich_notes_with_llm
@@ -202,21 +203,41 @@ def manually_prune_existing_notes(notes, existing_notes):
             map_existing_expressions_to_notes[expr] = []
         map_existing_expressions_to_notes[expr].append(existing_note)
 
+    num_of_new_notes_that_are_duplicates = sum(1 for note in notes if note.expression in map_existing_expressions_to_notes)
+
+    if num_of_new_notes_that_are_duplicates == 0:
+        return notes
+
     pruned_notes = []
 
+    print(f"\nFound {num_of_new_notes_that_are_duplicates} new notes with pre-existing expressions in Anki.")
+    manually_prune = input("Would you like to manually prune these notes? (y/n): ").strip().lower()
+    if manually_prune != 'y' and manually_prune != 'yes':
+        include_all = input("Include all new notes with pre-existing expressions? (y/n): ").strip().lower()
+        if include_all != 'y' and include_all != 'yes':
+            return notes
+        else:
+            for note in notes:
+                if note in map_existing_expressions_to_notes[note.expression]:
+                    print(f"Omitting word: {note.expression}")
+                    continue
+                pruned_notes.append(note)
+            return pruned_notes
+
+    # Opted for manual route pruning
     for note in notes:
         if note.expression in map_existing_expressions_to_notes:
             existing_notes = map_existing_expressions_to_notes[note.expression]
             print(f"\nThese notes already exist in Anki for {note.expression}:")
             for existing_note in existing_notes:
                 print(f"\t{note.uid}")
-                print(f"\t\tDefinition      : {existing_note['Definition']}")
-                print(f"\t\tContext Sentence: {existing_note['Context_Sentence']}")
+                print(textwrap.fill(f"\t\tDefinition      : {existing_note['Definition']}", width=100))
+                print(textwrap.fill(f"\t\tContext Sentence: {existing_note['Context_Sentence']}", width=100))
             print("This is the candidate note:")
-            print(f"\t\tDefinition      : {note.definition}")
-            print(f"\t\tContext Sentence: {note.context_sentence}")
-            response = input("Omit adding this word to Anki? (y/n): ").strip().lower()
-            if response == 'y' or response == 'yes':
+            print(textwrap.fill(f"\t\tDefinition      : {note.definition}", width=100))
+            print(textwrap.fill(f"\t\tContext Sentence: {note.context_sentence}", width=100))
+            response = input("Add this word to Anki? (y/n): ").strip().lower()
+            if response != 'y' and response != 'yes':
                 print(f"Omitting word: {note.expression}")
                 continue
             else:
