@@ -345,6 +345,8 @@ def export_kindle_vocab():
 
         # Enrich notes with morphological and LLM analysis
         process_morphological_enrichment(notes, lang)
+        exit()
+
         enrich_notes_with_llm(notes)
 
         # Offer user to omit saving words that are already represented in Anki
