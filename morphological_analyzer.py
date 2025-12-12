@@ -1,4 +1,7 @@
 import morfeusz2
+import spacy
+
+from anki_note import AnkiNote
 
 
 def analyze_with_morfeusz(word):
@@ -50,12 +53,27 @@ def analyze_with_morfeusz(word):
     return None, None
 
 
+def analyze_with_spacy(note: AnkiNote):
+    # Load the Polish model
+    nlp = spacy.load("pl_core_news_sm")
+
+    doc = nlp(note.context_sentence)
+
+    for token in doc:
+        print(token.text, token.lemma_, token.pos_)
+
+    exit()
+
+
 def process_notes_with_morfeusz(notes):
 
     stem_changes = []
     pos_changes = []
 
     for note in notes:
+
+        analyze_with_spacy(note)
+
         # Analyze word with morfeusz2
         morfeusz_lemma, morfeusz_pos = analyze_with_morfeusz(note.kindle_word)
 
