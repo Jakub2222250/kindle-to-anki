@@ -191,10 +191,11 @@ def prune_existing_notes(notes, existing_notes):
 
     num_of_new_notes_that_are_duplicates = sum(1 for note in new_notes if note.expression in existing_expressions)
 
-    response = input(f"Skip {num_of_new_notes_that_are_duplicates} notes with pre-existing notes of same expression without checking definition via LLM? (y/n): ").strip().lower()
-    if response == 'y' or response == 'yes':
-        print("Skipping all notes with pre-existing notes of same expression without checking definition via LLM.")
-        new_notes = [note for note in new_notes if note.expression not in existing_expressions]
+    if num_of_new_notes_that_are_duplicates > 0:
+        response = input(f"Skip {num_of_new_notes_that_are_duplicates} notes with pre-existing notes of same expression without checking definition via LLM? (y/n): ").strip().lower()
+        if response == 'y' or response == 'yes':
+            print("Skipping all notes with pre-existing notes of same expression without checking definition via LLM.")
+            new_notes = [note for note in new_notes if note.expression not in existing_expressions]
 
     return new_notes
 
@@ -333,7 +334,8 @@ def export_kindle_vocab():
     for lang, notes in notes_by_language.items():
 
         print("\nChecking for existing notes in Anki...")
-        existing_notes = anki_connect_instance.get_notes(language=lang)
+        # existing_notes = anki_connect_instance.get_notes(language=lang)
+        existing_notes = []
         print(f"Retrieved {len(existing_notes)} existing notes from Anki for language: {lang}")
 
         # Prune existing notes before expensive LLM enrichment
