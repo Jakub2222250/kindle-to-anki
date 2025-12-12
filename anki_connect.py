@@ -66,6 +66,7 @@ class AnkiConnect:
                     'UID': fields.get('UID', {}).get('value', ''),
                     'Expression': fields.get('Expression', {}).get('value', ''),
                     'Context_Sentence': fields.get('Context_Sentence', {}).get('value', ''),
+                    'Context_Translation': fields.get('Context_Translation', {}).get('value', ''),
                     'Definition': fields.get('Definition', {}).get('value', '')
                 }
                 notes_data.append(note_data)

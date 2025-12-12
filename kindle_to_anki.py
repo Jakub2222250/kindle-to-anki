@@ -236,17 +236,23 @@ def manually_prune_existing_notes(notes, existing_notes):
     for note in notes:
         if note.expression in map_existing_expressions_to_notes:
             existing_notes = map_existing_expressions_to_notes[note.expression]
-            print(f"\nThese notes already exist in Anki for {note.expression}:")
+            print(f"\n{note.expression}:")
             for existing_note in existing_notes:
-                print(f"\t{note.uid}")
-                print(textwrap.fill(f"\t\tDefinition      : {existing_note['Definition']}", width=100))
-                print(textwrap.fill(f"\t\tContext Sentence: {existing_note['Context_Sentence']}", width=100))
-            print("This is the candidate note:")
-            print(textwrap.fill(f"\t\tDefinition      : {note.definition}", width=100))
-            print(textwrap.fill(f"\t\tContext Sentence: {note.context_sentence}", width=100))
-            response = input("Add this word to Anki? (y/n): ").strip().lower()
+                print(f"\n\t{existing_note['UID']}")
+                print(textwrap.fill(f"Definition      : {existing_note['Definition']}", width=100, initial_indent="\t\t", subsequent_indent="\t\t"))
+                print()
+                print(textwrap.fill(f"Context Sentence: {existing_note['Context_Sentence']}", width=100, initial_indent="\t\t", subsequent_indent="\t\t"))
+                print()
+                print(textwrap.fill(f"Context Translation: {existing_note['Context_Translation']}", width=100, initial_indent="\t\t", subsequent_indent="\t\t"))
+            print("\n\t Candidate note:")
+            print(textwrap.fill(f"Definition      : {note.definition}", width=100, initial_indent="\t\t", subsequent_indent="\t\t"))
+            print()
+            print(textwrap.fill(f"Context Sentence: {note.context_sentence}", width=100, initial_indent="\t\t", subsequent_indent="\t\t"))
+            print()
+            print(textwrap.fill(f"Context Translation: {note.context_translation}", width=100, initial_indent="\t\t", subsequent_indent="\t\t"))
+            response = input("\nAdd this note to Anki? (y/n): ").strip().lower()
             if response != 'y' and response != 'yes':
-                print(f"Omitting word: {note.expression}")
+                print(f"Omitting candidate note for: {note.expression}")
                 continue
             else:
                 pruned_notes.append(note)
