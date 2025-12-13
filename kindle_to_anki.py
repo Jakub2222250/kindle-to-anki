@@ -5,6 +5,7 @@ import json
 import time
 import textwrap
 from pathlib import Path
+
 from anki_note import AnkiNote
 from llm_enrichment import enrich_notes_with_llm
 from morphological_analyzer import process_morphological_enrichment
@@ -88,13 +89,8 @@ def handle_incremental_import_choice(db_path, last_timestamp):
     print(f"New kindle vocab builder entries since last import: {new_count}")
     print(f"Total kindle vocab builder entries available: {total_count}")
 
-    response = input(f"Import only {new_count} new kindle vocab builder entries since last import? (y/n): ").strip().lower()
-    if response == 'y' or response == 'yes':
-        print("Importing only new kindle vocab builder entries...")
-        return read_vocab_from_db(db_path, last_timestamp)
-    else:
-        print(f"Importing all {total_count} kindle vocab builder entries...")
-        return read_vocab_from_db(db_path)
+    print("Importing only new kindle vocab builder entries...")
+    return read_vocab_from_db(db_path, last_timestamp)
 
 
 def offer_to_save_timestamp(vocab_data, metadata):
@@ -173,14 +169,13 @@ def create_anki_notes(kindle_vocab_data):
     return notes_by_language
 
 
-def prune_existing_notes(notes, existing_notes):
+def prune_existing_notes_by_UID(notes, existing_notes):
     """Remove notes that already exist in Anki based on UID"""
 
     if len(notes) == 0:
         return notes
 
     existing_uids = {note['UID'] for note in existing_notes if note['UID']}
-    existing_expressions = {note['Expression'] for note in existing_notes if note['Expression']}
 
     # Filter out notes that already exist
     new_notes = [note for note in notes if note.uid not in existing_uids]
@@ -189,14 +184,33 @@ def prune_existing_notes(notes, existing_notes):
     if pruned_count > 0:
         print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
 
-    num_of_new_notes_that_are_duplicates = sum(1 for note in new_notes if note.expression in existing_expressions)
-
-    response = input(f"Skip {num_of_new_notes_that_are_duplicates} notes with pre-existing notes of same expression without checking definition via LLM? (y/n): ").strip().lower()
-    if response == 'y' or response == 'yes':
-        print("Skipping all notes with pre-existing notes of same expression without checking definition via LLM.")
-        new_notes = [note for note in new_notes if note.expression not in existing_expressions]
-
     return new_notes
+
+
+def prune_existing_notes_by_expression(notes, existing_notes):
+    """ Option to opt out of expensive LLM activity for notes that already exist in Anki based on Expression field"""
+
+    if len(notes) == 0:
+        return notes
+
+    print("\nChecking for notes with existing expressions in Anki...")
+
+    existing_expressions = {note['Expression'] for note in existing_notes if note['Expression']}
+    new_notes_that_are_duplicates = [note for note in notes if note.expression in existing_expressions]
+    num_of_new_notes_that_are_duplicates = len(new_notes_that_are_duplicates)
+
+    if num_of_new_notes_that_are_duplicates > 0:
+        for note in new_notes_that_are_duplicates:
+            print(f"  Found existing expression in Anki: {note.expression}")
+
+        response = input(f"Process {num_of_new_notes_that_are_duplicates} notes with existing expressions? (y/n): ").strip().lower()
+        if response != 'y' and response != 'yes':
+            print(f"Skipping {num_of_new_notes_that_are_duplicates} notes with existing expressions.")
+            notes = [note for note in notes if note.expression not in existing_expressions]
+    else:
+        print("No notes with existing expressions found in Anki.")
+
+    return notes
 
 
 def manually_prune_existing_notes(notes, existing_notes):
@@ -280,28 +294,37 @@ def write_anki_import_file(notes, language):
     print(f"Created Anki import file with {len(notes)} records at {anki_path}")
 
 
-def export_kindle_vocab():
-
-    print("Starting Kindle to Anki export process.")
-
+def connect_to_anki():
     print("\nChecking AnkiConnect reachability...")
     anki_connect_instance = AnkiConnect()
     if not anki_connect_instance.is_reachable():
         print("AnkiConnect not reachable. Exiting.")
         exit(0)
     print("AnkiConnect is reachable.")
+    return anki_connect_instance
 
+
+def get_vocab_db():
     # Attempt to copy vocab.db via batch script call
-    response = input(f"\nCopy vocab.db from connected Kindle device? (y/n): ").strip().lower()
-    if response == 'y' or response == 'yes':
-        print("Copying vocab.db from Kindle device...")
-        result = subprocess.run(["copy_vocab.bat"], check=True)
 
-        if result.returncode != 0:
-            print(f"Error: Failed to copy vocab.db from Kindle device with error {result.returncode}.")
-            exit(1)
-        else:
-            print(f'vocab.db copied from Kindle device successfully.')
+    print("Attempting to copy vocab.db from Kindle device...")
+
+    try:
+        retcode = subprocess.run(["copy_vocab.bat"], check=True).returncode
+    except subprocess.CalledProcessError as e:
+        retcode = 1
+
+    if retcode != 0:
+        print(f"Error: Failed to copy vocab.db from Kindle device. Continuing.")
+    else:
+        # Overwrite vocab.db in inputs/ with vocab_powershell_copy.db
+        script_dir = Path(__file__).parent
+        out_dir = script_dir / "inputs"
+        src_db = out_dir / "vocab_powershell_copy.db"
+        dest_db = out_dir / "vocab.db"
+        src_db.replace(dest_db)
+
+        print(f'vocab.db copied from Kindle device successfully.')
 
     # Get script directory and construct path to inputs/vocab.db
     script_dir = Path(__file__).parent
@@ -312,8 +335,10 @@ def export_kindle_vocab():
         print("Please place your Kindle vocab.db file in the 'inputs' folder relative to this script.")
         sys.exit(1)
 
-    # Load existing metadata
-    metadata = load_metadata()
+    return db_path
+
+
+def get_latest_kindle_vocab_data(db_path, metadata):
     last_timestamp = metadata.get('last_timestamp_import')
 
     # Handle import choice (incremental vs full)
@@ -326,30 +351,62 @@ def export_kindle_vocab():
 
     if not kindle_vocab_data:
         print("No new notes to import.")
-        return
+        exit()
 
+    return kindle_vocab_data
+
+
+def get_existing_notes_by_language(anki_connect_instance, lang):
+    print("\nChecking for existing notes in Anki...")
+    existing_notes = anki_connect_instance.get_notes(language=lang)
+    print(f"Retrieved {len(existing_notes)} existing notes from Anki for language: {lang}")
+    return existing_notes
+
+
+def export_kindle_vocab():
+
+    print("Starting Kindle to Anki export process.")
+
+    # Get path to vocab.db
+    db_path = get_vocab_db()
+
+    # Load existing metadata
+    metadata = load_metadata()
+
+    # Get latest kindle vocab data
+    kindle_vocab_data = get_latest_kindle_vocab_data(db_path, metadata)
+
+    # Create Anki notes from kindle vocab data
     notes_by_language = create_anki_notes(kindle_vocab_data)
+
+    # Connect to AnkiConnect
+    anki_connect_instance = connect_to_anki()
 
     for lang, notes in notes_by_language.items():
 
-        print("\nChecking for existing notes in Anki...")
-        existing_notes = anki_connect_instance.get_notes(language=lang)
-        print(f"Retrieved {len(existing_notes)} existing notes from Anki for language: {lang}")
+        # Get existing notes from Anki for this language
+        existing_notes = get_existing_notes_by_language(anki_connect_instance, lang)
 
-        # Prune existing notes before expensive LLM enrichment
-        notes = prune_existing_notes(notes, existing_notes)
+        # Prune existing notes by UID
+        notes = prune_existing_notes_by_UID(notes, existing_notes)
+
+        # Enrich notes with morphological analysis
+        process_morphological_enrichment(notes, lang)
+
+        # Optionally prune existing notes by Expression before LLM enrichment to save cost
+        notes = prune_existing_notes_by_expression(notes, existing_notes)
 
         if not notes:
             print(f"No new notes to process for language: {lang}")
             continue
 
-        # Enrich notes with morphological and LLM analysis
-        process_morphological_enrichment(notes, lang)
+        # Enrich notes with LLM
         enrich_notes_with_llm(notes)
 
-        # Offer user to omit saving words that are already represented in Anki
+        # Optionally manually prune words that are already represented in Anki
         notes = manually_prune_existing_notes(notes, existing_notes)
 
+        # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, lang)
         anki_connect_instance.create_notes_batch(notes, lang=lang)
 
