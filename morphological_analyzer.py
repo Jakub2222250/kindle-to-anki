@@ -1,53 +1,95 @@
 import morfeusz2
 
 
+def morfeusz_tag_to_pos_string(morf_tag: str) -> str:
+    """
+    Convert a full Morfeusz tag string into a learner-facing POS label,
+    optionally augmented with verbal aspect.
+
+    Examples:
+      "praet:sg:m1:imperf" -> "verb (impf)"
+      "inf:perf"           -> "verb (perf)"
+      "subst:sg:nom:m1"    -> "noun"
+    """
+
+    if not morf_tag:
+        return "other"
+
+    parts = morf_tag.split(":")
+    base = parts[0]
+    features = set(parts[1:])
+
+    # --- POS mapping (coarse) ---
+    if base in {"subst", "depr", "ger", "brev"}:
+        pos = "noun"
+
+    elif base in {
+        "fin", "inf", "impt", "praet", "bedzie",
+        "pcon", "pant"
+    }:
+        pos = "verb"
+
+    elif base in {"adj", "adja", "adjp", "pact", "ppas"}:
+        pos = "adj"
+
+    elif base == "adv":
+        pos = "adv"
+
+    elif base in {"ppron12", "ppron3", "siebie", "pron"}:
+        pos = "pron"
+
+    elif base in {"num", "numcol", "numord", "numfrac"}:
+        pos = "num"
+
+    elif base == "prep":
+        pos = "prep"
+
+    elif base == "conj":
+        pos = "conj"
+
+    elif base in {"qub", "part", "pred"}:
+        pos = "part"
+
+    elif base == "interj":
+        pos = "interj"
+
+    else:
+        pos = "other"
+
+    # --- Aspect extraction (verbs only) ---
+    if pos == "verb":
+        if "imperf" in features:
+            return "verb (impf)"
+        if "perf" in features:
+            return "verb (perf)"
+        # biaspectual or unresolved
+        return "verb"
+
+    return pos
+
+
+def select_best_candidate(candidates):
+    return candidates[0]
+
+
 def analyze_with_morfeusz(word):
     """Analyze word with morfeusz2 to get lemma and part of speech"""
-    if not morfeusz2 or not word:
-        return None, None
 
-    try:
-        morf = morfeusz2.Morfeusz()
-        analysis = morf.analyse(word.lower())
+    morf = morfeusz2.Morfeusz()
+    candidates = morf.analyse(word.lower())
 
-        if analysis:
-            # morfeusz2 returns list of tuples: (start_pos, end_pos, interpretation)
-            # where interpretation is a tuple: (lemma, tag, name_list)
-            for start_pos, end_pos, interpretation in analysis:
-                if interpretation and len(interpretation) >= 2:
-                    lemma_raw = interpretation[1]
-                    tag = interpretation[2]
+    # Select the first candidate (to be improved later with llm and się analysis)
+    _, _, interpretation = select_best_candidate(candidates)
 
-                    lemma = lemma_raw.split(':')[0] if ':' in lemma_raw else lemma_raw
-                    pos = tag.split(':')[0] if ':' in tag else tag
+    # Extract lemma and tag
+    lemma_raw = interpretation[1]
+    lemma = lemma_raw.split(':')[0] if ':' in lemma_raw else lemma_raw
+    tag = interpretation[2]
 
-                    # Map morfeusz2 tags to more readable forms
-                    pos_mapping = {
-                        'subst': 'noun',
-                        'adj': 'adjective', 
-                        'adv': 'adverb',
-                        'verb': 'verb',
-                        'num': 'numeral',
-                        'prep': 'preposition',
-                        'conj': 'conjunction',
-                        'qub': 'particle',
-                        'fin': 'finite verb',
-                        'ger': 'gerund',
-                        'praet': 'preterite/past tense',
-                        'ppas': 'past passive participle',
-                        'xxx': 'unknown',
-                        'ign': 'ignored'
-                    }
+    # Map SGJP tag to readable POS
+    readable_pos = morfeusz_tag_to_pos_string(tag)
 
-                    readable_pos = pos_mapping.get(pos, pos)
-                    return lemma, readable_pos
-
-    except Exception as e:
-        # If morfeusz2 analysis fails, return None values
-        print(f"Morfeusz2 analysis error: {e}")
-        pass
-
-    return None, None
+    return lemma, readable_pos
 
 
 def process_notes_with_morfeusz(notes):
@@ -95,3 +137,11 @@ def process_morphological_enrichment(notes, language):
         exit()
 
     print("Morphological enrichment completed.")
+
+
+if __name__ == "__main__":
+    # Test morfeusz2 analysis
+    test_words = ["pobiec", "piękny", "szybko", "dom", "iść", "czytać", "ładniejszy"]
+    for word in test_words:
+        lemma, pos = analyze_with_morfeusz(word)
+        print(f"Word: {word}, Lemma: {lemma}, POS: {pos}")
