@@ -80,12 +80,20 @@ def disambiguate_lemma_pos(
         "instruction": (
             "For each item, select exactly ONE lemma from the morfeusz_options by providing its index.\n"
             "Also determine whether 'się' should be absorbed with the token.\n\n"
-            "If 'się' appears adjacent to the token in the sentence, determine if it should be "
-            "absorbed based on semantic necessity (e.g. for reflexive verbs where 'się' is integral "
-            "to the meaning).\n"
-            "- Absorb 'się' when it is semantically binding and essential to the verb's meaning\n"
-            "- Do NOT absorb 'się' if removing it preserves the same core meaning "
-            "(voice/diathesis alternation only)\n\n"
+            "CRITICAL: Only absorb 'się' if ALL of these conditions are met:\n"
+            "1. The token is a VERB (check the sgjp_tag - must be a verb form)\n"
+            "2. 'się' appears adjacent to the token in the sentence\n"
+            "3. 'się' is syntactically bound to THIS SPECIFIC verb token (not to another verb in the sentence)\n"
+            "4. 'się' is semantically essential to the verb's meaning (reflexive/reciprocal verbs)\n\n"
+            "Do NOT absorb 'się' if:\n"
+            "- The token is a noun, adjective, adverb, or any non-verb part of speech\n"
+            "- 'się' belongs to a different verb in the sentence\n"
+            "- 'się' is just a voice alternation (removing it preserves the core meaning)\n"
+            "- 'się' appears near the token but is not syntactically related to it\n\n"
+            "Examples:\n"
+            "- 'uczy się' → absorb_się: true (reflexive verb)\n"
+            "- 'pozbyłem się zjawy' → for token 'zjawy': absorb_się: false (noun, się belongs to 'pozbyłem')\n"
+            "- 'zatrzymał się' → absorb_się: true (reflexive verb)\n\n"
             "Prefer the analysis that best fits syntactic role, argument structure, "
             "and idiomatic or lexicalized usage.\n\n"
             "Return results as a JSON object where keys are the UIDs and values are the analysis objects:\n"
@@ -171,14 +179,19 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
 
                     absorb_się = disamb_result['absorb_się']
 
+                    # Get part of speech first for validation
+                    tag = interpretation[2]
+                    readable_pos = morfeusz_tag_to_pos_string(tag)
+
+                    # Validate absorb_się - only verbs can absorb się
+                    if absorb_się and 'verb' not in readable_pos.lower():
+                        print(f"    WARNING: Overriding absorb_się=True for non-verb '{note.kindle_word}' ({readable_pos})")
+                        absorb_się = False
+
                     # Get lemma
                     lemma = interpretation[1].split(":")[0] if ":" in interpretation[1] else interpretation[1]
                     if absorb_się:
                         lemma = lemma + ' się'
-
-                    # Get part of speech
-                    tag = interpretation[2]
-                    readable_pos = morfeusz_tag_to_pos_string(tag)
 
                     # Create MA result for caching
                     ma_result = {
