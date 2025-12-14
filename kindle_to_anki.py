@@ -299,6 +299,10 @@ def export_kindle_vocab():
         # Optionally prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=lang)
 
+        if len(notes) == 0:
+            print(f"No new notes to add to Anki after pruning for language: {lang}")
+            continue
+
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, lang)
         anki_connect_instance.create_notes_batch(notes, lang=lang)

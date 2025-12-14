@@ -131,7 +131,9 @@ def evaluate_gloss_similarity(gloss1, gloss2) -> int:
     return fuzz.token_set_ratio(gloss1, gloss2)
 
 
-def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: list[dict], auto_prune=False, cache_suffix='pl'):
+def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: list[dict], cache_suffix='pl'):
+
+    print("\nAutomatically pruning notes redundant to existing Anki notes based on Expression, Part_Of_Speech, and Definition similarity...")
 
     # Initialize cache
     cache = PruningCache(cache_suffix=cache_suffix)
@@ -147,12 +149,10 @@ def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: li
         for existing_note in existing_notes:
             if note.expression == existing_note['Expression'] and note.part_of_speech == existing_note['Part_Of_Speech']:
                 similarity_factor = evaluate_gloss_similarity(note.definition, existing_note['Definition'])
-                print(f"Evaluating note for {note.expression}: similarity factor = {similarity_factor}%")
                 if similarity_factor > 45:
                     is_redundant = True
                     matched_expression = existing_note['Expression']
-                    if not auto_prune:
-                        print(f"Note for {note.expression} detected as redundant due to high similarity_factor ({similarity_factor}%) with existing note.")
+                    print(f"Note for {note.expression} detected as redundant due to high similarity_factor ({similarity_factor}%) with existing note.")
                     break
 
         # Cache the result
@@ -161,22 +161,9 @@ def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: li
         if not is_redundant:
             pruned_notes.append(note)
 
-    if len(pruned_notes) < len(notes):
-        pruned_count = len(notes) - len(pruned_notes)
+    pruned_count = len(notes) - len(pruned_notes)
 
-        if auto_prune:
-            # Default behavior: omit redundant notes without prompting
-            print("Redundant notes omitted automatically.")
-            return pruned_notes
-
-        print(f"{pruned_count} notes redundant to existing Anki notes (based on Expression, Part_Of_Speech, and Definition similarity)")
-
-        result = input("Create notes for redundant entries anyway? (y/N): ").strip().lower()
-        if result != 'y' and result != 'yes':
-            print("Redundant notes omitted.")
-        else:
-            print("Redundant notes retained.")
-            return notes
+    print(f"Skipping {pruned_count} redundant notes based on Expression, Part_Of_Speech, and Definition similarity.")
 
     return pruned_notes
 
