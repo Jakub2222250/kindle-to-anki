@@ -1,10 +1,54 @@
 import json
+import time
 from typing import List, Dict, Any
+from pathlib import Path
 from openai import OpenAI
 
 
 from anki.anki_note import AnkiNote
 from ma.polish_ma_sgjp_helper import morfeusz_tag_to_pos_string
+
+
+class MACache:
+    def __init__(self, cache_dir="cache", lang='default'):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.cache_file = self.cache_dir / f"ma_cache-{lang}.json"
+
+        # Load existing cache
+        self.cache = self.load_cache()
+
+    def load_cache(self):
+        """Load cache from file"""
+        if self.cache_file.exists():
+            try:
+                with open(self.cache_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, FileNotFoundError):
+                pass
+        return {}
+
+    def save_cache(self):
+        """Save cache to file"""
+        with open(self.cache_file, "w", encoding="utf-8") as f:
+            json.dump(self.cache, f, ensure_ascii=False, indent=2)
+
+    def get(self, uid):
+        """Get cached MA result for UID"""
+        cache_entry = self.cache.get(uid)
+        if cache_entry and isinstance(cache_entry, dict) and "ma_data" in cache_entry:
+            return cache_entry["ma_data"]
+        return None
+
+    def set(self, uid, ma_result, model_used=None, timestamp=None):
+        """Set cached MA result for UID"""
+        cache_entry = {
+            "ma_data": ma_result,
+            "model_used": model_used,
+            "timestamp": timestamp
+        }
+        self.cache[uid] = cache_entry
+        self.save_cache()
 
 
 MA_WSD_LLM = "gpt-5-mini"
@@ -13,16 +57,17 @@ MA_WSD_LLM = "gpt-5-mini"
 def disambiguate_lemma_pos(
     model: str,
     items: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Dict[str, Any]]:
     """
     Resolves lemma for a batch of Polish tokens using context and
     Morfeusz options, determining whether 'się' should be absorbed.
 
     Returns:
-        [
-          {"candidate_index": 0, "absorb_się": true},
+        {
+          "uid1": {"candidate_index": 0, "absorb_się": true},
+          "uid2": {"candidate_index": 1, "absorb_się": false},
           ...
-        ]
+        }
     """
 
     system_prompt = (
@@ -43,8 +88,8 @@ def disambiguate_lemma_pos(
             "(voice/diathesis alternation only)\n\n"
             "Prefer the analysis that best fits syntactic role, argument structure, "
             "and idiomatic or lexicalized usage.\n\n"
-            "Return results as a JSON list in the form:\n"
-            "[{\"candidate_index\": 0, \"absorb_się\": true}]\n"
+            "Return results as a JSON object where keys are the UIDs and values are the analysis objects:\n"
+            "{\"uid1\": {\"candidate_index\": 0, \"absorb_się\": true}, \"uid2\": {\"candidate_index\": 1, \"absorb_się\": false}}\n"
             "where candidate_index is the 0-based index of the selected option from morfeusz_options "
             "and absorb_się is a boolean indicating whether 'się' should be absorbed."
         ),
@@ -77,6 +122,7 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
 
     for note in notes:
         item = dict()
+        item["uid"] = note.uid
         item["token"] = note.kindle_word
         # Clean whitespace: remove leading/trailing spaces and normalize internal whitespace
         cleaned_sentence = " ".join(note.kindle_usage.split())
@@ -97,49 +143,110 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
     return disambiguate_lemma_pos_response
 
 
-def process_notes_in_batches(notes: list[AnkiNote], cache):
+def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
+
+    # Capture timestamp at the start of MA processing
+    processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     # Process in batches
     batch_size = 20
+    total_batches = (len(notes) + batch_size - 1) // batch_size
+    failing_notes = []
 
-    for batch_start in range(0, len(notes), batch_size):
-        batch_notes = notes[batch_start:batch_start + batch_size]
+    for i in range(0, len(notes), batch_size):
+        batch = notes[i:i + batch_size]
+        batch_num = (i // batch_size) + 1
 
-        disambiguation_results = perform_wsd_on_lemma_and_pos(batch_notes)
+        print(f"\nProcessing batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
-        for i, note in enumerate(batch_notes):
-            disamb_result = disambiguation_results[i]
+        try:
+            disambiguation_results = perform_wsd_on_lemma_and_pos(batch)
 
-            selected_index = disamb_result['candidate_index']
-            _, _, interpretation = note.morfeusz_candidates[selected_index]
+            for note in batch:
+                if note.uid in disambiguation_results:
+                    disamb_result = disambiguation_results[note.uid]
 
-            absorb_się = disamb_result['absorb_się']
+                    selected_index = disamb_result['candidate_index']
+                    _, _, interpretation = note.morfeusz_candidates[selected_index]
 
-            # Get lemma
-            lemma = interpretation[1].split(":")[0] if ":" in interpretation[1] else interpretation[1]
-            if absorb_się:
-                lemma = lemma + ' się'
+                    absorb_się = disamb_result['absorb_się']
 
-            # Get part of speech
-            tag = interpretation[2]
-            readable_pos = morfeusz_tag_to_pos_string(tag)
+                    # Get lemma
+                    lemma = interpretation[1].split(":")[0] if ":" in interpretation[1] else interpretation[1]
+                    if absorb_się:
+                        lemma = lemma + ' się'
 
-            # Update note with normal MA fields
-            note.morfeusz_tag = tag
-            note.morfeusz_lemma = lemma
-            note.part_of_speech = readable_pos
+                    # Get part of speech
+                    tag = interpretation[2]
+                    readable_pos = morfeusz_tag_to_pos_string(tag)
+
+                    # Create MA result for caching
+                    ma_result = {
+                        "candidate_index": selected_index,
+                        "absorb_się": absorb_się,
+                        "morfeusz_lemma": lemma,
+                        "morfeusz_tag": tag,
+                        "part_of_speech": readable_pos
+                    }
+
+                    # Save to cache
+                    cache.set(note.uid, ma_result, MA_WSD_LLM, processing_timestamp)
+
+                    # Update note with normal MA fields
+                    note.morfeusz_tag = tag
+                    note.morfeusz_lemma = lemma
+                    note.part_of_speech = readable_pos
+
+                    print(f"  SUCCESS - processed MA for {note.kindle_word}")
+                else:
+                    print(f"  FAILED - no result for {note.kindle_word}")
+                    failing_notes.append(note)
+
+        except Exception as e:
+            print(f"  BATCH FAILED - {str(e)}")
+            failing_notes.extend(batch)
+
+    if len(failing_notes) > 0:
+        print(f"{len(failing_notes)} notes failed MA processing.")
+        print("All successful MA results already saved to cache. Running script again usually fixes the issue. Exiting.")
+        exit()
 
 
-def update_notes_with_llm(notes):
+def update_notes_with_llm(notes, lang='pl'):
+    """Process MA enrichment for all notes"""
 
-    print(f"{len(notes)} notes need LLM MA processing.")
+    print("\nStarting LLM MA processing...")
 
-    # TODO resolve notes from cache if available. Then only process those that are missing if any.
-    notes_needing_llm = notes
+    cache = MACache(lang=lang)
+    print(f"\nLoaded MA cache with {len(cache.cache)} entries")
 
-    result = input(f"Do you want to proceed with LLM MA processing for {len(notes)} notes? [y/n]: ").strip().lower()
+    # Phase 1: Collect notes that need LLM MA processing
+    notes_needing_llm = []
+    cached_count = 0
+
+    for note in notes:
+        cached_result = cache.get(note.uid)
+        if cached_result:
+            cached_count += 1
+            # Apply cached MA result
+            note.morfeusz_tag = cached_result['morfeusz_tag']
+            note.morfeusz_lemma = cached_result['morfeusz_lemma']
+            note.part_of_speech = cached_result['part_of_speech']
+        else:
+            notes_needing_llm.append(note)
+
+    print(f"Found {cached_count} cached results, {len(notes_needing_llm)} notes need LLM calls")
+
+    if not notes_needing_llm:
+        print("LLM MA processing completed.")
+        return
+
+    result = input(f"\nDo you want to proceed with LLM MA processing for {len(notes_needing_llm)} notes? [y/n]: ").strip().lower()
     if result != 'y' and result != 'yes':
         print("LLM MA processing aborted by user.")
         exit()
 
-    process_notes_in_batches(notes_needing_llm, cache=None)
+    # Phase 2: Process notes in batches
+    process_notes_in_batches(notes_needing_llm, cache)
+
+    print("LLM MA processing completed.")
