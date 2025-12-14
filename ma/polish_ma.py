@@ -136,7 +136,7 @@ def absorb_nearest_sie(kindle_word, usage_text):
 def process_notes_with_morfeusz(notes: list[AnkiNote]):
 
     morf = morfeusz2.Morfeusz()
-    notes_benefiting_llm_wsd = []
+    notes_requiring_llm_wsd = []
 
     for note in notes:
         # Get candidates
@@ -149,21 +149,10 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
         if not benefits_from_llm_wsd:
             update_note_without_llm(note)
         else:
-            notes_benefiting_llm_wsd.append(note)
+            notes_requiring_llm_wsd.append(note)
 
-    for note in notes_benefiting_llm_wsd:
-        # See if cache contains LLM results already and remove from list
-        pass
-
-    if len(notes_benefiting_llm_wsd) > 0:
-        print(f"{len(notes_benefiting_llm_wsd)} notes need LLM MA processing.")
-        result = input(f"Do you want to proceed with LLM MA processing for {len(notes_benefiting_llm_wsd)} notes? [y/n]: ").strip().lower()
-        if result != 'y' and result != 'yes':
-            for note in notes_benefiting_llm_wsd:
-                update_note_without_llm(note)
-        else:
-            # Call LLM disambiguation function
-            update_notes_with_llm(notes_benefiting_llm_wsd)
+    if len(notes_requiring_llm_wsd) > 0:
+        update_notes_with_llm(notes_requiring_llm_wsd)
 
     # Post process notes by checking if się was absorbed
     for note in notes:

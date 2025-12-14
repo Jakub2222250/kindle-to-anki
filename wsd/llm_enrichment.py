@@ -19,10 +19,10 @@ LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
 
 
 class LLMCache:
-    def __init__(self, cache_dir="cache"):
+    def __init__(self, cache_dir="cache", lang='default'):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
-        self.cache_file = self.cache_dir / "llm_cache.json"
+        self.cache_file = self.cache_dir / f"llm_cache-{lang}.json"
 
         # Load existing cache
         self.cache = self.load_cache()
@@ -117,7 +117,11 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
     return json.loads(response.choices[0].message.content), BATCH_LLM, processing_timestamp
 
 
-def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache, processing_timestamp: str):
+def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache):
+
+    # Capture timestamp at the start of LLM processing
+    processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
     total_batches = (len(notes_needing_llm) + BATCH_SIZE - 1) // BATCH_SIZE
     failing_notes = []
     for i in range(0, len(notes_needing_llm), BATCH_SIZE):
@@ -149,15 +153,12 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache,
         exit()
 
 
-def enrich_notes_with_llm(notes: list[AnkiNote]):
+def enrich_notes_with_llm(notes: list[AnkiNote], lang):
     """Process LLM enrichment for all notes"""
 
     print("\nStarting LLM enrichment process...")
 
-    # Capture timestamp at the start of LLM processing
-    processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-
-    cache = LLMCache()
+    cache = LLMCache(lang=lang)
     print(f"\nLoaded LLM cache with {len(cache.cache)} entries")
 
     # Phase 1: Collect notes that need LLM enrichment
@@ -186,6 +187,6 @@ def enrich_notes_with_llm(notes: list[AnkiNote]):
         exit()
 
     # Phase 2: Process notes in batches
-    process_notes_in_batches(notes_needing_llm, cache, processing_timestamp)
+    process_notes_in_batches(notes_needing_llm, cache)
 
     print("LLM enrichment process completed.")

@@ -97,7 +97,7 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
     return disambiguate_lemma_pos_response
 
 
-def update_notes_with_llm(notes):
+def process_notes_in_batches(notes: list[AnkiNote], cache):
 
     # Process in batches
     batch_size = 20
@@ -128,3 +128,18 @@ def update_notes_with_llm(notes):
             note.morfeusz_tag = tag
             note.morfeusz_lemma = lemma
             note.part_of_speech = readable_pos
+
+
+def update_notes_with_llm(notes):
+
+    print(f"{len(notes)} notes need LLM MA processing.")
+
+    # TODO resolve notes from cache if available. Then only process those that are missing if any.
+    notes_needing_llm = notes
+
+    result = input(f"Do you want to proceed with LLM MA processing for {len(notes)} notes? [y/n]: ").strip().lower()
+    if result != 'y' and result != 'yes':
+        print("LLM MA processing aborted by user.")
+        exit()
+
+    process_notes_in_batches(notes_needing_llm, cache=None)

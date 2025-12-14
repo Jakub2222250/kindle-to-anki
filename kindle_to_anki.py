@@ -294,7 +294,7 @@ def export_kindle_vocab():
             continue
 
         # Enrich notes with LLM
-        enrich_notes_with_llm(notes)
+        enrich_notes_with_llm(notes, lang)
 
         # Optionally prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes)
