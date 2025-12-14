@@ -63,3 +63,43 @@ def morfeusz_tag_to_pos_string(morf_tag: str) -> str:
         return "verb"
 
     return pos
+
+
+def normalize_adj_to_masc_sg(surface: str) -> str:
+    hard_i = ("k", "g", "c", "dz", "s", "z", "n", "l")
+
+    def choose_suffix(stem: str) -> str:
+        return "i" if stem.endswith(hard_i) else "y"
+
+    for suffix in (
+        "ego", "emu", "ymi", "ich", "ej", "e", "a"
+    ):
+        if surface.endswith(suffix):
+            stem = surface[: -len(suffix)]
+            return stem + choose_suffix(stem)
+
+    return surface  # fallback
+
+
+def normalize_lemma(
+    surface: str,
+    morfeusz_lemma: str,
+    pos: str,
+    sgjp_tag: str | None = None
+) -> str:
+
+    if pos == "verb":
+        return morfeusz_lemma
+
+    if pos == "adv":
+        return surface
+
+    if pos == "adj":
+        if sgjp_tag and "sg" in sgjp_tag and "nom" in sgjp_tag and "m" in sgjp_tag:
+            return surface
+        return normalize_adj_to_masc_sg(surface)
+
+    if pos in {"noun", "subst"}:
+        return morfeusz_lemma
+
+    return surface

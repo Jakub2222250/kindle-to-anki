@@ -1,7 +1,7 @@
 import morfeusz2
 
 from ma.polish_ma_llm import update_notes_with_llm
-from ma.polish_ma_sgjp_helper import morfeusz_tag_to_pos_string
+from ma.polish_ma_sgjp_helper import morfeusz_tag_to_pos_string, normalize_lemma
 from anki.anki_note import AnkiNote
 
 
@@ -28,7 +28,8 @@ def update_note_without_llm(note: AnkiNote):
     # Map SGJP tag to readable POS
     readable_pos = morfeusz_tag_to_pos_string(tag)
 
-    note.expression = lemma
+    note.morfeusz_tag = tag
+    note.morefeusz_lemma = lemma
     note.part_of_speech = readable_pos
 
 
@@ -77,11 +78,6 @@ def check_if_benefits_from_llm_wsd(note: AnkiNote):
 
     # Identify if the word has only one candidate
     has_single_candidate = len(note.morfeusz_candidates) == 1
-
-    if has_sie_before_or_after:
-        print(f"'się' detected adjacent to '{note.kindle_word}' in usage.")
-    if not has_single_candidate:
-        print(f"Multiple candidates detected for '{note.kindle_word}'.")
 
     return has_sie_before_or_after or not has_single_candidate
 
@@ -173,6 +169,9 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
     for note in notes:
         if "się" in note.expression:
             note.original_form = absorb_nearest_sie(note.kindle_word, note.kindle_usage)
+
+        # Normalize morfeusz lemma to best lemma for Anki learning now that final POS is known
+        note.expression = normalize_lemma(note.original_form, note.morefeusz_lemma, note.part_of_speech, note.morfeusz_tag)
 
     # Log if expression, lemma or part_of_speech was changed
     for note in notes:

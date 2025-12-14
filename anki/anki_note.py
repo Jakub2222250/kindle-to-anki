@@ -101,10 +101,10 @@ class AnkiNote:
         return result if result else "unknown"
 
     def generate_uid(self):
-        """Generate unique ID based on stem, book_abbrev, and location"""
+        """Generate unique ID based on word, book_abbrev, and location"""
         # Normalize stem part similar to book_abbrev
-        stem_normalized = unicodedata.normalize('NFD', self.expression or "unknown")
-        stem_part = ''.join(char for char in stem_normalized if unicodedata.category(char) != 'Mn')[:10]
+        word_normalized = unicodedata.normalize('NFD', self.kindle_word or "unknown")
+        stem_part = ''.join(char for char in word_normalized if unicodedata.category(char) != 'Mn')[:10]
         stem_part = stem_part.lower().replace(' ', '_')
         location_part = str(self.location).replace('kindle_', '') if self.location else "0"
         return f"{stem_part}_{self.book_abbrev}_{location_part}"
@@ -127,14 +127,14 @@ class AnkiNote:
 
     def get_context_sentence_cloze(self):
         """Get context sentence with word replaced by [...]"""
-        if self.context_sentence and self.kindle_word:
-            return self.context_sentence.replace(self.kindle_word, "<b>[...]</b>", 1)
+        if self.context_sentence and self.original_form:
+            return self.context_sentence.replace(self.original_form, "<b>[...]</b>", 1)
         return ""
 
     def get_context_sentence_bold_word(self):
         """Get context sentence with word in bold"""
-        if self.context_sentence and self.kindle_word:
-            return self.context_sentence.replace(self.kindle_word, f"<b>{self.kindle_word}</b>", 1)
+        if self.context_sentence and self.original_form:
+            return self.context_sentence.replace(self.original_form, f"<b>{self.original_form}</b>", 1)
         return self.context_sentence or ""
 
     def get_cloze_enabled_output(self):

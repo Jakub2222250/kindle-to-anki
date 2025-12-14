@@ -53,8 +53,6 @@ def disambiguate_lemma_pos(
 
     client = OpenAI()
 
-    print(json.dumps(user_prompt, ensure_ascii=False))
-
     print("\nSending LLM disambiguation request...")
 
     response = client.chat.completions.create(
@@ -69,8 +67,6 @@ def disambiguate_lemma_pos(
     content = response.choices[0].message.content
 
     print("Sending LLM disambiguation request completed.")
-    print("LLM response content:")
-    print(content)
 
     return json.loads(content)
 
@@ -120,7 +116,7 @@ def update_notes_with_llm(notes):
             absorb_się = disamb_result['absorb_się']
 
             # Get lemma
-            lemma = interpretation[1]
+            lemma = interpretation[1].split(":")[0] if ":" in interpretation[1] else interpretation[1]
             if absorb_się:
                 lemma = lemma + ' się'
 
@@ -129,5 +125,6 @@ def update_notes_with_llm(notes):
             readable_pos = morfeusz_tag_to_pos_string(tag)
 
             # Update note with normal MA fields
-            note.expression = lemma
+            note.morfeusz_tag = tag
+            note.morefeusz_lemma = lemma
             note.part_of_speech = readable_pos
