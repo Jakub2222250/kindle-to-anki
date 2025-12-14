@@ -1,16 +1,19 @@
-def morfeusz_tag_to_pos_string(morf_tag: str) -> str:
+def morfeusz_tag_to_pos_string(morf_tag: str) -> tuple[str, str]:
     """
-    Convert a full Morfeusz tag string into a learner-facing POS label,
-    optionally augmented with verbal aspect.
+    Convert a full Morfeusz tag string into a learner-facing POS label and aspect.
+
+    Returns:
+        tuple: (pos, aspect) where pos is the part of speech and aspect is 
+               "" for non-verbs, or "impf"/"perf" for verbs
 
     Examples:
-      "praet:sg:m1:imperf" -> "verb (impf)"
-      "inf:perf"           -> "verb (perf)"
-      "subst:sg:nom:m1"    -> "noun"
+      "praet:sg:m1:imperf" -> ("verb", "impf")
+      "inf:perf"           -> ("verb", "perf")
+      "subst:sg:nom:m1"    -> ("noun", "")
     """
 
     if not morf_tag:
-        return "other"
+        return ("other", "")
 
     parts = morf_tag.split(":")
     base = parts[0]
@@ -56,13 +59,13 @@ def morfeusz_tag_to_pos_string(morf_tag: str) -> str:
     # --- Aspect extraction (verbs only) ---
     if pos == "verb":
         if "imperf" in features:
-            return "verb (impf)"
+            return (pos, "impf")
         if "perf" in features:
-            return "verb (perf)"
+            return (pos, "perf")
         # biaspectual or unresolved
-        return "verb"
+        return (pos, "")
 
-    return pos
+    return (pos, "")
 
 
 def normalize_adj_to_masc_sg(surface: str) -> str:
@@ -90,7 +93,7 @@ def normalize_lemma(
 
     surface_lower = surface.lower()
 
-    if "verb" in pos:
+    if pos == "verb":
         return morfeusz_lemma
 
     if pos == "adv":

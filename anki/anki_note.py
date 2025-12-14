@@ -19,7 +19,7 @@ class AnkiNote:
         self.original_form = self.kindle_word or ""
         self.part_of_speech = ""
         self.definition = ""
-        self.secondary_definitions = ""
+        self.aspect = ""
         self.context_sentence = self.kindle_usage or ""
         self.context_sentence_cloze = ""
         self.context_translation = ""
@@ -142,4 +142,4 @@ class AnkiNote:
 
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
-        return f"{self.uid}\t{self.expression}\t{self.original_form}\t{self.part_of_speech}\t{self.definition}\t{self.secondary_definitions}\t{self.get_context_sentence_bold_word()}\t{self.get_context_sentence_cloze()}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.source_book}\t{self.location}\t{self.status}\t{self.get_cloze_enabled_output()}\t{self.tags}\n"
+        return f"{self.uid}\t{self.expression}\t{self.original_form}\t{self.part_of_speech}\t{self.definition}\t{self.aspect}\t{self.get_context_sentence_bold_word()}\t{self.get_context_sentence_cloze()}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.source_book}\t{self.location}\t{self.status}\t{self.get_cloze_enabled_output()}\t{self.tags}\n"

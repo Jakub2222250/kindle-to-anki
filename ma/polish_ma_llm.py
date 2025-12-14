@@ -181,7 +181,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
 
                     # Get part of speech first for validation
                     tag = interpretation[2]
-                    readable_pos = morfeusz_tag_to_pos_string(tag)
+                    readable_pos, aspect = morfeusz_tag_to_pos_string(tag)
 
                     # Validate absorb_się - only verbs can absorb się
                     if absorb_się and 'verb' not in readable_pos.lower():
@@ -199,7 +199,8 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
                         "absorb_się": absorb_się,
                         "morfeusz_lemma": lemma,
                         "morfeusz_tag": tag,
-                        "part_of_speech": readable_pos
+                        "part_of_speech": readable_pos,
+                        "aspect": aspect
                     }
 
                     # Save to cache
@@ -209,6 +210,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
                     note.morfeusz_tag = tag
                     note.morfeusz_lemma = lemma
                     note.part_of_speech = readable_pos
+                    note.aspect = aspect
 
                     print(f"  SUCCESS - processed MA for {note.kindle_word}")
                 else:
@@ -245,6 +247,7 @@ def update_notes_with_llm(notes, cache_suffix='pl'):
             note.morfeusz_tag = cached_result['morfeusz_tag']
             note.morfeusz_lemma = cached_result['morfeusz_lemma']
             note.part_of_speech = cached_result['part_of_speech']
+            note.aspect = cached_result['aspect']
         else:
             notes_needing_llm.append(note)
 

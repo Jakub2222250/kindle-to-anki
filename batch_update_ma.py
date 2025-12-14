@@ -55,8 +55,9 @@ if __name__ == "__main__":
                     "Part_Of_Speech": note.part_of_speech,
                     "Context_Sentence": note.get_context_sentence_bold_word(),
                     "Context_Sentence_Cloze": note.get_context_sentence_cloze(),
+                    "Aspect": note.aspect
                 }
             }
             card_updates.append(card_update)
 
-        anki_connect_instance.update_notes_fields(card_updates)
+        anki_connect_instance.update_notes_fields(card_updates[:10])
