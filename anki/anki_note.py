@@ -1,9 +1,8 @@
 import unicodedata
-from urllib.parse import quote
 
 
 class AnkiNote:
-    def __init__(self, word, stem, usage, language, book_name, position, timestamp):
+    def __init__(self, word, stem, usage, language, book_name, position, timestamp, uid=None):
 
         # Save off all original kindle fields that will not be modified
         self.kindle_word = word
@@ -36,7 +35,7 @@ class AnkiNote:
         self.book_abbrev = self.generate_book_abbrev(self.kindle_book_name)
 
         # Generate UID (requires book abbreviation and location to be set first)
-        self.uid = self.generate_uid()
+        self.uid = uid or self.generate_uid()
 
         # Format usage text for HTML
         self.format_context_sentence()

@@ -65,6 +65,7 @@ class AnkiConnect:
                 fields = note.get('fields', {})
                 note_data = {
                     'UID': fields.get('UID', {}).get('value', ''),
+                    'Original_Form': fields.get('Original_Form', {}).get('value', ''),
                     'Expression': fields.get('Expression', {}).get('value', ''),
                     'Context_Sentence': fields.get('Context_Sentence', {}).get('value', ''),
                     'Context_Translation': fields.get('Context_Translation', {}).get('value', ''),
@@ -122,8 +123,77 @@ class AnkiConnect:
         except Exception as e:
             raise Exception(f"Failed to create notes batch: {e}")
 
+    def get_uid_to_note_id_map(self):
+        """Get a mapping from UID to Anki note ID for all notes in the deck"""
+        try:
+            query = f'"deck:{self.parent_deck_name}" "note:{self.note_type}"'
+            note_ids = self._invoke("findNotes", {"query": query})
 
-# Example usage
+            if not note_ids:
+                return {}
+
+            notes_info = self._invoke("notesInfo", {"notes": note_ids})
+
+            uid_to_note_id = {}
+            for note in notes_info:
+                fields = note.get('fields', {})
+                uid = fields.get('UID', {}).get('value', '')
+                if uid:
+                    uid_to_note_id[uid] = note.get('noteId')
+
+            return uid_to_note_id
+
+        except Exception as e:
+            raise Exception(f"Failed to get UID to note ID map: {e}")
+
+    def update_notes_fields(self, card_updates):
+        """Update multiple notes' fields using UID as note ID"""
+        if not card_updates:
+            print("No card updates provided")
+            return []
+
+        print(f"\nUpdating {len(card_updates)} notes in Anki...")
+
+        successful_updates = []
+        failed_updates = []
+
+        uid_to_note_id_map = self.get_uid_to_note_id_map()
+
+        for update in card_updates:
+            uid = update.get('UID')
+            fields_to_update = update.get('fields', {})
+
+            id = int(uid_to_note_id_map[uid])
+
+            if not uid or uid not in uid_to_note_id_map:
+                print("Probably never happens")
+                exit()
+
+            print("Updating fields for UID:", uid, id)
+            for key, value in fields_to_update.items():
+                print(f"  {key}: {value}")
+
+            # Use UID directly as note ID
+            try:
+                self._invoke("updateNoteFields", {
+                    "note": {
+                        "id": id,
+                        "fields": fields_to_update
+                    }
+                })
+                successful_updates.append(uid)
+            except Exception as e:
+                failed_updates.append(f"Failed to update UID {uid}: {e}")
+
+        print(f"Successfully updated {len(successful_updates)} notes")
+        if failed_updates:
+            print(f"Failed to update {len(failed_updates)} notes:")
+            for failure in failed_updates:
+                print(f"  {failure}")
+
+        return successful_updates
+
+
 if __name__ == "__main__":
     anki = AnkiConnect()
 
