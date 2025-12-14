@@ -1,8 +1,8 @@
 import morfeusz2
 
-from polish_ma_llm import update_notes_with_llm
-from polish_ma_sgjp_helper import morfeusz_tag_to_pos_string
-from ..anki.anki_note import AnkiNote
+from ma.polish_ma_llm import update_notes_with_llm
+from ma.polish_ma_sgjp_helper import morfeusz_tag_to_pos_string
+from anki.anki_note import AnkiNote
 
 
 '''
