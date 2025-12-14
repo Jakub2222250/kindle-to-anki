@@ -324,25 +324,24 @@ if __name__ == "__main__":
 
     process_notes_with_morfeusz(notes, cache_suffix='pl_test')
 
-    for test in test_cases:
-        for note in notes:
-            if note.kindle_word == test['kindle_word'] and note.kindle_usage == test['sentence']:
-                if test['expected_lemma'] != note.expression:
-                    print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected lemma '{test['expected_lemma']}', got '{note.expression}'")
-                else:
-                    print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected lemma '{note.expression}'")
+    for i, test in enumerate(test_cases):
+        note = notes[i]
+        if test['expected_lemma'] != note.expression:
+            print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected lemma '{test['expected_lemma']}', got '{note.expression}'")
+        else:
+            print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected lemma '{note.expression}'")
 
-                if test['expected_original_form'] != note.original_form:
-                    print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected original form '{test['expected_original_form']}', got '{note.original_form}'")
-                else:
-                    print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected original form '{note.original_form}'")
+        if test['expected_original_form'] != note.original_form:
+            print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected original form '{test['expected_original_form']}', got '{note.original_form}'")
+        else:
+            print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected original form '{note.original_form}'")
 
-                if test['expected_pos'] != note.part_of_speech:
-                    print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected pos '{test['expected_pos']}', got '{note.part_of_speech}'")
-                else:
-                    print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected pos '{note.part_of_speech}'")
+        if test['expected_pos'] != note.part_of_speech:
+            print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected pos '{test['expected_pos']}', got '{note.part_of_speech}'")
+        else:
+            print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected pos '{note.part_of_speech}'")
 
-                if test['expected_aspect'] != note.aspect:
-                    print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected aspect '{test['expected_aspect']}', got '{note.aspect}'")
-                else:
-                    print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected aspect '{note.aspect}'")
+        if test['expected_aspect'] != note.aspect:
+            print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected aspect '{test['expected_aspect']}', got '{note.aspect}'")
+        else:
+            print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected aspect '{note.aspect}'")
