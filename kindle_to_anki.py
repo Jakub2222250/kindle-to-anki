@@ -8,7 +8,7 @@ from pathlib import Path
 from anki.anki_note import AnkiNote
 from wsd.llm_enrichment import enrich_notes_with_llm
 from ma.morphological_analyzer import process_morphological_enrichment
-from pruning.pruning import prune_existing_notes_manually, prune_existing_notes_by_expression, prune_existing_notes_by_UID
+from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_expression, prune_existing_notes_by_UID
 from anki.anki_connect import AnkiConnect
 import datetime
 
@@ -296,8 +296,8 @@ def export_kindle_vocab():
         # Enrich notes with LLM
         enrich_notes_with_llm(notes)
 
-        # Optionally manually prune words that are already represented in Anki
-        notes = prune_existing_notes_manually(notes, existing_notes)
+        # Optionally prune existing notes automatically based on definition similarity
+        notes = prune_existing_notes_automatically(notes, existing_notes)
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, lang)

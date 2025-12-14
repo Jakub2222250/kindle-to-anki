@@ -67,6 +67,7 @@ class AnkiConnect:
                     'Expression': fields.get('Expression', {}).get('value', ''),
                     'Context_Sentence': fields.get('Context_Sentence', {}).get('value', ''),
                     'Context_Translation': fields.get('Context_Translation', {}).get('value', ''),
+                    'Part_Of_Speech': fields.get('Part_Of_Speech', {}).get('value', ''),
                     'Definition': fields.get('Definition', {}).get('value', '')
                 }
                 notes_data.append(note_data)
