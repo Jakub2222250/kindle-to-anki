@@ -102,7 +102,7 @@ def offer_to_save_timestamp(vocab_data, metadata):
     human_readable_time = datetime.datetime.fromtimestamp(max_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
     print(f"\nMax timestamp from this import: {human_readable_time}")
 
-    response = input("Save this timestamp for future incremental imports? (y/n): ").strip().lower()
+    response = input("Save this timestamp for future incremental imports? (Y/n): ").strip().lower()
     if response == 'y' or response == 'yes':
         metadata['last_timestamp_import'] = max_timestamp
         save_metadata(metadata)

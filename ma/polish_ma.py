@@ -157,8 +157,8 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
 
     if len(notes_benefiting_llm_wsd) > 0:
         print(f"{len(notes_benefiting_llm_wsd)} notes need LLM MA processing.")
-        result = input("Proceed? (No means using first candidate without reflexive analysis) [y/N]: ")
-        if result.lower() != 'y' and result.lower() != 'yes':
+        result = input(f"Do you want to proceed with LLM MA processing for {len(notes_benefiting_llm_wsd)} notes? [y/n]: ").strip().lower()
+        if result != 'y' and result != 'yes':
             for note in notes_benefiting_llm_wsd:
                 update_note_without_llm(note)
         else:
