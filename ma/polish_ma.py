@@ -176,15 +176,11 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
 
     # Log if expression, lemma or part_of_speech was changed
     for note in notes:
-        if note.expression != note.kindle_stem:
-            print(f"Changed expression: {note.kindle_stem} -> {note.expression}")
-
-    for note in notes:
-        print(f"Changed POS: '' -> {note.part_of_speech}")
-
-    for note in notes:
-        if note.original_form != note.kindle_word:
-            print(f"Changed original_form: {note.kindle_word} -> {note.original_form}")
+        print("\nOriginal word:", note.kindle_word)
+        print("  -> Expression (lemma):", note.expression)
+        print("  -> Part of Speech:", note.part_of_speech)
+        if note.kindle_word != note.original_form:
+            print("  -> Original Form:", note.original_form)
 
 
 if __name__ == "__main__":

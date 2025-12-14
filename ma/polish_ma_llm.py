@@ -53,6 +53,8 @@ def disambiguate_lemma_pos(
 
     client = OpenAI()
 
+    print("\nSending LLM disambiguation request...")
+
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -64,8 +66,7 @@ def disambiguate_lemma_pos(
     # Strict JSON parsing — fail fast if the model misbehaves
     content = response.choices[0].message.content
 
-    print("LLM Response:")
-    print(content)
+    print("Sending LLM disambiguation request completed.")
 
     return json.loads(content)
 
@@ -76,7 +77,6 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
 
     for note in notes:
         item = dict()
-        item["uid"] = note.uid
         item["token"] = note.kindle_word
         item["sentence"] = note.kindle_usage
         morfeusz_candidates = note.morfeusz_candidates
