@@ -53,6 +53,8 @@ def disambiguate_lemma_pos(
 
     client = OpenAI()
 
+    print(json.dumps(user_prompt, ensure_ascii=False))
+
     print("\nSending LLM disambiguation request...")
 
     response = client.chat.completions.create(
@@ -67,6 +69,8 @@ def disambiguate_lemma_pos(
     content = response.choices[0].message.content
 
     print("Sending LLM disambiguation request completed.")
+    print("LLM response content:")
+    print(content)
 
     return json.loads(content)
 
@@ -78,7 +82,9 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
     for note in notes:
         item = dict()
         item["token"] = note.kindle_word
-        item["sentence"] = note.kindle_usage
+        # Clean whitespace: remove leading/trailing spaces and normalize internal whitespace
+        cleaned_sentence = " ".join(note.kindle_usage.split())
+        item["sentence"] = cleaned_sentence
         morfeusz_candidates = note.morfeusz_candidates
         item["morfeusz_options"] = []
         for _, lemma, interpretation in morfeusz_candidates:
@@ -96,24 +102,32 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
 
 
 def update_notes_with_llm(notes):
-    disambiguation_results = perform_wsd_on_lemma_and_pos(notes)
-    for i, note in enumerate(notes):
-        disamb_result = disambiguation_results[i]
 
-        selected_index = disamb_result['candidate_index']
-        _, _, interpretation = note.morfeusz_candidates[selected_index]
+    # Process in batches
+    batch_size = 20
 
-        absorb_się = disamb_result['absorb_się']
+    for batch_start in range(0, len(notes), batch_size):
+        batch_notes = notes[batch_start:batch_start + batch_size]
 
-        # Get lemma
-        lemma = interpretation[1]
-        if absorb_się:
-            lemma = lemma + ' się'
+        disambiguation_results = perform_wsd_on_lemma_and_pos(batch_notes)
 
-        # Get part of speech
-        tag = interpretation[2]
-        readable_pos = morfeusz_tag_to_pos_string(tag)
+        for i, note in enumerate(batch_notes):
+            disamb_result = disambiguation_results[i]
 
-        # Update note with normal MA fields
-        note.expression = lemma
-        note.part_of_speech = readable_pos
+            selected_index = disamb_result['candidate_index']
+            _, _, interpretation = note.morfeusz_candidates[selected_index]
+
+            absorb_się = disamb_result['absorb_się']
+
+            # Get lemma
+            lemma = interpretation[1]
+            if absorb_się:
+                lemma = lemma + ' się'
+
+            # Get part of speech
+            tag = interpretation[2]
+            readable_pos = morfeusz_tag_to_pos_string(tag)
+
+            # Update note with normal MA fields
+            note.expression = lemma
+            note.part_of_speech = readable_pos
