@@ -83,7 +83,7 @@ def check_if_benefits_from_llm_wsd(note: AnkiNote):
     if not has_single_candidate:
         print(f"Multiple candidates detected for '{note.kindle_word}'.")
 
-    return not has_sie_before_or_after and not has_single_candidate
+    return has_sie_before_or_after or not has_single_candidate
 
 
 def process_notes_with_morfeusz(notes: list[AnkiNote]):
@@ -114,10 +114,9 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
         if result.lower() != 'y' and result.lower() != 'yes':
             for note in notes_benefiting_llm_wsd:
                 update_note_without_llm(note)
-            return
-
-        # Call LLM disambiguation function
-        update_notes_with_llm(notes_benefiting_llm_wsd)
+        else:
+            # Call LLM disambiguation function
+            update_notes_with_llm(notes_benefiting_llm_wsd)
 
     # Log if expression, lemma or part_of_speech was changed
     for note in notes:
@@ -128,7 +127,7 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
         print(f"Changed POS: '' -> {note.part_of_speech}")
 
     for note in notes:
-        if note.original_form != note.kindle_stem:
+        if note.original_form != note.kindle_word:
             print(f"Changed original_form: {note.kindle_word} -> {note.original_form}")
 
 
@@ -143,16 +142,82 @@ if __name__ == "__main__":
             'expected_pos': 'verb'
         },
         {
-            'kindle_word': 'się',
+            'kindle_word': 'uczy',
             'sentence': 'Nauczyciel uczy dzieci matematyki.',
             'expected_lemma': 'uczyć',
             'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'zatrzymał',
+            'sentence': 'Samochód nagle zatrzymał się na środku drogi.',
+            'expected_lemma': 'zatrzymać się',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'otworzył',
+            'sentence': 'Otworzył drzwi bez pukania.',
+            'expected_lemma': 'otworzyć',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'zawzięcie',
+            'sentence': 'Który walił zawzięcie różdżką w blat ławki.',
+            'expected_lemma': 'zawzięcie',
+            'expected_pos': 'adv'
+        },
+        {
+            'kindle_word': 'zawzięcie',
+            'sentence': 'Jego zawzięcie było godne podziwu.',
+            'expected_lemma': 'zawziąć',
+            'expected_pos': 'noun'
+        },
+        {
+            'kindle_word': 'podoba',
+            'sentence': 'Ten obraz podoba się dzieciom.',
+            'expected_lemma': 'podobać się',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'mył',
+            'sentence': 'Mył naczynia po obiedzie.',
+            'expected_lemma': 'myć',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'mył się',
+            'sentence': 'Mył się codziennie rano.',
+            'expected_lemma': 'myć się',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'bił',
+            'sentence': 'Bił się z bratem w dzieciństwie.',
+            'expected_lemma': 'bić się',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'bił',
+            'sentence': 'Bił rekord świata w pływaniu.',
+            'expected_lemma': 'bić',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'nadzieja',
+            'sentence': 'Mam nadzieję na dobrą ocenę.',
+            'expected_lemma': 'nadzieja',
+            'expected_pos': 'noun'
+        },
+        {
+            'kindle_word': 'szybko',
+            'sentence': 'Biegł szybko do szkoły.',
+            'expected_lemma': 'szybko',
+            'expected_pos': 'adv'
         }
     ]
 
     notes = []
     for i, test_case in enumerate(test_cases):
-        note = AnkiNote(uid=f"test-{i}", kindle_word=test_case['kindle_word'], kindle_usage=test_case['sentence'])
+        note = AnkiNote(test_case['kindle_word'], "", test_case['sentence'], "pl", "Test Book", f"loc_{i + 1}", "")
         notes.append(note)
 
     process_notes_with_morfeusz(notes)

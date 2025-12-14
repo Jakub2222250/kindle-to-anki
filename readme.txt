@@ -25,3 +25,7 @@ Fields to write out in order:
 15: Status
 16: Cloze_Enabled
 Tags
+
+# Running stuff
+kindle_to_anki.bat
+py -m ma.polish_ma
