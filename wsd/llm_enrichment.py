@@ -2,7 +2,7 @@ import json
 import time
 from pathlib import Path
 from openai import OpenAI
-from anki_note import AnkiNote
+from anki.anki_note import AnkiNote
 
 # Configuration
 BATCH_SIZE = 40

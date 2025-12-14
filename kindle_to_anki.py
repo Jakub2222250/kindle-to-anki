@@ -6,10 +6,10 @@ import time
 import textwrap
 from pathlib import Path
 
-from anki_note import AnkiNote
-from llm_enrichment import enrich_notes_with_llm
-from morphological_analyzer import process_morphological_enrichment
-from anki_connect import AnkiConnect
+from anki.anki_note import AnkiNote
+from wsd.llm_enrichment import enrich_notes_with_llm
+from ma.morphological_analyzer import process_morphological_enrichment
+from anki.anki_connect import AnkiConnect
 import datetime
 
 

@@ -1,3 +1,4 @@
+from os import read
 import morfeusz2
 
 
@@ -140,8 +141,23 @@ def process_morphological_enrichment(notes, language):
 
 
 if __name__ == "__main__":
+
+    morf = morfeusz2.Morfeusz()
+
     # Test morfeusz2 analysis
-    test_words = ["pobiec", "piękny", "szybko", "dom", "iść", "czytać", "ładniejszy"]
+    test_words = ["pobiec", "piękny", "szybko", "dom", "iść", "czytać", "ładniejszy", "zawzięcie"]
     for word in test_words:
-        lemma, pos = analyze_with_morfeusz(word)
-        print(f"Word: {word}, Lemma: {lemma}, POS: {pos}")
+
+        candidates = morf.analyse(word.lower())
+
+        # Select the first candidate (to be improved later with llm and się analysis)
+        for _, _, interpretation in candidates:
+            # Extract lemma and tag
+            lemma_raw = interpretation[1]
+            lemma = lemma_raw.split(':')[0] if ':' in lemma_raw else lemma_raw
+            tag = interpretation[2]
+
+            # Map SGJP tag to readable POS
+            readable_pos = morfeusz_tag_to_pos_string(tag)
+
+            print(f"Word: {word}, Lemma: {lemma}, POS: {readable_pos}")
