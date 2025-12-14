@@ -32,3 +32,4 @@ kindle_to_anki.bat
 # Running integration/unit tests
 py -m ma.polish_ma
 py -m pruning.pruning
+py -m wsd.llm_enrichment
