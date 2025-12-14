@@ -86,6 +86,57 @@ def check_if_benefits_from_llm_wsd(note: AnkiNote):
     return has_sie_before_or_after or not has_single_candidate
 
 
+def absorb_nearest_sie(kindle_word, usage_text):
+    """
+    Find the nearest 'się' to the first occurrence of kindle_word and return
+    all text between them (inclusive). Returns the absorbed phrase as a string.
+
+    Args:
+        kindle_word: The target word to find
+        usage_text: The sentence containing the word
+
+    Returns:
+        String containing 'się' and all words between it and kindle_word
+    """
+    words_list = usage_text.split()
+
+    # Find the first occurrence of the target word
+    target_word_lower = kindle_word.lower()
+    target_index = None
+
+    for i, word in enumerate(words_list):
+        # Remove punctuation from word for comparison
+        clean_word = ''.join(char for char in word if char.isalpha())
+        if clean_word.lower() == target_word_lower:
+            target_index = i
+            break
+
+    if target_index is None:
+        return kindle_word  # Fallback if word not found
+
+    # Find all occurrences of "się"
+    sie_indices = []
+    for i, word in enumerate(words_list):
+        clean_word = ''.join(char for char in word if char.isalpha())
+        if clean_word.lower() == "się":
+            sie_indices.append(i)
+
+    if not sie_indices:
+        return kindle_word  # No "się" found, return original word
+
+    # Find the nearest "się" to the target word
+    nearest_sie_index = min(sie_indices, key=lambda x: abs(x - target_index))
+
+    # Determine the range to extract (inclusive)
+    start_index = min(nearest_sie_index, target_index)
+    end_index = max(nearest_sie_index, target_index)
+
+    # Extract the words between and including "się" and the target word
+    absorbed_words = words_list[start_index:end_index + 1]
+
+    return ' '.join(absorbed_words)
+
+
 def process_notes_with_morfeusz(notes: list[AnkiNote]):
 
     morf = morfeusz2.Morfeusz()
@@ -117,6 +168,11 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
         else:
             # Call LLM disambiguation function
             update_notes_with_llm(notes_benefiting_llm_wsd)
+
+    # Post process notes by checking if się was absorbed
+    for note in notes:
+        if "się" in note.expression:
+            note.original_form = absorb_nearest_sie(note.kindle_word, note.kindle_usage)
 
     # Log if expression, lemma or part_of_speech was changed
     for note in notes:
@@ -221,3 +277,11 @@ if __name__ == "__main__":
         notes.append(note)
 
     process_notes_with_morfeusz(notes)
+
+    for test in test_cases:
+        for note in notes:
+            if note.kindle_word == test['kindle_word'] and note.kindle_usage == test['sentence']:
+                if test['expected_lemma'] != note.expression:
+                    print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected lemma '{test['expected_lemma']}', got '{note.expression}'")
+                else:
+                    print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected lemma '{note.expression}'")
