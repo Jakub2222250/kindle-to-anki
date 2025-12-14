@@ -1,4 +1,5 @@
 import morfeusz2
+import string
 
 from ma.polish_ma_llm import update_notes_with_llm
 from ma.polish_ma_sgjp_helper import morfeusz_tag_to_pos_string, normalize_lemma
@@ -129,8 +130,12 @@ def absorb_nearest_sie(kindle_word, usage_text):
 
     # Extract the words between and including "się" and the target word
     absorbed_words = words_list[start_index:end_index + 1]
+    result = ' '.join(absorbed_words)
 
-    return ' '.join(absorbed_words)
+    # Trim punctuation from the beginning and end of the result
+    result = result.strip(string.punctuation + ' ')
+
+    return result
 
 
 def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl'):
