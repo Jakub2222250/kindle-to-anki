@@ -218,7 +218,7 @@ def update_notes_with_llm(notes, cache_suffix='pl'):
     print("\nStarting LLM MA processing...")
 
     cache = MACache(cache_suffix=cache_suffix)
-    print(f"\nLoaded MA cache with {len(cache.cache)} entries")
+    print(f"Loaded MA cache with {len(cache.cache)} entries")
 
     # Phase 1: Collect notes that need LLM MA processing
     notes_needing_llm = []

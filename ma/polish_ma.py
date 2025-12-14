@@ -72,7 +72,7 @@ def has_sie_adjacent_to_word(usage_text, target_word):
     return False
 
 
-def check_if_benefits_from_llm_wsd(note: AnkiNote):
+def check_if_requires_llm_ma(note: AnkiNote):
     # Check if "się" is adjacent to the word
     has_sie_before_or_after = has_sie_adjacent_to_word(note.kindle_usage, note.kindle_word)
 
@@ -136,23 +136,27 @@ def absorb_nearest_sie(kindle_word, usage_text):
 def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl'):
 
     morf = morfeusz2.Morfeusz()
-    notes_requiring_llm_wsd = []
+    notes_requiring_llm_ma = []
+    num_notes_not_requiring_llm_ma = 0
 
     for note in notes:
         # Get candidates
         candidates = morf.analyse(note.kindle_word.lower())
         note.morfeusz_candidates = candidates
 
-        benefits_from_llm_wsd = check_if_benefits_from_llm_wsd(note)
+        requires_llm_ma = check_if_requires_llm_ma(note)
 
         # Simple case
-        if not benefits_from_llm_wsd:
+        if not requires_llm_ma:
             update_note_without_llm(note)
+            num_notes_not_requiring_llm_ma += 1
         else:
-            notes_requiring_llm_wsd.append(note)
+            notes_requiring_llm_ma.append(note)
 
-    if len(notes_requiring_llm_wsd) > 0:
-        update_notes_with_llm(notes_requiring_llm_wsd, cache_suffix=cache_suffix)
+    print(f"{num_notes_not_requiring_llm_ma} notes did not require LLM MA processing.")
+
+    if len(notes_requiring_llm_ma) > 0:
+        update_notes_with_llm(notes_requiring_llm_ma, cache_suffix=cache_suffix)
 
     # Post process notes by checking if się was absorbed
     for note in notes:
@@ -280,6 +284,13 @@ if __name__ == "__main__":
             'expected_lemma': 'piękny',
             'expected_original_form': 'piękną',
             'expected_pos': 'adj'
+        },
+        {
+            'kindle_word': 'zjawy',
+            'sentence': 'Nie pozbyłem się zjawy z Bandonu.',
+            'expected_lemma': 'zjawa',
+            'expected_original_form': 'zjawy',
+            'expected_pos': 'noun'
         }
     ]
 
