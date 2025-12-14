@@ -30,42 +30,48 @@ def update_note_without_llm(note):
     note.part_of_speech = readable_pos
 
 
+def benefits_from_llm_wsd(note):
+    # Identify if the word contains "się" particle
+    has_sie_before_or_after = False
+
+    # Identify if the word has only one candidate
+    has_single_candidate = len(note.morfeusz_candidates) == 1
+
+    return not has_sie_before_or_after and not has_single_candidate
+
+
 def process_notes_with_morfeusz(notes):
 
     morf = morfeusz2.Morfeusz()
-    notes_needing_llm_wsd = []
+    notes_benefiting_llm_wsd = []
 
     for note in notes:
         # Get candidates
         candidates = morf.analyse(note.kindle_word.lower())
         note.morfeusz_candidates = candidates
 
-        # Identify if the word contains "się" particle
-        has_sie_before_or_after = False
-
-        # Identify if the word has only one candidate
-        has_single_candidate = len(candidates) == 1
+        benefits_from_llm_wsd = benefits_from_llm_wsd(note)
 
         # Simple case
-        if not has_sie_before_or_after and has_single_candidate:
+        if not benefits_from_llm_wsd:
             update_note_without_llm(note)
         else:
-            notes_needing_llm_wsd.append(note)
+            notes_benefiting_llm_wsd.append(note)
 
-    for note in notes_needing_llm_wsd:
+    for note in notes_benefiting_llm_wsd:
         # See if cache contains LLM results already and remove from list
         pass
 
-    if len(notes_needing_llm_wsd) > 0:
-        print(f"{len(notes_needing_llm_wsd)} notes need LLM MA processing.")
+    if len(notes_benefiting_llm_wsd) > 0:
+        print(f"{len(notes_benefiting_llm_wsd)} notes need LLM MA processing.")
         result = input("Proceed? (No means using first candidate without reflexive analysis) [y/N]: ")
         if result.lower() != 'y' and result.lower() != 'yes':
-            for note in notes_needing_llm_wsd:
+            for note in notes_benefiting_llm_wsd:
                 update_note_without_llm(note)
             return
 
         # Call LLM disambiguation function
-        update_notes_with_llm(notes_needing_llm_wsd)
+        update_notes_with_llm(notes_benefiting_llm_wsd)
 
 
 if __name__ == "__main__":
