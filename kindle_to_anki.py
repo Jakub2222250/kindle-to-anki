@@ -8,7 +8,7 @@ from pathlib import Path
 from anki.anki_note import AnkiNote
 from wsd.llm_enrichment import enrich_notes_with_llm
 from ma.morphological_analyzer import process_morphological_enrichment
-from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_expression, prune_existing_notes_by_UID
+from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 import datetime
 
@@ -283,11 +283,11 @@ def export_kindle_vocab():
         # Prune existing notes by UID
         notes = prune_existing_notes_by_UID(notes, existing_notes)
 
+        # Prune notes previously identified as redundant
+        notes = prune_notes_identified_as_redundant(notes, cache_suffix=lang)
+
         # Enrich notes with morphological analysis
         process_morphological_enrichment(notes, lang)
-
-        # Optionally prune existing notes by Expression before LLM enrichment to save cost
-        notes = prune_existing_notes_by_expression(notes, existing_notes)
 
         if not notes:
             print(f"No new notes to process for language: {lang}")
@@ -297,7 +297,7 @@ def export_kindle_vocab():
         enrich_notes_with_llm(notes, lang)
 
         # Optionally prune existing notes automatically based on definition similarity
-        notes = prune_existing_notes_automatically(notes, existing_notes)
+        notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=lang)
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, lang)

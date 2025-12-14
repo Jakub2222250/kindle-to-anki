@@ -1,10 +1,88 @@
-import textwrap
+import json
+import time
+from pathlib import Path
+
 from anki.anki_note import AnkiNote
 from thefuzz import fuzz
 
 
+class PruningCache:
+    def __init__(self, cache_dir="cache", cache_suffix='default'):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.cache_file = self.cache_dir / f"pruning_cache-{cache_suffix}.json"
+
+        # Load existing cache
+        self.cache = self.load_cache()
+
+    def load_cache(self):
+        """Load cache from file"""
+        if self.cache_file.exists():
+            try:
+                with open(self.cache_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, FileNotFoundError):
+                pass
+        return {}
+
+    def save_cache(self):
+        """Save cache to file"""
+        with open(self.cache_file, "w", encoding="utf-8") as f:
+            json.dump(self.cache, f, ensure_ascii=False, indent=2)
+
+    def get(self, uid):
+        """Get cached pruning result for UID"""
+        cache_entry = self.cache.get(uid)
+        if cache_entry and isinstance(cache_entry, dict) and "pruning_data" in cache_entry:
+            return cache_entry["pruning_data"]
+        return None
+
+    def set(self, uid, is_redundant, similarity_factor=None, matched_expression=None, timestamp=None):
+        """Set cached pruning result for UID"""
+        cache_entry = {
+            "pruning_data": {
+                "is_redundant": is_redundant,
+                "similarity_factor": similarity_factor,
+                "matched_expression": matched_expression
+            },
+            "timestamp": timestamp
+        }
+        self.cache[uid] = cache_entry
+        self.save_cache()
+
+
+def prune_notes_identified_as_redundant(notes: list[AnkiNote], cache_suffix='pl'):
+    """Remove notes that were previously identified as redundant based on cached results"""
+
+    print("\nPruning notes previously identified as redundant...")
+
+    if len(notes) == 0:
+        return notes
+
+    cache = PruningCache(cache_suffix=cache_suffix)
+    print(f"Loaded pruning cache with {len(cache.cache)} entries")
+
+    # Filter out notes that are cached as redundant
+    non_redundant_notes = []
+    cached_redundant_count = 0
+
+    for note in notes:
+        cached_result = cache.get(note.uid)
+        if cached_result and cached_result.get('is_redundant', False):
+            cached_redundant_count += 1
+            print(f"  Pruning cached redundant note: {note.expression}")
+        else:
+            non_redundant_notes.append(note)
+
+    print(f"Pruned {cached_redundant_count} notes previously identified as redundant")
+
+    return non_redundant_notes
+
+
 def prune_existing_notes_by_UID(notes: list[AnkiNote], existing_notes: list[dict]):
     """Remove notes that already exist in Anki based on UID"""
+
+    print("\nPruning notes that already exist in Anki based on UID...")
 
     if len(notes) == 0:
         return notes
@@ -15,14 +93,15 @@ def prune_existing_notes_by_UID(notes: list[AnkiNote], existing_notes: list[dict
     new_notes = [note for note in notes if note.uid not in existing_uids]
 
     pruned_count = len(notes) - len(new_notes)
-    if pruned_count > 0:
-        print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
+    print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
 
     return new_notes
 
 
 def prune_existing_notes_by_expression(notes: list[AnkiNote], existing_notes: list[dict]):
-    """ Option to opt out of expensive LLM activity for notes that already exist in Anki based on Expression field"""
+    """ Option to opt out of expensive LLM activity for notes that already exist in Anki based on Expression field
+        TODO: Let each language define an expression + pos based pruning function if needed
+    """
 
     if len(notes) == 0:
         return notes
@@ -52,21 +131,33 @@ def evaluate_gloss_similarity(gloss1, gloss2) -> int:
     return fuzz.token_set_ratio(gloss1, gloss2)
 
 
-def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: list[dict], auto_prune=False):
+def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: list[dict], auto_prune=False, cache_suffix='pl'):
+
+    # Initialize cache
+    cache = PruningCache(cache_suffix=cache_suffix)
+    processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     pruned_notes = []
 
     for note in notes:
         is_redundant = False
+        similarity_factor = None
+        matched_expression = None
+
         for existing_note in existing_notes:
             if note.expression == existing_note['Expression'] and note.part_of_speech == existing_note['Part_Of_Speech']:
                 similarity_factor = evaluate_gloss_similarity(note.definition, existing_note['Definition'])
                 print(f"Evaluating note for {note.expression}: similarity factor = {similarity_factor}%")
                 if similarity_factor > 45:
                     is_redundant = True
+                    matched_expression = existing_note['Expression']
                     if not auto_prune:
                         print(f"Note for {note.expression} detected as redundant due to high similarity_factor ({similarity_factor}%) with existing note.")
                     break
+
+        # Cache the result
+        cache.set(note.uid, is_redundant, similarity_factor, matched_expression, processing_timestamp)
+
         if not is_redundant:
             pruned_notes.append(note)
 
@@ -178,7 +269,7 @@ if __name__ == "__main__":
     ]
 
     # Test the pruning function with auto_prune=True to skip user input
-    pruned_notes = prune_existing_notes_automatically(notes, existing_notes, auto_prune=True)
+    pruned_notes = prune_existing_notes_automatically(notes, existing_notes, auto_prune=True, cache_suffix='test')
 
     # Check results for each test case
     for test_case in test_cases:
