@@ -10,10 +10,10 @@ from ma.polish_ma_sgjp_helper import morfeusz_tag_to_pos_string
 
 
 class MACache:
-    def __init__(self, cache_dir="cache", lang='default'):
+    def __init__(self, cache_dir="cache", cache_suffix='default'):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
-        self.cache_file = self.cache_dir / f"ma_cache-{lang}.json"
+        self.cache_file = self.cache_dir / f"ma_cache-{cache_suffix}.json"
 
         # Load existing cache
         self.cache = self.load_cache()
@@ -212,12 +212,12 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
         exit()
 
 
-def update_notes_with_llm(notes, lang='pl'):
+def update_notes_with_llm(notes, cache_suffix='pl'):
     """Process MA enrichment for all notes"""
 
     print("\nStarting LLM MA processing...")
 
-    cache = MACache(lang=lang)
+    cache = MACache(cache_suffix=cache_suffix)
     print(f"\nLoaded MA cache with {len(cache.cache)} entries")
 
     # Phase 1: Collect notes that need LLM MA processing

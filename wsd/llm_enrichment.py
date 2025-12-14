@@ -11,18 +11,18 @@ FALLBACK_LLM = "gpt-5"
 
 # Common LLM instructions
 LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
-1. definition: Definition of the input lemma based on the usage of the input word in the input sentence as a short gloss in English
+1. definition: English definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
 2. translation: English translation of the sentence
-3. collocations: Any common Polish collocations or phrases that include the input word as a JSON list of 0-3 short collocations in Polish
-4. original_language_definition: Definition of the input lemma based on the usage of the input word in the input sentence as a short gloss in Polish
+3. collocations: Any common Polish collocations or phrases that include the inflected input word as a JSON list of 0-3 short collocations in Polish
+4. original_language_definition: Polish definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
 5. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
 
 
 class LLMCache:
-    def __init__(self, cache_dir="cache", lang='default'):
+    def __init__(self, cache_dir="cache", cache_suffix='default'):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
-        self.cache_file = self.cache_dir / f"llm_cache-{lang}.json"
+        self.cache_file = self.cache_dir / f"llm_cache-{cache_suffix}.json"
 
         # Load existing cache
         self.cache = self.load_cache()
@@ -85,7 +85,8 @@ def make_batch_llm_call(batch_notes, processing_timestamp):
     """Make batch LLM API call for multiple notes"""
     items_list = []
     for note in batch_notes:
-        items_list.append(f'{{"uid": "{note.uid}", "word": "{note.kindle_word}", "lemma": "{note.expression}", "sentence": "{note.kindle_usage}"}}')
+        pos_tag = getattr(note, 'pos_tag', 'unknown')
+        items_list.append(f'{{"uid": "{note.uid}", "word": "{note.kindle_word}", "lemma": "{note.expression}", "pos": "{pos_tag}", "sentence": "{note.kindle_usage}"}}')
 
     items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
@@ -158,7 +159,7 @@ def enrich_notes_with_llm(notes: list[AnkiNote], lang):
 
     print("\nStarting LLM enrichment process...")
 
-    cache = LLMCache(lang=lang)
+    cache = LLMCache(cache_suffix=lang)
     print(f"\nLoaded LLM cache with {len(cache.cache)} entries")
 
     # Phase 1: Collect notes that need LLM enrichment

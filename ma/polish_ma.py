@@ -133,7 +133,7 @@ def absorb_nearest_sie(kindle_word, usage_text):
     return ' '.join(absorbed_words)
 
 
-def process_notes_with_morfeusz(notes: list[AnkiNote]):
+def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl'):
 
     morf = morfeusz2.Morfeusz()
     notes_requiring_llm_wsd = []
@@ -152,7 +152,7 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
             notes_requiring_llm_wsd.append(note)
 
     if len(notes_requiring_llm_wsd) > 0:
-        update_notes_with_llm(notes_requiring_llm_wsd)
+        update_notes_with_llm(notes_requiring_llm_wsd, cache_suffix=cache_suffix)
 
     # Post process notes by checking if się was absorbed
     for note in notes:
@@ -288,7 +288,7 @@ if __name__ == "__main__":
         note = AnkiNote(test_case['kindle_word'], "", test_case['sentence'], "pl", "Test Book", f"loc_{i + 1}", "")
         notes.append(note)
 
-    process_notes_with_morfeusz(notes)
+    process_notes_with_morfeusz(notes, cache_suffix='pl_test')
 
     for test in test_cases:
         for note in notes:
