@@ -29,7 +29,7 @@ def update_note_without_llm(note: AnkiNote):
     readable_pos = morfeusz_tag_to_pos_string(tag)
 
     note.morfeusz_tag = tag
-    note.morefeusz_lemma = lemma
+    note.morfeusz_lemma = lemma
     note.part_of_speech = readable_pos
 
 
@@ -167,11 +167,12 @@ def process_notes_with_morfeusz(notes: list[AnkiNote]):
 
     # Post process notes by checking if się was absorbed
     for note in notes:
-        if "się" in note.expression:
+        if "się" in note.morfeusz_lemma:
             note.original_form = absorb_nearest_sie(note.kindle_word, note.kindle_usage)
 
         # Normalize morfeusz lemma to best lemma for Anki learning now that final POS is known
-        note.expression = normalize_lemma(note.original_form, note.morefeusz_lemma, note.part_of_speech, note.morfeusz_tag)
+        # Morfeusz lemma already has "się" absorbed if applicable for verbs
+        note.expression = normalize_lemma(note.original_form, note.morfeusz_lemma, note.part_of_speech, note.morfeusz_tag)
 
     # Log if expression, lemma or part_of_speech was changed
     for note in notes:
@@ -190,79 +191,106 @@ if __name__ == "__main__":
             'kindle_word': 'uczy',
             'sentence': 'Dziecko szybko uczy się nowych słów.',
             'expected_lemma': 'uczyć się',
+            'expected_original_form': 'uczy się',
             'expected_pos': 'verb'
         },
         {
             'kindle_word': 'uczy',
             'sentence': 'Nauczyciel uczy dzieci matematyki.',
             'expected_lemma': 'uczyć',
+            'expected_original_form': 'uczy',
             'expected_pos': 'verb'
         },
         {
             'kindle_word': 'zatrzymał',
             'sentence': 'Samochód nagle zatrzymał się na środku drogi.',
             'expected_lemma': 'zatrzymać się',
+            'expected_original_form': 'zatrzymał się',
             'expected_pos': 'verb'
         },
         {
-            'kindle_word': 'otworzył',
+            'kindle_word': 'Otworzył',
             'sentence': 'Otworzył drzwi bez pukania.',
             'expected_lemma': 'otworzyć',
+            'expected_original_form': 'Otworzył',
             'expected_pos': 'verb'
         },
         {
             'kindle_word': 'zawzięcie',
             'sentence': 'Który walił zawzięcie różdżką w blat ławki.',
             'expected_lemma': 'zawzięcie',
+            'expected_original_form': 'zawzięcie',
             'expected_pos': 'adv'
         },
         {
             'kindle_word': 'zawzięcie',
             'sentence': 'Jego zawzięcie było godne podziwu.',
             'expected_lemma': 'zawziąć',
+            'expected_original_form': 'zawzięcie',
             'expected_pos': 'noun'
         },
         {
             'kindle_word': 'podoba',
             'sentence': 'Ten obraz podoba się dzieciom.',
             'expected_lemma': 'podobać się',
+            'expected_original_form': 'podoba się',
             'expected_pos': 'verb'
         },
         {
-            'kindle_word': 'mył',
+            'kindle_word': 'Mył',
             'sentence': 'Mył naczynia po obiedzie.',
             'expected_lemma': 'myć',
+            'expected_original_form': 'Mył',
             'expected_pos': 'verb'
         },
         {
-            'kindle_word': 'mył się',
+            'kindle_word': 'Mył się',
             'sentence': 'Mył się codziennie rano.',
             'expected_lemma': 'myć się',
+            'expected_original_form': 'Mył się',
             'expected_pos': 'verb'
         },
         {
-            'kindle_word': 'bił',
+            'kindle_word': 'Bił',
             'sentence': 'Bił się z bratem w dzieciństwie.',
             'expected_lemma': 'bić się',
+            'expected_original_form': 'Bił się',
             'expected_pos': 'verb'
         },
         {
-            'kindle_word': 'bił',
+            'kindle_word': 'Bił',
             'sentence': 'Bił rekord świata w pływaniu.',
             'expected_lemma': 'bić',
+            'expected_original_form': 'Bił',
             'expected_pos': 'verb'
         },
         {
             'kindle_word': 'nadzieja',
             'sentence': 'Mam nadzieję na dobrą ocenę.',
             'expected_lemma': 'nadzieja',
+            'expected_original_form': 'nadzieja',
             'expected_pos': 'noun'
         },
         {
             'kindle_word': 'szybko',
             'sentence': 'Biegł szybko do szkoły.',
             'expected_lemma': 'szybko',
+            'expected_original_form': 'szybko',
             'expected_pos': 'adv'
+        },
+        {
+            'kindle_word': 'boi',
+            'sentence': 'On się nie boi ciemności.',
+            'expected_lemma': 'bać się',
+            'expected_original_form': 'się nie boi',
+            'expected_pos': 'verb'
+        },
+        {
+            'kindle_word': 'piękną',
+            'sentence': 'Podziwiał piękną rzeźbę w muzeum.',
+            'expected_lemma': 'piękny',
+            'expected_original_form': 'piękną',
+            'expected_pos': 'adj'
         }
     ]
 
@@ -280,3 +308,8 @@ if __name__ == "__main__":
                     print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected lemma '{test['expected_lemma']}', got '{note.expression}'")
                 else:
                     print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected lemma '{note.expression}'")
+
+                if test['expected_original_form'] != note.original_form:
+                    print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected original form '{test['expected_original_form']}', got '{note.original_form}'")
+                else:
+                    print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected original form '{note.original_form}'")

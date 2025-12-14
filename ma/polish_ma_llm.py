@@ -126,5 +126,5 @@ def update_notes_with_llm(notes):
 
             # Update note with normal MA fields
             note.morfeusz_tag = tag
-            note.morefeusz_lemma = lemma
+            note.morfeusz_lemma = lemma
             note.part_of_speech = readable_pos
