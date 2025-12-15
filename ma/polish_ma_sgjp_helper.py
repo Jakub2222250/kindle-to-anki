@@ -167,6 +167,13 @@ def test_normalize_adj_to_masc_sg():
         ("młodym", "młody"),        # instrumental masculine singular
         ("starych", "stary"),       # genitive/locative plural
 
+        # Additional test cases
+        ("włochata", "włochaty"),   # feminine nominative singular
+        ("pulchna", "pulchny"),     # feminine nominative singular  
+        ("kiełkowa", "kiełkowy"),   # feminine nominative singular
+        ("wierne", "wierny"),       # neuter nominative singular or plural
+        ("niemym", "niemy"),        # instrumental masculine singular
+
         # Words that should remain unchanged (already masc sg or unknown forms)
         ("nieznany", "nieznany"),   # already masculine singular
         ("xyz", "xyz"),             # unknown word
