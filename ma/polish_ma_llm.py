@@ -235,12 +235,14 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
 
     print("\nStarting LLM MA processing...")
 
+    cache = MACache(cache_suffix=cache_suffix)
+    notes_needing_llm = []
+
     if not ignore_cache:
-        cache = MACache(cache_suffix=cache_suffix)
         print(f"Loaded MA cache with {len(cache.cache)} entries")
 
         # Phase 1: Collect notes that need LLM MA processing
-        notes_needing_llm = []
+
         cached_count = 0
 
         for note in notes:
@@ -257,6 +259,7 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
 
         print(f"Found {cached_count} cached results, {len(notes_needing_llm)} notes need LLM calls")
     else:
+        notes_needing_llm = notes
         print("Ignoring cache as per user request. Fresh results will be generated.")
 
     if not notes_needing_llm:

@@ -3,11 +3,10 @@ from anki.anki_note import AnkiNote
 from ma.morphological_analyzer import process_morphological_enrichment
 
 
-def get_all_notes(lang: str) -> list[dict]:
+def get_all_notes(anki_connect_instance: AnkiConnect, lang: str) -> list[dict]:
     """
     Retrieve all notes for a given language from Anki.
     """
-    anki_connect_instance = AnkiConnect()
 
     if not anki_connect_instance.is_reachable():
         print("AnkiConnect is not reachable. Please ensure Anki is running with AnkiConnect installed and enabled.")
@@ -76,9 +75,12 @@ def generate_card_updates(uid_to_old_note_info_dict: dict, notes_to_reprocess: l
     for card_update in card_updates:
         old_note = uid_to_old_note_info_dict[card_update["UID"]]
 
-        print(f"Card Update UID: {card_update['UID']}")
+        print(f"\nCard Update UID: {card_update['UID']}")
         for field, value in card_update["fields"].items():
-            print(f"  {field}: {old_note[field]} [{value}]")
+            if field in ["Context_Sentence", "Context_Sentence_Cloze"]:
+                print(f"  {field}: [updated]")
+            else:
+                print(f"  {field}: [{old_note[field]}]->[{value}]")
 
     return card_updates
 
@@ -88,18 +90,22 @@ if __name__ == "__main__":
     for lang in ["pl"]:
         print(f"\nProcessing language: {lang}")
 
-        uid_to_old_note_info_dict, notes = get_all_notes(lang)
+        anki_connect_instance = AnkiConnect()
+
+        uid_to_old_note_info_dict, notes = get_all_notes(anki_connect_instance, lang)
 
         # Do filtering in memory
         notes_to_reprocess = []
+        num_of_unsuitable_notes = 0
 
         for note in notes:
             existing_note = uid_to_old_note_info_dict[note.uid]
 
             # Avoid words that were manually or automatically updated with się or idiom
-            if (len(existing_note["Expression"].split()) == 2 and "się" in existing_note["Expression"].split()):
+            if (len(existing_note["Original_Form"].split()) == 2 and "się" in existing_note["Original_Form"].lower().split()):
                 # Set the kindle_word back to without się for typical MA behavior
-                note.kindle_word = existing_note["Expression"].replace(" się", "").replace("się ", "")
+                note.kindle_word = existing_note["Original_Form"].replace(" się", "").replace("się ", "")
+                print("Added original word without się for reprocessing:", note.kindle_word)
                 notes_to_reprocess.append(note)
             elif existing_note["Part_Of_Speech"] == "adj":
                 notes_to_reprocess.append(note)
@@ -112,10 +118,10 @@ if __name__ == "__main__":
         for note in notes_to_reprocess:
             print(note.kindle_word)
 
-        process_morphological_enrichment(notes_to_reprocess, lang, ignore_cache=True)
+        process_morphological_enrichment(notes_to_reprocess, lang, ignore_cache=False)
 
         # Save morphological analysis updated fields back to Anki only
         card_updates = generate_card_updates(uid_to_old_note_info_dict, notes_to_reprocess)
 
         # Don't save until verified
-        # anki_connect_instance.update_notes_fields(card_updates)
+        anki_connect_instance.update_notes_fields(card_updates)

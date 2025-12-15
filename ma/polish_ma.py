@@ -322,7 +322,7 @@ if __name__ == "__main__":
         note = AnkiNote(test_case['kindle_word'], "", test_case['sentence'], "pl", "Test Book", f"loc_{i + 1}", "")
         notes.append(note)
 
-    process_notes_with_morfeusz(notes, cache_suffix='pl_test')
+    process_notes_with_morfeusz(notes, cache_suffix='pl_test', ignore_cache=True)
 
     for i, test in enumerate(test_cases):
         note = notes[i]
