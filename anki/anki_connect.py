@@ -64,14 +64,16 @@ class AnkiConnect:
             for note in notes_info:
                 fields = note.get('fields', {})
                 note_data = {
-                    'UID': fields.get('UID', {}).get('value', ''),
-                    'Original_Form': fields.get('Original_Form', {}).get('value', ''),
-                    'Expression': fields.get('Expression', {}).get('value', ''),
-                    'Context_Sentence': fields.get('Context_Sentence', {}).get('value', ''),
-                    'Context_Translation': fields.get('Context_Translation', {}).get('value', ''),
-                    'Part_Of_Speech': fields.get('Part_Of_Speech', {}).get('value', ''),
-                    'Definition': fields.get('Definition', {}).get('value', '')
+                    'UID': fields.get('UID', {}).get('value', '').strip(),
+                    'Original_Form': fields.get('Original_Form', {}).get('value', '').strip(),
+                    'Expression': fields.get('Expression', {}).get('value', '').strip(),
+                    'Context_Sentence': fields.get('Context_Sentence', {}).get('value', '').strip(),
+                    'Context_Translation': fields.get('Context_Translation', {}).get('value', '').strip(),
+                    'Part_Of_Speech': fields.get('Part_Of_Speech', {}).get('value', '').strip(),
+                    'Definition': fields.get('Definition', {}).get('value', '').strip(),
+                    'Aspect': fields.get('Aspect', {}).get('value', '').strip(),
                 }
+
                 notes_data.append(note_data)
 
             return notes_data
