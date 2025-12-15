@@ -230,31 +230,34 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
         exit()
 
 
-def update_notes_with_llm(notes, cache_suffix='pl'):
+def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
     """Process MA enrichment for all notes"""
 
     print("\nStarting LLM MA processing...")
 
-    cache = MACache(cache_suffix=cache_suffix)
-    print(f"Loaded MA cache with {len(cache.cache)} entries")
+    if not ignore_cache:
+        cache = MACache(cache_suffix=cache_suffix)
+        print(f"Loaded MA cache with {len(cache.cache)} entries")
 
-    # Phase 1: Collect notes that need LLM MA processing
-    notes_needing_llm = []
-    cached_count = 0
+        # Phase 1: Collect notes that need LLM MA processing
+        notes_needing_llm = []
+        cached_count = 0
 
-    for note in notes:
-        cached_result = cache.get(note.uid)
-        if cached_result:
-            cached_count += 1
-            # Apply cached MA result
-            note.morfeusz_tag = cached_result['morfeusz_tag']
-            note.morfeusz_lemma = cached_result['morfeusz_lemma']
-            note.part_of_speech = cached_result['part_of_speech']
-            note.aspect = cached_result['aspect']
-        else:
-            notes_needing_llm.append(note)
+        for note in notes:
+            cached_result = cache.get(note.uid)
+            if cached_result:
+                cached_count += 1
+                # Apply cached MA result
+                note.morfeusz_tag = cached_result['morfeusz_tag']
+                note.morfeusz_lemma = cached_result['morfeusz_lemma']
+                note.part_of_speech = cached_result['part_of_speech']
+                note.aspect = cached_result['aspect']
+            else:
+                notes_needing_llm.append(note)
 
-    print(f"Found {cached_count} cached results, {len(notes_needing_llm)} notes need LLM calls")
+        print(f"Found {cached_count} cached results, {len(notes_needing_llm)} notes need LLM calls")
+    else:
+        print("Ignoring cache as per user request. Fresh results will be generated.")
 
     if not notes_needing_llm:
         print("LLM MA processing completed.")

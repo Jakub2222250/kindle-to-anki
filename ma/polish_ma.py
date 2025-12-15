@@ -139,7 +139,7 @@ def absorb_nearest_sie(kindle_word, usage_text):
     return result
 
 
-def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl'):
+def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl', ignore_cache=False):
 
     morf = morfeusz2.Morfeusz()
     notes_requiring_llm_ma = []
@@ -162,7 +162,7 @@ def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl'):
     print(f"{num_notes_not_requiring_llm_ma} notes did not require LLM MA processing.")
 
     if len(notes_requiring_llm_ma) > 0:
-        update_notes_with_llm(notes_requiring_llm_ma, cache_suffix=cache_suffix)
+        update_notes_with_llm(notes_requiring_llm_ma, cache_suffix=cache_suffix, ignore_cache=ignore_cache)
 
     # Post process notes by checking if się was absorbed
     for note in notes:

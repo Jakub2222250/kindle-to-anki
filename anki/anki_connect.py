@@ -172,8 +172,6 @@ class AnkiConnect:
                 exit()
 
             print("Updating fields for UID:", uid, id)
-            for key, value in fields_to_update.items():
-                print(f"  {key}: {value}")
 
             # Use UID directly as note ID
             try:
