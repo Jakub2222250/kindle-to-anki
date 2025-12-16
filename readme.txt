@@ -7,16 +7,16 @@
 6. Delete "Internal Storage/system/vocabulary/vocab.db" on of the kindle
 
 
-Fields to write out in order:
+Fields to write out in order (ordering based on manual categorizing ease in Anki UI)
 1: UID
 2: Expression
-3: Original_Form
-4: Part_Of_Speech
-5: Definition
-6: Secondary_Definitions
-7: Context_Sentence
-8: Context_Sentence_Cloze
-9: Context_Translation
+3: Definition
+4: Context_Sentence
+5: Context_Translation
+6: Part_Of_Speech
+7: Aspect
+8: Original_Form
+9: Context_Sentence_Cloze
 10: Collocations
 11: Original_Language_Hint
 12: Notes

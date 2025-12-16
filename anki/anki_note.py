@@ -142,4 +142,20 @@ class AnkiNote:
 
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
-        return f"{self.uid}\t{self.expression}\t{self.original_form}\t{self.part_of_speech}\t{self.definition}\t{self.aspect}\t{self.get_context_sentence_bold_word()}\t{self.get_context_sentence_cloze()}\t{self.context_translation}\t{self.collocations}\t{self.original_language_hint}\t{self.notes}\t{self.source_book}\t{self.location}\t{self.status}\t{self.get_cloze_enabled_output()}\t{self.tags}\n"
+        return (f"{self.uid}\t"
+                f"{self.expression}\t"
+                f"{self.definition}\t"
+                f"{self.get_context_sentence_bold_word()}\t"
+                f"{self.context_translation}\t"
+                f"{self.part_of_speech}\t"
+                f"{self.aspect}\t"
+                f"{self.original_form}\t"
+                f"{self.get_context_sentence_cloze()}\t"
+                f"{self.collocations}\t"
+                f"{self.original_language_hint}\t"
+                f"{self.notes}\t"
+                f"{self.source_book}\t"
+                f"{self.location}\t"
+                f"{self.status}\t"
+                f"{self.get_cloze_enabled_output()}\t"
+                f"{self.tags}\n")
