@@ -93,8 +93,8 @@ def handle_incremental_import_choice(db_path, last_timestamp):
     return read_vocab_from_db(db_path, last_timestamp)
 
 
-def offer_to_save_timestamp(vocab_data, metadata):
-    """Offer to save the max timestamp from current import for future incremental imports"""
+def save_latest_vocab_builder_entry_timestamp(vocab_data, metadata):
+    """Save the max timestamp from current import for future incremental imports"""
     if not vocab_data:
         return
 
@@ -102,11 +102,9 @@ def offer_to_save_timestamp(vocab_data, metadata):
     human_readable_time = datetime.datetime.fromtimestamp(max_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
     print(f"\nMax timestamp from this import: {human_readable_time}")
 
-    response = input("Save this timestamp for future incremental imports? (Y/n): ").strip().lower()
-    if response == 'y' or response == 'yes':
-        metadata['last_timestamp_import'] = max_timestamp
-        save_metadata(metadata)
-        print("Timestamp saved. Future runs will offer to import only newer notes.")
+    metadata['last_timestamp_import'] = max_timestamp
+    save_metadata(metadata)
+    print("Timestamp saved. Future runs will offer to import only newer notes.")
 
 
 def read_vocab_from_db(db_path, timestamp=None):
@@ -310,8 +308,8 @@ def export_kindle_vocab():
     # Save script run timestamp
     save_script_run_timestamp(metadata)
 
-    # Offer to save timestamp for future incremental imports
-    offer_to_save_timestamp(kindle_vocab_data, metadata)
+    # Save timestamp for future incremental imports
+    save_latest_vocab_builder_entry_timestamp(kindle_vocab_data, metadata)
 
     print("\nKindle to Anki export process completed successfully.")
 

@@ -182,10 +182,11 @@ def enrich_notes_with_llm(notes: list[AnkiNote], lang):
     if not notes_needing_llm:
         return
 
-    result = input(f"\nDo you want to proceed with LLM API calls for {len(notes_needing_llm)} notes? (y/n): ").strip().lower()
-    if result != 'y' and result != 'yes':
-        print("LLM enrichment process aborted by user.")
-        exit()
+    if len(notes_needing_llm) > 200:
+        result = input(f"\nDo you want to proceed with LLM API calls for {len(notes_needing_llm)} notes? (y/n): ").strip().lower()
+        if result != 'y' and result != 'yes':
+            print("LLM enrichment process aborted by user.")
+            exit()
 
     # Phase 2: Process notes in batches
     process_notes_in_batches(notes_needing_llm, cache)

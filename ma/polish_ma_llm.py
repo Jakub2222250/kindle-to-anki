@@ -266,10 +266,11 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
         print("LLM MA processing completed.")
         return
 
-    result = input(f"\nDo you want to proceed with LLM MA processing for {len(notes_needing_llm)} notes? [y/n]: ").strip().lower()
-    if result != 'y' and result != 'yes':
-        print("LLM MA processing aborted by user.")
-        exit()
+    if len(notes_needing_llm) > 200:
+        result = input(f"\nDo you want to proceed with LLM MA processing for {len(notes_needing_llm)} notes? [y/n]: ").strip().lower()
+        if result != 'y' and result != 'yes':
+            print("LLM MA processing aborted by user.")
+            exit()
 
     # Phase 2: Process notes in batches
     process_notes_in_batches(notes_needing_llm, cache)
