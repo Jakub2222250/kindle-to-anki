@@ -170,6 +170,7 @@ def test_normalize_adj_to_masc_sg():
         # Additional test cases
         ("włochata", "włochaty"),   # feminine nominative singular
         ("pulchna", "pulchny"),     # feminine nominative singular  
+        ("bystra", "bystry"),       # feminine nominative singular
         ("kiełkowa", "kiełkowy"),   # feminine nominative singular
         ("wierne", "wierny"),       # neuter nominative singular or plural
         ("niemym", "niemy"),        # instrumental masculine singular
