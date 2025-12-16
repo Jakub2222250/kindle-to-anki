@@ -95,7 +95,7 @@ class AnkiConnect:
                     "Original_Form": anki_note.original_form,
                     "Part_Of_Speech": anki_note.part_of_speech,
                     "Definition": anki_note.definition,
-                    "Secondary_Definitions": anki_note.secondary_definitions,
+                    "Aspect": anki_note.aspect,
                     "Context_Sentence": anki_note.get_context_sentence_bold_word(),
                     "Context_Sentence_Cloze": anki_note.get_context_sentence_cloze(),
                     "Context_Translation": anki_note.context_translation,
