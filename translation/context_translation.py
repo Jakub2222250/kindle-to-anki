@@ -1,4 +1,4 @@
-from translation.polish_translator import translate_polish_context_to_english
+from translation.polish_translator_local import translate_polish_context_to_english
 from translation.translation_cache import TranslationCache
 
 
