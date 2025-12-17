@@ -7,7 +7,6 @@ from wsd.wsd_cache import WSDCache
 # Configuration
 BATCH_SIZE = 40
 BATCH_LLM = "gpt-5"
-FALLBACK_LLM = "gpt-5"
 
 # Common LLM instructions
 
@@ -130,20 +129,25 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
 
     # Phase 1: Collect notes that need LLM enrichment
     notes_needing_llm = []
-    cached_count = 0
 
-    for note in notes:
-        if not note.kindle_usage or not note.expression:
-            continue
+    if not ignore_cache:
+        cached_count = 0
 
-        cached_result = cache.get(note.uid)
-        if cached_result:
-            cached_count += 1
-            note.apply_llm_enrichment(cached_result)
-        else:
-            notes_needing_llm.append(note)
+        for note in notes:
+            if not note.kindle_usage or not note.expression:
+                continue
 
-    print(f"Found {cached_count} cached results, {len(notes_needing_llm)} notes need LLM calls")
+            cached_result = cache.get(note.uid)
+            if cached_result:
+                cached_count += 1
+                note.apply_llm_enrichment(cached_result)
+            else:
+                notes_needing_llm.append(note)
+
+        print(f"Found {cached_count} cached results, {len(notes_needing_llm)} notes need LLM calls")
+    else:
+        notes_needing_llm = notes
+        print("Ignoring cache as per user request. Fresh results will be generated.")
 
     if not notes_needing_llm:
         return

@@ -1,6 +1,5 @@
 import json
 import time
-from pathlib import Path
 from openai import OpenAI
 from anki.anki_note import AnkiNote
 from language.language_helper import get_language_name_in_english
@@ -9,7 +8,7 @@ from translation.translation_cache import TranslationCache
 
 # Configuration
 BATCH_SIZE = 40
-TRANSLATION_LLM = "gpt-5-mini"
+TRANSLATION_LLM = "gpt-5"
 
 # LLM translation instructions
 
@@ -142,28 +141,29 @@ def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, tar
         cache_suffix += "_test"
 
     cache = TranslationCache(cache_suffix=cache_suffix)
-    if not ignore_cache:
-        print(f"Loaded translation cache with {len(cache.cache)} entries")
-    else:
-        print("Ignoring cache as per user request. Fresh translations will be generated.")
 
     # Filter notes that need translation and collect cached results
     notes_needing_translation = []
-    cached_count = 0
 
-    for note in notes:
-        sentence = note.kindle_usage or note.context_sentence
-        if not sentence:
-            continue
+    if not ignore_cache:
+        cached_count = 0
 
-        cached_result = cache.get(note.uid)
-        if cached_result:
-            cached_count += 1
-            note.context_translation = cached_result.get('context_translation', '')
-        else:
-            notes_needing_translation.append(note)
+        for note in notes:
+            sentence = note.kindle_usage or note.context_sentence
+            if not sentence:
+                continue
 
-    print(f"Found {cached_count} cached translations, {len(notes_needing_translation)} notes need LLM translation")
+            cached_result = cache.get(note.uid)
+            if cached_result:
+                cached_count += 1
+                note.context_translation = cached_result.get('context_translation', '')
+            else:
+                notes_needing_translation.append(note)
+
+        print(f"Found {cached_count} cached translations, {len(notes_needing_translation)} notes need LLM translation")
+    else:
+        notes_needing_translation = notes
+        print("Ignoring cache as per user request. Fresh translations will be generated.")
 
     if not notes_needing_translation:
         print(f"{source_language_name} context translation (LLM) completed (all from cache).")
