@@ -353,7 +353,7 @@ if __name__ == "__main__":
     ]
 
     # Test the pruning function with auto_prune=True to skip user input
-    pruned_notes = prune_existing_notes_automatically(notes, existing_notes, auto_prune=True, cache_suffix='test')
+    pruned_notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix='pl-en_test')
 
     # Check results for each test case
     for test_case in test_cases:

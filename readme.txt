@@ -37,7 +37,13 @@ Tags
 
 
 # Running integration/unit tests
-py -m ma.polish_ma
-py -m ma.polish_ma_sgjp_helper
+
+py -m ma.pl_en.ma_polish_hybrid
+py -m ma.pl_en.ma_polish_sgjp_helper
+
 py -m pruning.pruning
-py -m wsd.llm_enrichment
+
+py -m wsd.wsd_llm
+
+py -m translation.pl_en.polish_translator_local
+py -m translation.translator_llm
