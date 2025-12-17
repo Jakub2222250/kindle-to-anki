@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from anki.anki_note import AnkiNote
+from collocation.collocation import process_collocation_generation
 from translation.context_translation import process_context_translation
 from wsd.wsd_llm_provider import provide_word_sense_disambiguation
 from ma.morphological_analyzer import process_morphological_enrichment
@@ -307,6 +308,9 @@ def export_kindle_vocab():
 
         # Provide translations
         process_context_translation(notes, language=lang, cache_suffix=lang, ignore_cache=False, use_llm=False)
+
+        # Provide collocations
+        process_collocation_generation(notes, language=lang, cache_suffix=lang, ignore_cache=False, use_llm=True)
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, lang)

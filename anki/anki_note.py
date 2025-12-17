@@ -44,18 +44,12 @@ class AnkiNote:
         self.set_tags(language)
 
     def apply_llm_enrichment(self, llm_data):
-        """Apply LLM enrichment data to the note (excluding translation which is handled separately)"""
+        """Apply LLM enrichment data to the note (excluding translation and collocations which are handled separately)"""
         if not llm_data:
             return []
 
         if llm_data.get('definition'):
             self.definition = llm_data['definition']  # Override glosbe_url with LLM definition
-
-        if llm_data.get('collocations'):
-            if isinstance(llm_data['collocations'], list):
-                self.collocations = ', '.join(llm_data['collocations'])
-            else:
-                self.collocations = str(llm_data['collocations'])
 
         if llm_data.get('original_language_definition'):
             self.original_language_hint = llm_data['original_language_definition']
