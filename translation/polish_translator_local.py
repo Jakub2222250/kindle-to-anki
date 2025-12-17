@@ -3,11 +3,16 @@ from translation.translation_cache import TranslationCache
 import time
 
 
-def translate_polish_context_to_english(notes: list[AnkiNote], cache: TranslationCache):
+def translate_polish_context_to_english(notes: list[AnkiNote], ignore_cache=False):
     """Translate Polish context notes to English"""
 
     print("\nStarting Polish context translation...")
-    from transformers import MarianMTModel, MarianTokenizer
+
+    cache = TranslationCache(cache_suffix="pl-en")
+    if not ignore_cache:
+        print(f"Loaded translation cache with {len(cache.cache)} entries")
+    else:
+        print("Ignoring cache as per user request. Fresh translations will be generated.")
 
     # Capture timestamp at the start of translation processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -36,6 +41,9 @@ def translate_polish_context_to_english(notes: list[AnkiNote], cache: Translatio
         return
 
     # Process notes that need translation
+    print(f"\nTranslating {len(notes_needing_translation)} notes using local MarianMT model...")
+
+    from transformers import MarianMTModel, MarianTokenizer
     src_texts = [note.context_sentence for note in notes_needing_translation]
 
     tokenizer = MarianTokenizer.from_pretrained(model_name)

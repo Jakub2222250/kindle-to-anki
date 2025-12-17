@@ -2,15 +2,15 @@ import json
 import urllib.request
 import urllib.error
 
+from anki.anki_deck import AnkiDeck
+from anki.anki_note import AnkiNote
+
 
 class AnkiConnect:
     """Super minimal AnkiConnect wrapper for Polish Vocab Discovery deck"""
 
     def __init__(self):
         self.anki_url = "http://localhost:8765"
-        self.ready_deck_name = "Polish Vocab Discovery::Ready"
-        self.staging_deck_name = "Polish Vocab Discovery::Import"
-        self.parent_deck_name = "Polish Vocab Discovery"
         self.note_type = "My Foreign Language Reading Words Note Type"
 
     def _invoke(self, action, params=None):
@@ -46,11 +46,11 @@ class AnkiConnect:
         except Exception:
             return False
 
-    def get_notes(self, language=None):
+    def get_notes(self, anki_deck: AnkiDeck):
         """Get all notes from the specified deck with Expression, Context_Sentence, and Definition fields"""
         try:
             # Find all note IDs in the deck with the specified note type
-            query = f'"deck:{self.parent_deck_name}" "note:{self.note_type}"'
+            query = f'"deck:{anki_deck.parent_deck_name}" "note:{self.note_type}"'
             note_ids = self._invoke("findNotes", {"query": query})
 
             if not note_ids:
@@ -81,7 +81,7 @@ class AnkiConnect:
         except Exception as e:
             raise Exception(f"Failed to get deck notes: {e}")
 
-    def create_notes_batch(self, anki_notes, lang=None):
+    def create_notes_batch(self, anki_deck: AnkiDeck, anki_notes: list[AnkiNote]):
         """Create multiple notes in Anki from a list of AnkiNote objects"""
         print(f"\nCreating {len(anki_notes)} notes in Anki...")
         try:
@@ -109,7 +109,7 @@ class AnkiConnect:
                 }
 
                 note_data = {
-                    "deckName": self.staging_deck_name,
+                    "deckName": anki_deck.name,
                     "modelName": self.note_type,
                     "fields": fields,
                     "tags": anki_note.tags.split() if anki_note.tags else ["kindle_to_anki"]

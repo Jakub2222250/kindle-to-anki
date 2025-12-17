@@ -10,7 +10,7 @@ class PruningCache:
     def __init__(self, cache_dir="cache", cache_suffix='default'):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
-        self.cache_file = self.cache_dir / f"pruning_cache-{cache_suffix}.json"
+        self.cache_file = self.cache_dir / f"pruning_cache_{cache_suffix}.json"
 
         # Load existing cache
         self.cache = self.load_cache()
@@ -51,7 +51,7 @@ class PruningCache:
         self.save_cache()
 
 
-def prune_notes_identified_as_redundant(notes: list[AnkiNote], cache_suffix='pl'):
+def prune_notes_identified_as_redundant(notes: list[AnkiNote], cache_suffix: str):
     """Remove notes that were previously identified as redundant based on cached results"""
 
     print("\nPruning notes previously identified as redundant...")
@@ -131,7 +131,7 @@ def evaluate_gloss_similarity(gloss1, gloss2) -> int:
     return fuzz.token_set_ratio(gloss1, gloss2)
 
 
-def prune_new_notes_against_eachother(notes: list[AnkiNote], cache_suffix='pl'):
+def prune_new_notes_against_eachother(notes: list[AnkiNote], cache_suffix: str):
     """Gather groups of notes with the same Expression, Part_Of_Speech, and similar Definition to prune duplicates among new notes.
        Choose the note with the highest cloze_enabled value, or the longest context_sentence, or the first one as a tiebreaker."""
 
@@ -228,7 +228,7 @@ def choose_best_note(notes: list[AnkiNote]) -> AnkiNote:
     return context_candidates[0]
 
 
-def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: list[dict], cache_suffix='pl'):
+def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: list[dict], cache_suffix: str):
 
     print("\nAutomatically pruning notes redundant to existing Anki notes based on Expression, Part_Of_Speech, and Definition similarity...")
 

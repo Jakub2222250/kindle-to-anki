@@ -111,12 +111,15 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache)
         exit()
 
 
-def provide_word_sense_disambiguation(notes: list[AnkiNote], lang):
+def provide_word_sense_disambiguation(notes: list[AnkiNote], source_language_code: str, target_language_code: str):
     """Process LLM enrichment for all notes"""
 
     print("\nStarting LLM enrichment process...")
 
-    cache = WSDCache(cache_suffix=lang)
+    language_pair_code = source_language_code + "-" + target_language_code
+    cache_suffix = language_pair_code + "_llm"
+
+    cache = WSDCache(cache_suffix=cache_suffix)
     print(f"\nLoaded LLM cache with {len(cache.cache)} entries")
 
     # Phase 1: Collect notes that need LLM enrichment

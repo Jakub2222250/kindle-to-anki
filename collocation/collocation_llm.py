@@ -127,10 +127,19 @@ def process_collocation_batches(notes_needing_collocations: list[AnkiNote], cach
         exit()
 
 
-def generate_polish_collocations_llm(notes: list[AnkiNote], cache: CollocationCache):
+def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, target_language_code: str, ignore_cache=False):
     """Generate Polish collocations using LLM"""
 
     print("\nStarting Polish collocation generation (LLM)...")
+
+    language_pair_code = f"{source_language_code}-{target_language_code}"
+    cache_suffix = language_pair_code + "_llm"
+
+    cache = CollocationCache(cache_suffix=cache_suffix)
+    if not ignore_cache:
+        print(f"Loaded collocation cache with {len(cache.cache)} entries")
+    else:
+        print("Ignoring cache as per user request. Fresh collocations will be generated.")
 
     # Filter notes that need collocation analysis and collect cached results
     notes_needing_collocations = []
@@ -193,7 +202,7 @@ if __name__ == "__main__":
     ]
 
     cache = CollocationCache(cache_suffix='pl_test_llm')
-    generate_polish_collocations_llm(notes, cache)
+    generate_collocations_llm(notes, cache)
 
     print()
     for note in notes:

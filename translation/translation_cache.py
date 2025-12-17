@@ -6,7 +6,7 @@ class TranslationCache:
     def __init__(self, cache_dir="cache", cache_suffix='default'):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
-        self.cache_file = self.cache_dir / f"translation_cache-{cache_suffix}.json"
+        self.cache_file = self.cache_dir / f"translation_cache_{cache_suffix}.json"
 
         # Load existing cache
         self.cache = self.load_cache()
