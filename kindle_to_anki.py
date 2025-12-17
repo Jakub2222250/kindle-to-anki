@@ -210,7 +210,7 @@ def get_latest_kindle_vocab_data(db_path, metadata):
     return kindle_vocab_data
 
 
-def get_anki_decks_by_language_pair():
+def get_anki_decks_by_source_language():
     anki_decks_list = [
         AnkiDeck(
             source_lang_code="pl",
@@ -221,22 +221,19 @@ def get_anki_decks_by_language_pair():
         ),
     ]
 
-    anki_decks_by_language_pair = {}
+    anki_decks_by_source_language = {}
     for deck in anki_decks_list:
-        lang_pair = (deck.source_lang_code, deck.target_lang_code)
-        anki_decks_by_language_pair[lang_pair] = deck
+        anki_decks_by_source_language[deck.source_lang_code] = deck
 
-    return anki_decks_by_language_pair
+    return anki_decks_by_source_language
 
 
 def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
 
-    TARGET_LANGUAGE_CODE = "en"
-
     # Get available anki decks by language pair
-    anki_decks_by_language_pair = get_anki_decks_by_language_pair()
+    anki_decks_by_source_language = get_anki_decks_by_source_language()
 
     # Get path to vocab.db
     db_path = get_vocab_db()
@@ -256,7 +253,8 @@ def export_kindle_vocab():
     for source_lang_code, notes in notes_by_language.items():
 
         # Reference to anki deck for metadata
-        anki_deck = anki_decks_by_language_pair.get((source_lang_code, TARGET_LANGUAGE_CODE))
+        anki_deck = anki_decks_by_source_language.get(source_lang_code)
+        target_lang_code = anki_deck.target_lang_code
         language_pair_code = anki_deck.get_language_pair_code()
 
         # Get existing notes from Anki for this language
@@ -269,14 +267,14 @@ def export_kindle_vocab():
         notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
 
         # Enrich notes with morphological analysis
-        process_morphological_enrichment(notes, source_lang_code, TARGET_LANGUAGE_CODE)
+        process_morphological_enrichment(notes, source_lang_code, target_lang_code)
 
         if not notes:
             print(f"No new notes to process for language: {source_lang_code}")
             continue
 
         # Provide word sense disambiguation via LLM
-        provide_word_sense_disambiguation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False)
+        provide_word_sense_disambiguation(notes, source_lang_code, target_lang_code, ignore_cache=False)
 
         # Prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=language_pair_code)
@@ -289,10 +287,10 @@ def export_kindle_vocab():
             continue
 
         # Provide translations
-        process_context_translation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False, use_llm=True)
+        process_context_translation(notes, source_lang_code, target_lang_code, ignore_cache=False, use_llm=True)
 
         # Provide collocations
-        process_collocation_generation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False)
+        process_collocation_generation(notes, source_lang_code, target_lang_code, ignore_cache=False)
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, source_lang_code)
