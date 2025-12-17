@@ -316,7 +316,7 @@ def export_kindle_vocab():
             continue
 
         # Provide word sense disambiguation via LLM
-        provide_word_sense_disambiguation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=True)
+        provide_word_sense_disambiguation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False)
 
         # Prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=language_pair_code)
@@ -329,7 +329,7 @@ def export_kindle_vocab():
             continue
 
         # Provide translations
-        process_context_translation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=True, use_llm=True)
+        process_context_translation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False, use_llm=True)
 
         # Provide collocations
         process_collocation_generation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False)

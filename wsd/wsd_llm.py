@@ -122,10 +122,6 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
     if use_test_cache:
         cache_suffix += "_test"
     cache = WSDCache(cache_suffix=cache_suffix)
-    if not ignore_cache:
-        print(f"Loaded wsd cache with {len(cache.cache)} entries")
-    else:
-        print("Ignoring cache as per user request. Fresh wsd will be generated.")
 
     # Phase 1: Collect notes that need LLM enrichment
     notes_needing_llm = []
