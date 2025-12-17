@@ -155,7 +155,7 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
             exit()
 
     # Phase 2: Process notes in batches
-    process_notes_in_batches(notes_needing_llm, cache)
+    process_notes_in_batches(notes_needing_llm, cache, source_language_name, target_language_name)
 
     print("LLM enrichment process completed.")
 

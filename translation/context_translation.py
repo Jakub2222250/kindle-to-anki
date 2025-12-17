@@ -1,6 +1,5 @@
 from translation.pl_en.polish_translator_local import translate_polish_context_to_english
 from translation.translator_llm import translate_context_with_llm
-from translation.translation_cache import TranslationCache
 
 
 def process_context_translation(notes, source_lang_code: str, target_lang_code: str, ignore_cache=False, use_llm=False):
@@ -15,14 +14,7 @@ def process_context_translation(notes, source_lang_code: str, target_lang_code: 
     """
 
     print("\nStarting context translation...")
-
     language_pair_code = f"{source_lang_code}-{target_lang_code}"
-
-    cache = TranslationCache(cache_suffix=language_pair_code)
-    if not ignore_cache:
-        print(f"Loaded translation cache with {len(cache.cache)} entries")
-    else:
-        print("Ignoring cache as per user request. Fresh translations will be generated.")
 
     if source_lang_code == "pl":
         if not use_llm and target_lang_code == "en":

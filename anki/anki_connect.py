@@ -48,6 +48,9 @@ class AnkiConnect:
 
     def get_notes(self, anki_deck: AnkiDeck):
         """Get all notes from the specified deck with Expression, Context_Sentence, and Definition fields"""
+
+        print(f"\nFetching notes from Anki deck: '{anki_deck.parent_deck_name}'...")
+
         try:
             # Find all note IDs in the deck with the specified note type
             query = f'"deck:{anki_deck.parent_deck_name}" "note:{self.note_type}"'
@@ -75,6 +78,8 @@ class AnkiConnect:
                 }
 
                 notes_data.append(note_data)
+
+            print("Notes fetch completed.")
 
             return notes_data
 
@@ -109,7 +114,7 @@ class AnkiConnect:
                 }
 
                 note_data = {
-                    "deckName": anki_deck.name,
+                    "deckName": anki_deck.staging_deck_name,
                     "modelName": self.note_type,
                     "fields": fields,
                     "tags": anki_note.tags.split() if anki_note.tags else ["kindle_to_anki"]

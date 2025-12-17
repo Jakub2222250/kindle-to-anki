@@ -139,7 +139,7 @@ def absorb_nearest_sie(kindle_word, usage_text):
     return result
 
 
-def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl-en_hybrid', ignore_cache=False):
+def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl-en_hybrid', ignore_cache=False, verbose=False):
 
     morf = morfeusz2.Morfeusz()
     notes_requiring_llm_ma = []
@@ -174,13 +174,14 @@ def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl-en_hybri
         note.expression = normalize_lemma(note.original_form, note.morfeusz_lemma, note.part_of_speech, note.morfeusz_tag)
 
     # Log if expression, lemma or part_of_speech was changed
-    for note in notes:
-        print("\nOriginal word:", note.kindle_word)
-        print("  -> Expression (lemma):", note.expression)
-        print("  -> Part of Speech:", note.part_of_speech)
-        print("  -> Aspect:", note.aspect)
-        if note.kindle_word != note.original_form:
-            print("  -> Original Form:", note.original_form)
+    if verbose:
+        for note in notes:
+            print("\nOriginal word:", note.kindle_word)
+            print("  -> Expression (lemma):", note.expression)
+            print("  -> Part of Speech:", note.part_of_speech)
+            print("  -> Aspect:", note.aspect)
+            if note.kindle_word != note.original_form:
+                print("  -> Original Form:", note.original_form)
 
 
 if __name__ == "__main__":

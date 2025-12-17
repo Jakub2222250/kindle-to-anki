@@ -1,5 +1,4 @@
 from collocation.collocation_llm import generate_collocations_llm
-from collocation.collocation_cache import CollocationCache
 
 
 def process_collocation_generation(notes, source_language_code: str, target_language_code: str, ignore_cache=False):

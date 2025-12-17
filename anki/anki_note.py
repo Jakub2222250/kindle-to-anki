@@ -29,6 +29,7 @@ class AnkiNote:
         self.source_book = self.kindle_book_name or ""
         self.location = f"kindle_{position}" if position else ""
         self.status = "raw"
+        self.cloze_deletion_score = -1
         self.cloze_enabled = None
 
         # Generate book abbreviation
@@ -57,6 +58,7 @@ class AnkiNote:
         if llm_data.get('cloze_deletion_score') is not None:
             score = llm_data['cloze_deletion_score']
             # Enable cloze if score is 7 or higher
+            self.cloze_deletion_score = score
             self.cloze_enabled = score if score >= 7 else None
 
     def generate_book_abbrev(self, book_name):

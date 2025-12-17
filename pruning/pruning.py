@@ -131,9 +131,9 @@ def evaluate_gloss_similarity(gloss1, gloss2) -> int:
     return fuzz.token_set_ratio(gloss1, gloss2)
 
 
-def prune_new_notes_against_eachother(notes: list[AnkiNote], cache_suffix: str):
+def prune_new_notes_against_eachother(notes: list[AnkiNote]):
     """Gather groups of notes with the same Expression, Part_Of_Speech, and similar Definition to prune duplicates among new notes.
-       Choose the note with the highest cloze_enabled value, or the longest context_sentence, or the first one as a tiebreaker."""
+       Choose the note with the highest cloze_deletion_score value, or the longest context_sentence, or the first one as a tiebreaker."""
 
     print("\nPruning duplicate notes among new notes based on Expression, Part_Of_Speech, and Definition similarity...")
 
@@ -141,7 +141,6 @@ def prune_new_notes_against_eachother(notes: list[AnkiNote], cache_suffix: str):
         return notes
 
     # Initialize cache
-    cache = PruningCache(cache_suffix=cache_suffix)
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     # Group notes by (expression, part_of_speech)
@@ -190,17 +189,6 @@ def prune_new_notes_against_eachother(notes: list[AnkiNote], cache_suffix: str):
                 best_note = choose_best_note(similar_notes)
                 pruned_notes.append(best_note)
 
-                # Cache the pruning decisions for similar notes
-                for similar_note in similar_notes:
-                    is_redundant = (similar_note != best_note)
-                    similarity_factor = evaluate_gloss_similarity(best_note.definition, similar_note.definition) if is_redundant else None
-                    matched_expression = best_note.expression if is_redundant else None
-
-                    cache.set(similar_note.uid, is_redundant, similarity_factor, matched_expression, processing_timestamp)
-
-                    if is_redundant:
-                        print(f"  Pruning duplicate note: {similar_note.expression} (similar to kept note)")
-
     pruned_count = len(notes) - len(pruned_notes)
     print(f"Pruned {pruned_count} duplicate notes among new notes based on similarity.")
 
@@ -210,16 +198,16 @@ def prune_new_notes_against_eachother(notes: list[AnkiNote], cache_suffix: str):
 def choose_best_note(notes: list[AnkiNote]) -> AnkiNote:
     """Choose the best note from a list of similar notes based on priority criteria."""
 
-    # Priority 1: Highest cloze_enabled value
-    max_cloze = max(getattr(note, 'cloze_enabled', 0) for note in notes)
-    cloze_candidates = [note for note in notes if getattr(note, 'cloze_enabled', 0) == max_cloze]
+    # Priority 1: Highest cloze_deletion_score value
+    max_cloze = max(note.cloze_deletion_score for note in notes)
+    cloze_candidates = [note for note in notes if note.cloze_deletion_score == max_cloze]
 
     if len(cloze_candidates) == 1:
         return cloze_candidates[0]
 
     # Priority 2: Longest context_sentence
-    max_context_length = max(len(getattr(note, 'context_sentence', '')) for note in cloze_candidates)
-    context_candidates = [note for note in cloze_candidates if len(getattr(note, 'context_sentence', '')) == max_context_length]
+    max_context_length = max(len(note.context_sentence) for note in cloze_candidates)
+    context_candidates = [note for note in cloze_candidates if len(note.context_sentence) == max_context_length]
 
     if len(context_candidates) == 1:
         return context_candidates[0]

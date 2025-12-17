@@ -257,7 +257,7 @@ def get_anki_decks_by_language_pair():
             target_lang_code="en",
             parent_deck_name="Polish Vocab Discovery",
             ready_deck_name="Polish Vocab Discovery::Ready",
-            staging_deck_name="Polish Vocab Discovery::Staging"
+            staging_deck_name="Polish Vocab Discovery::Import"
         ),
     ]
 
@@ -322,17 +322,17 @@ def export_kindle_vocab():
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=language_pair_code)
 
         # Prune duplicates new notes leaving the best one
-        notes = prune_new_notes_against_eachother(notes, cache_suffix=language_pair_code)
+        notes = prune_new_notes_against_eachother(notes)
 
         if len(notes) == 0:
             print(f"No new notes to add to Anki after pruning for language: {source_lang_code}")
             continue
 
         # Provide translations
-        process_context_translation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False, use_llm=False)
+        process_context_translation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False, use_llm=True)
 
         # Provide collocations
-        process_collocation_generation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False, use_llm=True)
+        process_collocation_generation(notes, source_lang_code, TARGET_LANGUAGE_CODE, ignore_cache=False)
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, source_lang_code)

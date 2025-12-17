@@ -8,7 +8,7 @@ def translate_polish_context_to_english(notes: list[AnkiNote], ignore_cache=Fals
 
     print("\nStarting Polish context translation...")
 
-    cache_suffix = "pl-en"
+    cache_suffix = "pl-en_local"
     if use_test_cache:
         cache_suffix += "_test"
 
