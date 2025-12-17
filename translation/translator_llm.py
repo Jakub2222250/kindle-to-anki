@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 from openai import OpenAI
 from anki.anki_note import AnkiNote
+from language.language_helper import get_language_name_in_english
 from translation.translation_cache import TranslationCache
 
 
@@ -11,10 +12,14 @@ BATCH_SIZE = 40
 TRANSLATION_LLM = "gpt-5-mini"
 
 # LLM translation instructions
-LLM_TRANSLATION_INSTRUCTIONS = """Translate the Polish sentences to English. Provide natural, accurate translations that preserve the meaning and context.
+
+
+def get_llm_translation_instructions(source_language_name: str, target_language_name: str) -> str:
+
+    return f"""Translate the {source_language_name} sentences to {target_language_name}. Provide natural, accurate translations that preserve the meaning and context.
 
 Output JSON as an object where keys are the UIDs and values are objects with:
-- "context_translation": English translation of the sentence"""
+- "context_translation": {target_language_name} translation of the sentence"""
 
 
 def estimate_translation_cost(input_chars, notes_count, model):
@@ -39,7 +44,7 @@ def estimate_translation_cost(input_chars, notes_count, model):
     return input_cost + output_cost
 
 
-def make_batch_translation_call(batch_notes, processing_timestamp):
+def make_batch_translation_call(batch_notes, processing_timestamp, source_language_name, target_language_name):
     """Make batch LLM API call for translation"""
     items_list = []
     for note in batch_notes:
@@ -48,12 +53,12 @@ def make_batch_translation_call(batch_notes, processing_timestamp):
 
     items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-    prompt = f"""Translate the following Polish sentences to English.
+    prompt = f"""Translate the following {source_language_name} sentences to {target_language_name}.
 
 Sentences to translate:
 {items_json}
 
-{LLM_TRANSLATION_INSTRUCTIONS}
+{get_llm_translation_instructions(source_language_name, target_language_name)}
 
 Respond with valid JSON. No additional text."""
 
@@ -76,7 +81,7 @@ Respond with valid JSON. No additional text."""
     return json.loads(response.choices[0].message.content), TRANSLATION_LLM, processing_timestamp
 
 
-def process_translation_batches(notes_needing_translation: list[AnkiNote], cache: TranslationCache):
+def process_translation_batches(notes_needing_translation: list[AnkiNote], cache: TranslationCache, source_language_name: str, target_language_name: str):
     """Process notes in batches for translation"""
 
     # Capture timestamp at the start of translation processing
@@ -92,7 +97,7 @@ def process_translation_batches(notes_needing_translation: list[AnkiNote], cache
         print(f"\nProcessing translation batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
         try:
-            batch_results, model_used, timestamp = make_batch_translation_call(batch, processing_timestamp)
+            batch_results, model_used, timestamp = make_batch_translation_call(batch, processing_timestamp, source_language_name, target_language_name)
 
             for note in batch:
                 if note.uid in batch_results:
@@ -124,11 +129,14 @@ def process_translation_batches(notes_needing_translation: list[AnkiNote], cache
 
 
 def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, target_lang_code: str, ignore_cache=False):
-    """Translate Polish context notes to English using LLM"""
+    """Translate context notes to using LLM"""
 
-    print("\nStarting Polish context translation (LLM)...")
+    print("\nStarting context translation (LLM)...")
 
     language_pair_code = f"{source_lang_code}-{target_lang_code}"
+    source_language_name = get_language_name_in_english(source_lang_code)
+    target_language_name = get_language_name_in_english(target_lang_code)
+
     cache = TranslationCache(cache_suffix=language_pair_code)
     if not ignore_cache:
         print(f"Loaded translation cache with {len(cache.cache)} entries")
@@ -154,7 +162,7 @@ def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, tar
     print(f"Found {cached_count} cached translations, {len(notes_needing_translation)} notes need LLM translation")
 
     if not notes_needing_translation:
-        print("Polish context translation (LLM) completed (all from cache).")
+        print(f"{source_language_name} context translation (LLM) completed (all from cache).")
         return
 
     if len(notes_needing_translation) > 100:
@@ -164,9 +172,9 @@ def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, tar
             exit()
 
     # Process notes in batches
-    process_translation_batches(notes_needing_translation, cache)
+    process_translation_batches(notes_needing_translation, cache, source_language_name, target_language_name)
 
-    print("Polish context translation (LLM) completed.")
+    print(f"{source_language_name} context translation (LLM) completed.")
 
 
 if __name__ == "__main__":

@@ -7,4 +7,5 @@ def process_collocation_generation(notes, source_language_code: str, target_lang
 
     print("\nStarting collocation generation...")
     generate_collocations_llm(notes, source_language_code, target_language_code, ignore_cache=ignore_cache)
+
     print("Collocation generation completed.")

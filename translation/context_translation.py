@@ -1,5 +1,5 @@
 from translation.polish_translator_local import translate_polish_context_to_english
-from translation.polish_translator_llm import translate_context_with_llm
+from translation.translator_llm import translate_context_with_llm
 from translation.translation_cache import TranslationCache
 
 

@@ -3,6 +3,7 @@ import time
 from openai import OpenAI
 from anki.anki_note import AnkiNote
 from collocation.collocation_cache import CollocationCache
+from language.language_helper import get_language_name_in_english
 
 
 # Configuration
@@ -10,10 +11,13 @@ BATCH_SIZE = 40
 COLLOCATION_LLM = "gpt-5-mini"
 
 # LLM collocation instructions
-LLM_COLLOCATION_INSTRUCTIONS = """For each Polish word and sentence provided, find common Polish collocations or phrases that include the inflected input word.
+
+
+def get_llm_collocation_instructions(source_language_name: str, target_language_name: str) -> str:
+    return f"""For each {source_language_name} word and sentence provided, find common {source_language_name} collocations or phrases that include the inflected input word.
 
 Output JSON as an object where keys are the UIDs and values are objects with:
-- "collocations": A JSON list of 0-3 short collocations in Polish that commonly use the input word form"""
+- "collocations": A JSON list of 0-3 short collocations in {source_language_name} that commonly use the input word form"""
 
 
 def estimate_collocation_cost(input_chars, notes_count, model):
@@ -38,7 +42,7 @@ def estimate_collocation_cost(input_chars, notes_count, model):
     return input_cost + output_cost
 
 
-def make_batch_collocation_call(batch_notes, processing_timestamp):
+def make_batch_collocation_call(batch_notes, processing_timestamp, source_language_name, target_language_name):
     """Make batch LLM API call for collocations"""
     items_list = []
     for note in batch_notes:
@@ -47,12 +51,12 @@ def make_batch_collocation_call(batch_notes, processing_timestamp):
 
     items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-    prompt = f"""Find collocations for the following Polish words and sentences.
+    prompt = f"""Find collocations for the following {source_language_name} words and sentences.
 
 Words to analyze:
 {items_json}
 
-{LLM_COLLOCATION_INSTRUCTIONS}
+{get_llm_collocation_instructions(source_language_name, target_language_name)}
 
 Respond with valid JSON. No additional text."""
 
@@ -75,7 +79,7 @@ Respond with valid JSON. No additional text."""
     return json.loads(response.choices[0].message.content), COLLOCATION_LLM, processing_timestamp
 
 
-def process_collocation_batches(notes_needing_collocations: list[AnkiNote], cache: CollocationCache):
+def process_collocation_batches(notes_needing_collocations: list[AnkiNote], cache: CollocationCache, source_language_name: str, target_language_name: str):
     """Process notes in batches for collocation analysis"""
 
     # Capture timestamp at the start of collocation processing
@@ -91,7 +95,7 @@ def process_collocation_batches(notes_needing_collocations: list[AnkiNote], cach
         print(f"\nProcessing collocation batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
         try:
-            batch_results, model_used, timestamp = make_batch_collocation_call(batch, processing_timestamp)
+            batch_results, model_used, timestamp = make_batch_collocation_call(batch, processing_timestamp, source_language_name, target_language_name)
 
             for note in batch:
                 if note.uid in batch_results:
@@ -128,13 +132,15 @@ def process_collocation_batches(notes_needing_collocations: list[AnkiNote], cach
 
 
 def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, target_language_code: str, ignore_cache=False):
-    """Generate Polish collocations using LLM"""
+    """Generate collocations using LLM"""
 
-    print("\nStarting Polish collocation generation (LLM)...")
+    print("\nStarting collocation generation (LLM)...")
 
     language_pair_code = f"{source_language_code}-{target_language_code}"
-    cache_suffix = language_pair_code + "_llm"
+    source_language_name = get_language_name_in_english(source_language_code)
+    target_language_name = get_language_name_in_english(target_language_code)
 
+    cache_suffix = language_pair_code + "_llm"
     cache = CollocationCache(cache_suffix=cache_suffix)
     if not ignore_cache:
         print(f"Loaded collocation cache with {len(cache.cache)} entries")
@@ -163,7 +169,7 @@ def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, 
     print(f"Found {cached_count} cached collocations, {len(notes_needing_collocations)} notes need LLM collocation analysis")
 
     if not notes_needing_collocations:
-        print("Polish collocation generation (LLM) completed (all from cache).")
+        print(f"{source_language_name} collocation generation (LLM) completed (all from cache).")
         return
 
     if len(notes_needing_collocations) > 100:
@@ -173,9 +179,9 @@ def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, 
             exit()
 
     # Process notes in batches
-    process_collocation_batches(notes_needing_collocations, cache)
+    process_collocation_batches(notes_needing_collocations, cache, source_language_name, target_language_name)
 
-    print("Polish collocation generation (LLM) completed.")
+    print(f"{source_language_name} collocation generation (LLM) completed.")
 
 
 if __name__ == "__main__":
