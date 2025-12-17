@@ -1,3 +1,4 @@
+from functools import cache
 import sqlite3
 import subprocess
 import sys
@@ -8,7 +9,7 @@ from pathlib import Path
 from anki.anki_note import AnkiNote
 from wsd.llm_enrichment import enrich_notes_with_llm
 from ma.morphological_analyzer import process_morphological_enrichment
-from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_notes_identified_as_redundant
+from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 import datetime
 
@@ -294,8 +295,11 @@ def export_kindle_vocab():
         # Enrich notes with LLM
         enrich_notes_with_llm(notes, lang)
 
-        # Optionally prune existing notes automatically based on definition similarity
+        # Prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=lang)
+
+        # Prune duplicates new notes leaving the best one
+        notes = prune_new_notes_against_eachother(notes, cache_suffix=lang)
 
         if len(notes) == 0:
             print(f"No new notes to add to Anki after pruning for language: {lang}")
