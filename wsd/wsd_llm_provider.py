@@ -233,7 +233,5 @@ if __name__ == "__main__":
         print(f"  Sentence:               {note.kindle_usage}")
         print(f"  Definition:             {note.definition}")
         print(f"  Polish definition:      {note.original_language_hint}")
-        print(f"  Translation:            {note.context_translation} (not provided by LLM enrichment)")
-        print(f"  Collocations:           {note.collocations}")
         print(f"  Cloze score:            {note.cloze_enabled}")
         print("-" * 60)
