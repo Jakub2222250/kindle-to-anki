@@ -10,11 +10,13 @@ BATCH_LLM = "gpt-5"
 FALLBACK_LLM = "gpt-5"
 
 # Common LLM instructions
-LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
-1. definition: English definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
-2. collocations: Any common Polish collocations or phrases that include the inflected input word as a JSON list of 0-3 short collocations in Polish
-3. original_language_definition: Polish definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
-4. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
+
+
+def get_wsd_llm_instructions(source_language_name: str, target_language_name: str) -> str:
+    return f"""output JSON with:
+1. definition: {target_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
+2. original_language_definition: {source_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
+3. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
 
 
 def estimate_cost(input_chars, notes_count, model):
@@ -24,7 +26,7 @@ def estimate_cost(input_chars, notes_count, model):
         "gpt-5-mini": {"input_cost_per_1m_tokens": 0.25, "output_cost_per_1m_tokens": 2.00},
     }
 
-    ESTIMATED_CHARS_PER_NOTE = 400  # Reduced since we no longer include translation
+    ESTIMATED_CHARS_PER_NOTE = 300  # Reduced since we no longer include translation or collocations
 
     input_tokens = input_chars / 4
     output_tokens = ESTIMATED_CHARS_PER_NOTE * notes_count / 4
@@ -38,7 +40,7 @@ def estimate_cost(input_chars, notes_count, model):
     return input_cost + output_cost
 
 
-def make_batch_llm_call(batch_notes, processing_timestamp):
+def make_batch_llm_call(batch_notes, processing_timestamp, source_language_name, target_language_name):
     """Make batch LLM API call for multiple notes"""
     items_list = []
     for note in batch_notes:
@@ -52,7 +54,7 @@ def make_batch_llm_call(batch_notes, processing_timestamp):
 Items to process:
 {items_json}
 
-For each item, {LLM_ANALYSIS_INSTRUCTIONS}
+For each item, {get_wsd_llm_instructions(source_language_name, target_language_name)}
 
 Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
 
@@ -75,7 +77,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
     return json.loads(response.choices[0].message.content), BATCH_LLM, processing_timestamp
 
 
-def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache):
+def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache, source_language_name, target_language_name):
 
     # Capture timestamp at the start of LLM processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -89,7 +91,7 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache)
         print(f"\nProcessing batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
         try:
-            batch_results, model_used, timestamp = make_batch_llm_call(batch, processing_timestamp)
+            batch_results, model_used, timestamp = make_batch_llm_call(batch, processing_timestamp, source_language_name, target_language_name)
 
             for note in batch:
                 if note.uid in batch_results:
@@ -111,16 +113,20 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache)
         exit()
 
 
-def provide_word_sense_disambiguation(notes: list[AnkiNote], source_language_code: str, target_language_code: str):
+def provide_word_sense_disambiguation(notes: list[AnkiNote], source_language_name, target_language_name, ignore_cache=False, use_test_cache=False):
     """Process LLM enrichment for all notes"""
 
     print("\nStarting LLM enrichment process...")
 
-    language_pair_code = source_language_code + "-" + target_language_code
+    language_pair_code = f"{source_language_name}-{target_language_name}"
     cache_suffix = language_pair_code + "_llm"
-
+    if use_test_cache:
+        cache_suffix += "_test"
     cache = WSDCache(cache_suffix=cache_suffix)
-    print(f"\nLoaded LLM cache with {len(cache.cache)} entries")
+    if not ignore_cache:
+        print(f"Loaded wsd cache with {len(cache.cache)} entries")
+    else:
+        print("Ignoring cache as per user request. Fresh wsd will be generated.")
 
     # Phase 1: Collect notes that need LLM enrichment
     notes_needing_llm = []
@@ -222,7 +228,7 @@ if __name__ == "__main__":
     print("Testing plural forms with singular lemmas to assess if definitions match lemma forms")
     print()
 
-    provide_word_sense_disambiguation(notes, "pl_test")
+    provide_word_sense_disambiguation(notes, "pl", "en", ignore_cache=False, use_test_cache=True)
 
     print("\n" + "=" * 80)
     print("TEST RESULTS FOR MANUAL ASSESSMENT")

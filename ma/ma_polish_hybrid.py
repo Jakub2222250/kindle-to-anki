@@ -1,8 +1,8 @@
 import morfeusz2
 import string
 
-from ma.polish_ma_llm import update_notes_with_llm
-from ma.polish_ma_sgjp_helper import morfeusz_tag_to_pos_string, normalize_lemma
+from ma.ma_polish_hybrid_llm import update_notes_with_llm
+from ma.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string, normalize_lemma
 from anki.anki_note import AnkiNote
 
 
