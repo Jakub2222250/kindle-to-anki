@@ -1,4 +1,3 @@
-from transformers import MarianMTModel, MarianTokenizer
 from anki.anki_note import AnkiNote
 from translation.translation_cache import TranslationCache
 import time
@@ -8,6 +7,7 @@ def translate_polish_context_to_english(notes: list[AnkiNote], cache: Translatio
     """Translate Polish context notes to English"""
 
     print("\nStarting Polish context translation...")
+    from transformers import MarianMTModel, MarianTokenizer
 
     # Capture timestamp at the start of translation processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
