@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from anki.anki_note import AnkiNote
+from translation.context_translation import process_context_translation
 from wsd.llm_enrichment import enrich_notes_with_llm
 from ma.morphological_analyzer import process_morphological_enrichment
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
@@ -304,6 +305,9 @@ def export_kindle_vocab():
         if len(notes) == 0:
             print(f"No new notes to add to Anki after pruning for language: {lang}")
             continue
+
+        # Provide translations
+        process_context_translation(notes, language=lang, cache_suffix=lang, ignore_cache=False, use_llm=False)
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, lang)
