@@ -7,7 +7,7 @@ from pathlib import Path
 
 from anki.anki_note import AnkiNote
 from translation.context_translation import process_context_translation
-from wsd.llm_enrichment import enrich_notes_with_llm
+from wsd.wsd_llm_provider import provide_word_sense_disambiguation
 from ma.morphological_analyzer import process_morphological_enrichment
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
@@ -292,8 +292,8 @@ def export_kindle_vocab():
             print(f"No new notes to process for language: {lang}")
             continue
 
-        # Enrich notes with LLM
-        enrich_notes_with_llm(notes, lang)
+        # Provide word sense disambiguation via LLM
+        provide_word_sense_disambiguation(notes, lang)
 
         # Prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=lang)

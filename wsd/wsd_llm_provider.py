@@ -1,8 +1,8 @@
 import json
 import time
-from pathlib import Path
 from openai import OpenAI
 from anki.anki_note import AnkiNote
+from wsd.wsd_cache import WSDCache
 
 # Configuration
 BATCH_SIZE = 40
@@ -15,48 +15,6 @@ LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
 2. collocations: Any common Polish collocations or phrases that include the inflected input word as a JSON list of 0-3 short collocations in Polish
 3. original_language_definition: Polish definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
 4. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
-
-
-class LLMCache:
-    def __init__(self, cache_dir="cache", cache_suffix='default'):
-        self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(exist_ok=True)
-        self.cache_file = self.cache_dir / f"llm_cache-{cache_suffix}.json"
-
-        # Load existing cache
-        self.cache = self.load_cache()
-
-    def load_cache(self):
-        """Load cache from file"""
-        if self.cache_file.exists():
-            try:
-                with open(self.cache_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, FileNotFoundError):
-                pass
-        return {}
-
-    def save_cache(self):
-        """Save cache to file"""
-        with open(self.cache_file, "w", encoding="utf-8") as f:
-            json.dump(self.cache, f, ensure_ascii=False, indent=2)
-
-    def get(self, uid):
-        """Get cached LLM result for UID"""
-        cache_entry = self.cache.get(uid)
-        if cache_entry and isinstance(cache_entry, dict) and "llm_data" in cache_entry:
-            return cache_entry["llm_data"]
-        return None
-
-    def set(self, uid, llm_result, model_used=None, timestamp=None):
-        """Set cached LLM result for UID"""
-        cache_entry = {
-            "llm_data": llm_result,
-            "model_used": model_used,
-            "timestamp": timestamp
-        }
-        self.cache[uid] = cache_entry
-        self.save_cache()
 
 
 def estimate_cost(input_chars, notes_count, model):
@@ -117,7 +75,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
     return json.loads(response.choices[0].message.content), BATCH_LLM, processing_timestamp
 
 
-def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache):
+def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache):
 
     # Capture timestamp at the start of LLM processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -153,12 +111,12 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: LLMCache)
         exit()
 
 
-def enrich_notes_with_llm(notes: list[AnkiNote], lang):
+def provide_word_sense_disambiguation(notes: list[AnkiNote], lang):
     """Process LLM enrichment for all notes"""
 
     print("\nStarting LLM enrichment process...")
 
-    cache = LLMCache(cache_suffix=lang)
+    cache = WSDCache(cache_suffix=lang)
     print(f"\nLoaded LLM cache with {len(cache.cache)} entries")
 
     # Phase 1: Collect notes that need LLM enrichment
@@ -261,7 +219,7 @@ if __name__ == "__main__":
     print("Testing plural forms with singular lemmas to assess if definitions match lemma forms")
     print()
 
-    enrich_notes_with_llm(notes, "pl_test")
+    provide_word_sense_disambiguation(notes, "pl_test")
 
     print("\n" + "=" * 80)
     print("TEST RESULTS FOR MANUAL ASSESSMENT")
