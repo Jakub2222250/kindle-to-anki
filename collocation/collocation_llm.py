@@ -131,7 +131,7 @@ def process_collocation_batches(notes_needing_collocations: list[AnkiNote], cach
         exit()
 
 
-def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, target_language_code: str, ignore_cache=False):
+def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, target_language_code: str, ignore_cache=False, use_test_cache=False):
     """Generate collocations using LLM"""
 
     print("\nStarting collocation generation (LLM)...")
@@ -141,6 +141,8 @@ def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, 
     target_language_name = get_language_name_in_english(target_language_code)
 
     cache_suffix = language_pair_code + "_llm"
+    if use_test_cache:
+        cache_suffix += "_test"
     cache = CollocationCache(cache_suffix=cache_suffix)
     if not ignore_cache:
         print(f"Loaded collocation cache with {len(cache.cache)} entries")
@@ -207,8 +209,7 @@ if __name__ == "__main__":
         )
     ]
 
-    cache = CollocationCache(cache_suffix='pl_test_llm')
-    generate_collocations_llm(notes, cache)
+    generate_collocations_llm(notes, "pl", "en", ignore_cache=False, use_test_cache=True)
 
     print()
     for note in notes:

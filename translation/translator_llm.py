@@ -128,7 +128,7 @@ def process_translation_batches(notes_needing_translation: list[AnkiNote], cache
         exit()
 
 
-def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, target_lang_code: str, ignore_cache=False):
+def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, target_lang_code: str, ignore_cache=False, use_test_cache=False):
     """Translate context notes to using LLM"""
 
     print("\nStarting context translation (LLM)...")
@@ -137,7 +137,11 @@ def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, tar
     source_language_name = get_language_name_in_english(source_lang_code)
     target_language_name = get_language_name_in_english(target_lang_code)
 
-    cache = TranslationCache(cache_suffix=language_pair_code)
+    cache_suffix = language_pair_code + "_llm"
+    if use_test_cache:  
+        cache_suffix += "_test"
+
+    cache = TranslationCache(cache_suffix=cache_suffix)
     if not ignore_cache:
         print(f"Loaded translation cache with {len(cache.cache)} entries")
     else:
@@ -200,7 +204,7 @@ if __name__ == "__main__":
         )
     ]
 
-    translate_context_with_llm(notes, "pl", "en", ignore_cache=False)
+    translate_context_with_llm(notes, "pl", "en", ignore_cache=False, use_test_cache=True)
 
     print()
     for note in notes:

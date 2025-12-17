@@ -1,6 +1,7 @@
 def get_language_name_in_english(language_code: str) -> str:
     """Get the English name of a language given its language code"""
     language_names = {
+        'en': 'English',
         'pl': 'Polish',
         'es': 'Spanish',
         'fr': 'French',

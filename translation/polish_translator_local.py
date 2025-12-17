@@ -3,12 +3,16 @@ from translation.translation_cache import TranslationCache
 import time
 
 
-def translate_polish_context_to_english(notes: list[AnkiNote], ignore_cache=False):
+def translate_polish_context_to_english(notes: list[AnkiNote], ignore_cache=False, use_test_cache=False):
     """Translate Polish context notes to English"""
 
     print("\nStarting Polish context translation...")
 
-    cache = TranslationCache(cache_suffix="pl-en")
+    cache_suffix = "pl-en"
+    if use_test_cache:
+        cache_suffix += "_test"
+
+    cache = TranslationCache(cache_suffix=cache_suffix)
     if not ignore_cache:
         print(f"Loaded translation cache with {len(cache.cache)} entries")
     else:
@@ -91,8 +95,7 @@ if __name__ == "__main__":
         )
     ]
 
-    cache = TranslationCache(cache_suffix='pl_local_test')
-    translate_polish_context_to_english(notes, cache)
+    translate_polish_context_to_english(notes, ignore_cache=False, use_test_cache=True)
 
     print()
     for note in notes:
