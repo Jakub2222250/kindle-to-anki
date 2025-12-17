@@ -7,7 +7,7 @@ from thefuzz import fuzz
 
 
 class PruningCache:
-    def __init__(self, cache_dir="cache", cache_suffix='default'):
+    def __init__(self, cache_dir=".cache", cache_suffix='default'):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
         self.cache_file = self.cache_dir / f"pruning_cache_{cache_suffix}.json"

@@ -1,6 +1,7 @@
 *.pyc
 
+.metadata/
+.cache/
+
 outputs/
 inputs/
-cache/
-metadata/

@@ -1,58 +1,18 @@
 import sqlite3
 import subprocess
 import sys
-import json
-import time
 from pathlib import Path
 
 from anki.anki_deck import AnkiDeck
 from anki.anki_note import AnkiNote
 from collocation.collocation import process_collocation_generation
+from metadata.metdata_manager import MetadataManager, load_metadata
 from translation.context_translation import process_context_translation
 from wsd.wsd import provide_word_sense_disambiguation
 from ma.morphological_analyzer import process_morphological_enrichment
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 import datetime
-
-
-def load_metadata():
-    """Load metadata from metadata/metadata.json if it exists"""
-    script_dir = Path(__file__).parent
-    metadata_path = script_dir / "metadata" / "metadata.json"
-
-    if metadata_path.exists():
-        try:
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError):
-            print("Warning: Could not read metadata.json, starting fresh")
-
-    return {}
-
-
-def save_metadata(metadata):
-    """Save metadata to metadata/metadata.json"""
-
-    print("\nSaving last run time to metadata...")
-
-    script_dir = Path(__file__).parent
-    metadata_dir = script_dir / "metadata"
-    metadata_dir.mkdir(exist_ok=True)
-
-    metadata_path = metadata_dir / "metadata.json"
-
-    with open(metadata_path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2)
-
-    print(f"Metadata saved to {metadata_path}")
-
-
-def save_script_run_timestamp(metadata):
-    """Save the current timestamp as script run time to metadata"""
-    current_time_ms = int(time.time() * 1000)
-    metadata['last_script_run'] = current_time_ms
-    save_metadata(metadata)
 
 
 def get_kindle_vocab_count(db_path, timestamp=None):
@@ -106,7 +66,7 @@ def save_latest_vocab_builder_entry_timestamp(vocab_data, metadata):
     print(f"\nMax timestamp from this import: {human_readable_time}")
 
     metadata['last_timestamp_import'] = max_timestamp
-    save_metadata(metadata)
+    MetadataManager.save_metadata(metadata)
     print("Timestamp saved. Future runs will offer to import only newer notes.")
 
 
@@ -282,7 +242,7 @@ def export_kindle_vocab():
     db_path = get_vocab_db()
 
     # Load existing metadata
-    metadata = load_metadata()
+    metadata = MetadataManager.load_metadata()
 
     # Get latest kindle vocab data
     kindle_vocab_data = get_latest_kindle_vocab_data(db_path, metadata)
@@ -339,10 +299,10 @@ def export_kindle_vocab():
         anki_connect_instance.create_notes_batch(anki_deck, notes)
 
     # Save script run timestamp
-    save_script_run_timestamp(metadata)
+    MetadataManager.save_script_run_timestamp(metadata)
 
     # Save timestamp for future incremental imports
-    save_latest_vocab_builder_entry_timestamp(kindle_vocab_data, metadata)
+    MetadataManager.save_latest_vocab_builder_entry_timestamp(kindle_vocab_data, metadata)
 
     print("\nKindle to Anki export process completed successfully.")
 
