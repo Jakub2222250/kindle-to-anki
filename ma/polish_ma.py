@@ -139,7 +139,7 @@ def absorb_nearest_sie(kindle_word, usage_text):
     return result
 
 
-def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl', ignore_cache=False):
+def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl-en_hybrid', ignore_cache=False):
 
     morf = morfeusz2.Morfeusz()
     notes_requiring_llm_ma = []
@@ -322,7 +322,7 @@ if __name__ == "__main__":
         note = AnkiNote(test_case['kindle_word'], "", test_case['sentence'], "pl", "Test Book", f"loc_{i + 1}", "")
         notes.append(note)
 
-    process_notes_with_morfeusz(notes, cache_suffix='pl_test', ignore_cache=True)
+    process_notes_with_morfeusz(notes, cache_suffix='pl-en_hybrid_test', ignore_cache=True)
 
     for i, test in enumerate(test_cases):
         note = notes[i]

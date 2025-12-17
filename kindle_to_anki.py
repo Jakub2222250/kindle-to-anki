@@ -5,6 +5,7 @@ import json
 import time
 from pathlib import Path
 
+from anki.anki_deck import AnkiDeck
 from anki.anki_note import AnkiNote
 from collocation.collocation import process_collocation_generation
 from translation.context_translation import process_context_translation
@@ -256,9 +257,33 @@ def get_existing_notes_by_language(anki_connect_instance, lang):
     return existing_notes
 
 
+def get_anki_decks_by_language_pair():
+    anki_decks_list = [
+        AnkiDeck(
+            source_lang_code="pl",
+            target_lang_code="en",
+            parent_deck_name="Polish Vocab Discovery",
+            ready_deck_name="Polish Vocab Discovery::Ready",
+            staging_deck_name="Polish Vocab Discovery::Staging"
+        ),
+    ]
+
+    anki_decks_by_language_pair = {}
+    for deck in anki_decks_list:
+        lang_pair = (deck.source_lang_code, deck.target_lang_code)
+        anki_decks_by_language_pair[lang_pair] = deck
+
+    return anki_decks_by_language_pair
+
+
 def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
+
+    TARGET_LANGUAGE_CODE = "en"
+
+    # Get available anki decks by language pair
+    anki_decks_by_language_pair = get_anki_decks_by_language_pair()
 
     # Get path to vocab.db
     db_path = get_vocab_db()
@@ -275,46 +300,50 @@ def export_kindle_vocab():
     # Connect to AnkiConnect
     anki_connect_instance = connect_to_anki()
 
-    for lang, notes in notes_by_language.items():
+    for source_lang_code, notes in notes_by_language.items():
+
+        # Reference to anki deck for metadata
+        anki_deck = anki_decks_by_language_pair.get((source_lang_code, TARGET_LANGUAGE_CODE))
+        language_pair_code = anki_deck.get_language_pair_code()
 
         # Get existing notes from Anki for this language
-        existing_notes = get_existing_notes_by_language(anki_connect_instance, lang)
+        existing_notes = get_existing_notes_by_language(anki_connect_instance, source_lang_code)
 
         # Prune existing notes by UID
         notes = prune_existing_notes_by_UID(notes, existing_notes)
 
         # Prune notes previously identified as redundant
-        notes = prune_notes_identified_as_redundant(notes, cache_suffix=lang)
+        notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
 
         # Enrich notes with morphological analysis
-        process_morphological_enrichment(notes, lang)
+        process_morphological_enrichment(notes, source_lang_code, TARGET_LANGUAGE_CODE)
 
         if not notes:
-            print(f"No new notes to process for language: {lang}")
+            print(f"No new notes to process for language: {source_lang_code}")
             continue
 
         # Provide word sense disambiguation via LLM
-        provide_word_sense_disambiguation(notes, lang)
+        provide_word_sense_disambiguation(notes, source_lang_code)
 
         # Prune existing notes automatically based on definition similarity
-        notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=lang)
+        notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=source_lang_code)
 
         # Prune duplicates new notes leaving the best one
-        notes = prune_new_notes_against_eachother(notes, cache_suffix=lang)
+        notes = prune_new_notes_against_eachother(notes, cache_suffix=source_lang_code)
 
         if len(notes) == 0:
-            print(f"No new notes to add to Anki after pruning for language: {lang}")
+            print(f"No new notes to add to Anki after pruning for language: {source_lang_code}")
             continue
 
         # Provide translations
-        process_context_translation(notes, language=lang, cache_suffix=lang, ignore_cache=False, use_llm=False)
+        process_context_translation(notes, language=source_lang_code, cache_suffix=source_lang_code, ignore_cache=False, use_llm=False)
 
         # Provide collocations
-        process_collocation_generation(notes, language=lang, cache_suffix=lang, ignore_cache=False, use_llm=True)
+        process_collocation_generation(notes, language=source_lang_code, cache_suffix=source_lang_code, ignore_cache=False, use_llm=True)
 
         # Save results to Anki import file and via AnkiConnect
-        write_anki_import_file(notes, lang)
-        anki_connect_instance.create_notes_batch(notes, lang=lang)
+        write_anki_import_file(notes, source_lang_code)
+        anki_connect_instance.create_notes_batch(notes, source_lang_code=source_lang_code)
 
     # Save script run timestamp
     save_script_run_timestamp(metadata)
