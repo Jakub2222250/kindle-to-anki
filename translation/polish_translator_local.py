@@ -83,7 +83,7 @@ if __name__ == "__main__":
         )
     ]
 
-    cache = TranslationCache(cache_suffix='pl_test')
+    cache = TranslationCache(cache_suffix='pl_local_test')
     translate_polish_context_to_english(notes, cache)
 
     print()

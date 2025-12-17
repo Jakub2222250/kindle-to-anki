@@ -12,10 +12,9 @@ FALLBACK_LLM = "gpt-5"
 # Common LLM instructions
 LLM_ANALYSIS_INSTRUCTIONS = """output JSON with:
 1. definition: English definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
-2. translation: English translation of the sentence
-3. collocations: Any common Polish collocations or phrases that include the inflected input word as a JSON list of 0-3 short collocations in Polish
-4. original_language_definition: Polish definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
-5. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
+2. collocations: Any common Polish collocations or phrases that include the inflected input word as a JSON list of 0-3 short collocations in Polish
+3. original_language_definition: Polish definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
+4. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
 
 
 class LLMCache:
@@ -67,7 +66,7 @@ def estimate_cost(input_chars, notes_count, model):
         "gpt-5-mini": {"input_cost_per_1m_tokens": 0.25, "output_cost_per_1m_tokens": 2.00},
     }
 
-    ESTIMATED_CHARS_PER_NOTE = 500
+    ESTIMATED_CHARS_PER_NOTE = 400  # Reduced since we no longer include translation
 
     input_tokens = input_chars / 4
     output_tokens = ESTIMATED_CHARS_PER_NOTE * notes_count / 4
@@ -276,7 +275,7 @@ if __name__ == "__main__":
         print(f"  Sentence:               {note.kindle_usage}")
         print(f"  Definition:             {note.definition}")
         print(f"  Polish definition:      {note.original_language_hint}")
-        print(f"  Translation:            {note.context_translation}")
+        print(f"  Translation:            {note.context_translation} (not provided by LLM enrichment)")
         print(f"  Collocations:           {note.collocations}")
         print(f"  Cloze score:            {note.cloze_enabled}")
         print("-" * 60)
