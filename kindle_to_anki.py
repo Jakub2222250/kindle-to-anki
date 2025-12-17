@@ -17,9 +17,9 @@ import datetime
 
 
 def load_metadata():
-    """Load metadata from cache/metadata.json if it exists"""
+    """Load metadata from metadata/metadata.json if it exists"""
     script_dir = Path(__file__).parent
-    metadata_path = script_dir / "cache" / "metadata.json"
+    metadata_path = script_dir / "metadata" / "metadata.json"
 
     if metadata_path.exists():
         try:
@@ -32,15 +32,15 @@ def load_metadata():
 
 
 def save_metadata(metadata):
-    """Save metadata to cache/metadata.json"""
+    """Save metadata to metadata/metadata.json"""
 
     print("\nSaving last run time to metadata...")
 
     script_dir = Path(__file__).parent
-    cache_dir = script_dir / "cache"
-    cache_dir.mkdir(exist_ok=True)
+    metadata_dir = script_dir / "metadata"
+    metadata_dir.mkdir(exist_ok=True)
 
-    metadata_path = cache_dir / "metadata.json"
+    metadata_path = metadata_dir / "metadata.json"
 
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
