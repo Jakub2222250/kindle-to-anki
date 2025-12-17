@@ -113,7 +113,7 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache,
         exit()
 
 
-def provide_word_sense_disambiguation(notes: list[AnkiNote], source_language_name, target_language_name, ignore_cache=False, use_test_cache=False):
+def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_language_name, ignore_cache=False, use_test_cache=False):
     """Process LLM enrichment for all notes"""
 
     print("\nStarting LLM enrichment process...")
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     print("Testing plural forms with singular lemmas to assess if definitions match lemma forms")
     print()
 
-    provide_word_sense_disambiguation(notes, "pl", "en", ignore_cache=False, use_test_cache=True)
+    provide_wsd_with_llm(notes, "pl", "en", ignore_cache=False, use_test_cache=True)
 
     print("\n" + "=" * 80)
     print("TEST RESULTS FOR MANUAL ASSESSMENT")

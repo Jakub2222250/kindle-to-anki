@@ -9,7 +9,7 @@ from anki.anki_deck import AnkiDeck
 from anki.anki_note import AnkiNote
 from collocation.collocation import process_collocation_generation
 from translation.context_translation import process_context_translation
-from wsd.wsd_llm_provider import provide_word_sense_disambiguation
+from wsd.wsd import provide_word_sense_disambiguation
 from ma.morphological_analyzer import process_morphological_enrichment
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
