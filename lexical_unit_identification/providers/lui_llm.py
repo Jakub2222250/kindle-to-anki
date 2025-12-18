@@ -10,46 +10,49 @@ from language.language_helper import get_language_name_in_english
 
 # Configuration
 BATCH_SIZE = 30
-MA_LLM = "gpt-5-mini"
+LUI_LLM = "gpt-5-mini"
 
 
-def get_llm_morphological_analysis_instructions(language_name: str) -> str:
-    """Get LLM instructions for morphological analysis"""
-    return f"""You are a morphological analyzer for {language_name} focused on language learning.
+def get_llm_lexical_unit_identification_instructions(language_name: str) -> str:
+    """Get LLM instructions for lexical unit identification"""
+    return f"""You are a lexical unit identifier for {language_name} focused on language learning.
+
+Your task is to identify the MINIMUM lexical unit that a learner needs to understand and memorize to comprehend the sentence and learn effectively.
 
 For each word/phrase, provide:
 - "lemma": The dictionary form (infinitive for verbs, singular nominative for nouns, etc.)
 - "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj
 - "aspect": For verbs only: "perf" (perfective), "impf" (imperfective), or "" (not applicable/unknown)
-- "original_form": The exact form from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
+- "original_form": The exact lexical unit from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
 
-CRITICAL LEARNING-FOCUSED RULES:
-1. For reflexive verbs (with reflexive pronouns like się, se, si, etc.): Include the reflexive pronoun in both lemma and original_form if it's essential to the verb's meaning
-2. For phrasal verbs and idioms: Include the full phrase if learning the parts separately would be confusing
-3. For particles that change meaning: Include them when they're semantically bound to the word
-4. Prioritize what a language learner should memorize as a unit, not just grammatical correctness
+CRITICAL LEXICAL UNIT IDENTIFICATION RULES:
+1. SUBSTRING REQUIREMENT: The "original_form" MUST be an exact substring of the provided context sentence. It can absorb surrounding text but must match the sentence text exactly.
+2. MINIMAL LEARNING UNIT: Identify the smallest unit that, when learned, enables comprehension and effective language acquisition.
+3. For reflexive verbs: Include reflexive pronouns (się, se, si, etc.) if they're essential to the verb's meaning and appear in the sentence.
+4. For phrasal verbs and idioms: Include the full phrase only if the parts appear together in the sentence and learning them separately would be confusing.
+5. For particles that change meaning: Include them only if they appear adjacent to the target word in the sentence and are semantically bound.
+6. Prioritize what a language learner should memorize as a unit for effective comprehension and learning.
 
 Examples for different languages:
-- Polish "bać się" (to be afraid) → lemma: "bać się", not just "bać"
-- Spanish "darse cuenta" (to realize) → lemma: "darse cuenta", not just "dar"
-- German "sich freuen" (to be happy) → lemma: "sich freuen", not just "freuen"
-- French "se souvenir" (to remember) → lemma: "se souvenir", not just "souvenir"
+- Polish sentence "Boi się ciemności" with target word "się" → original_form: "boi się" (if both words appear together)
+- Spanish sentence "Se da cuenta de todo" with target word "da" → original_form: "se da cuenta" (if all appear together)
+- German sentence "Er freut sich sehr" with target word "freut" → original_form: "freut sich" (if both appear together)
 
-Consider context to determine if particles belong to the target word or to other words in the sentence."""
+IMPORTANT: The original_form must exactly match text that appears in the provided sentence - no additions or modifications allowed."""
 
 
-def estimate_ma_cost(input_chars, notes_count, model):
-    """Estimate cost for morphological analysis API calls"""
+def estimate_lui_cost(input_chars, notes_count, model):
+    """Estimate cost for lexical unit identification API calls"""
     pricing = {
         "gpt-5": {"input_cost_per_1m_tokens": 1.25, "output_cost_per_1m_tokens": 10.00},
         "gpt-4.1": {"input_cost_per_1m_tokens": 2.00, "output_cost_per_1m_tokens": 8.00},
         "gpt-5-mini": {"input_cost_per_1m_tokens": 0.25, "output_cost_per_1m_tokens": 2.00},
     }
 
-    ESTIMATED_CHARS_PER_ANALYSIS = 150
+    ESTIMATED_CHARS_PER_IDENTIFICATION = 150
 
     input_tokens = input_chars / 4
-    output_tokens = ESTIMATED_CHARS_PER_ANALYSIS * notes_count / 4
+    output_tokens = ESTIMATED_CHARS_PER_IDENTIFICATION * notes_count / 4
 
     if model not in pricing:
         return None
@@ -60,8 +63,8 @@ def estimate_ma_cost(input_chars, notes_count, model):
     return input_cost + output_cost
 
 
-def make_batch_ma_call(batch_notes, processing_timestamp, language_name):
-    """Make batch LLM API call for morphological analysis"""
+def make_batch_lui_call(batch_notes, processing_timestamp, language_name):
+    """Make batch LLM API call for lexical unit identification"""
     items_list = []
     for note in batch_notes:
         sentence = note.kindle_usage or note.context_sentence or ""
@@ -69,82 +72,82 @@ def make_batch_ma_call(batch_notes, processing_timestamp, language_name):
 
     items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-    prompt = f"""Analyze the morphology of the following {language_name} words in context.
+    prompt = f"""Identify the lexical units of the following {language_name} words in context.
 
-Words to analyze:
+Words to identify:
 {items_json}
 
-{get_llm_morphological_analysis_instructions(language_name)}
+{get_llm_lexical_unit_identification_instructions(language_name)}
 
 Output JSON as an object where keys are the UIDs and values are objects with:
 - "lemma": dictionary form
-- "part_of_speech": grammatical category
+- "part_of_speech": grammatical category  
 - "aspect": verb aspect ("perf"/"impf"/"")
-- "original_form": form to be learned (may include particles/reflexive pronouns)
+- "original_form": lexical unit to be learned (must be exact substring of sentence)
 
 Respond with valid JSON. No additional text."""
 
     input_chars = len(prompt)
-    estimate_cost_value = estimate_ma_cost(input_chars, len(batch_notes), MA_LLM)
+    estimate_cost_value = estimate_lui_cost(input_chars, len(batch_notes), LUI_LLM)
     estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
-    print(f"  Making batch morphological analysis API call for {len(batch_notes)} notes ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
+    print(f"  Making batch lexical unit identification API call for {len(batch_notes)} notes ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
     start_time = time.time()
 
     client = OpenAI()
     response = client.chat.completions.create(
-        model=MA_LLM,
+        model=LUI_LLM,
         messages=[{"role": "user", "content": prompt}]
     )
 
     elapsed = time.time() - start_time
     output_chars = len(response.choices[0].message.content)
-    print(f"  Batch morphological analysis API call completed in {elapsed:.2f}s ({output_chars} output chars)")
+    print(f"  Batch lexical unit identification API call completed in {elapsed:.2f}s ({output_chars} output chars)")
 
-    return json.loads(response.choices[0].message.content), MA_LLM, processing_timestamp
+    return json.loads(response.choices[0].message.content), LUI_LLM, processing_timestamp
 
 
-def process_ma_batches(notes_needing_ma: List[AnkiNote], cache: MACache, language_name: str):
-    """Process notes in batches for morphological analysis"""
+def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, language_name: str):
+    """Process notes in batches for lexical unit identification"""
 
-    # Capture timestamp at the start of MA processing
+    # Capture timestamp at the start of LUI processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-    total_batches = (len(notes_needing_ma) + BATCH_SIZE - 1) // BATCH_SIZE
+    total_batches = (len(notes_needing_lui) + BATCH_SIZE - 1) // BATCH_SIZE
     failing_notes = []
 
-    for i in range(0, len(notes_needing_ma), BATCH_SIZE):
-        batch = notes_needing_ma[i:i + BATCH_SIZE]
+    for i in range(0, len(notes_needing_lui), BATCH_SIZE):
+        batch = notes_needing_lui[i:i + BATCH_SIZE]
         batch_num = (i // BATCH_SIZE) + 1
 
-        print(f"\nProcessing morphological analysis batch {batch_num}/{total_batches} ({len(batch)} notes)")
+        print(f"\nProcessing lexical unit identification batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
         try:
-            batch_results, model_used, timestamp = make_batch_ma_call(batch, processing_timestamp, language_name)
+            batch_results, model_used, timestamp = make_batch_lui_call(batch, processing_timestamp, language_name)
 
             for note in batch:
                 if note.uid in batch_results:
-                    ma_data = batch_results[note.uid]
+                    lui_data = batch_results[note.uid]
 
-                    # Create MA result for caching
-                    ma_result = {
-                        "lemma": ma_data.get("lemma", ""),
-                        "part_of_speech": ma_data.get("part_of_speech", ""),
-                        "aspect": ma_data.get("aspect", ""),
-                        "original_form": ma_data.get("original_form", note.kindle_word)
+                    # Create LUI result for caching
+                    lui_result = {
+                        "lemma": lui_data.get("lemma", ""),
+                        "part_of_speech": lui_data.get("part_of_speech", ""),
+                        "aspect": lui_data.get("aspect", ""),
+                        "original_form": lui_data.get("original_form", note.kindle_word)
                     }
 
                     # Save to cache
-                    cache.set(note.uid, ma_result, model_used, timestamp)
+                    cache.set(note.uid, lui_result, model_used, timestamp)
 
                     # Apply to note
-                    note.expression = ma_result["lemma"]
-                    note.part_of_speech = ma_result["part_of_speech"]
-                    note.aspect = ma_result["aspect"]
-                    note.original_form = ma_result["original_form"]
+                    note.expression = lui_result["lemma"]
+                    note.part_of_speech = lui_result["part_of_speech"]
+                    note.aspect = lui_result["aspect"]
+                    note.original_form = lui_result["original_form"]
 
-                    print(f"  SUCCESS - analyzed {note.kindle_word} → lemma: {note.expression}, pos: {note.part_of_speech}")
+                    print(f"  SUCCESS - identified {note.kindle_word} → lemma: {note.expression}, pos: {note.part_of_speech}")
                 else:
-                    print(f"  FAILED - no MA result for {note.kindle_word}")
+                    print(f"  FAILED - no LUI result for {note.kindle_word}")
                     failing_notes.append(note)
 
         except Exception as e:
@@ -152,15 +155,15 @@ def process_ma_batches(notes_needing_ma: List[AnkiNote], cache: MACache, languag
             failing_notes.extend(batch)
 
     if len(failing_notes) > 0:
-        print(f"{len(failing_notes)} notes failed LLM morphological analysis.")
-        print("All successful analysis results already saved to cache. Running script again usually fixes the issue. Exiting.")
+        print(f"{len(failing_notes)} notes failed LLM lexical unit identification.")
+        print("All successful identification results already saved to cache. Running script again usually fixes the issue. Exiting.")
         exit()
 
 
-def process_notes_with_llm_ma(notes: List[AnkiNote], source_language_code: str, target_language_code: str, ignore_cache=False, use_test_cache=False):
-    """Process morphological analysis for a list of notes using LLM"""
+def process_notes_with_llm_lui(notes: List[AnkiNote], source_language_code: str, target_language_code: str, ignore_cache=False, use_test_cache=False):
+    """Process lexical unit identification for a list of notes using LLM"""
 
-    print(f"\nStarting morphological analysis (LLM) for {source_language_code}...")
+    print(f"\nStarting lexical unit identification (LLM) for {source_language_code}...")
 
     language_pair_code = f"{source_language_code}-{target_language_code}"
     language_name = get_language_name_in_english(source_language_code)
@@ -171,8 +174,8 @@ def process_notes_with_llm_ma(notes: List[AnkiNote], source_language_code: str, 
 
     cache = MACache(cache_suffix=cache_suffix)
 
-    # Filter notes that need MA and collect cached results
-    notes_needing_ma = []
+    # Filter notes that need LUI and collect cached results
+    notes_needing_lui = []
 
     if not ignore_cache:
         cached_count = 0
@@ -186,27 +189,27 @@ def process_notes_with_llm_ma(notes: List[AnkiNote], source_language_code: str, 
                 note.aspect = cached_result.get('aspect', '')
                 note.original_form = cached_result.get('original_form', note.kindle_word)
             else:
-                notes_needing_ma.append(note)
+                notes_needing_lui.append(note)
 
-        print(f"Found {cached_count} cached analyses, {len(notes_needing_ma)} notes need LLM morphological analysis")
+        print(f"Found {cached_count} cached identifications, {len(notes_needing_lui)} notes need LLM lexical unit identification")
     else:
-        notes_needing_ma = notes
-        print("Ignoring cache as per user request. Fresh analyses will be generated.")
+        notes_needing_lui = notes
+        print("Ignoring cache as per user request. Fresh identifications will be generated.")
 
-    if not notes_needing_ma:
-        print(f"{language_name} morphological analysis (LLM) completed (all from cache).")
+    if not notes_needing_lui:
+        print(f"{language_name} lexical unit identification (LLM) completed (all from cache).")
         return
 
-    if len(notes_needing_ma) > 100:
-        result = input(f"\nDo you want to proceed with LLM morphological analysis API calls for {len(notes_needing_ma)} notes? (y/n): ").strip().lower()
+    if len(notes_needing_lui) > 100:
+        result = input(f"\nDo you want to proceed with LLM lexical unit identification API calls for {len(notes_needing_lui)} notes? (y/n): ").strip().lower()
         if result != 'y' and result != 'yes':
-            print("LLM morphological analysis process aborted by user.")
+            print("LLM lexical unit identification process aborted by user.")
             exit()
 
     # Process notes in batches
-    process_ma_batches(notes_needing_ma, cache, language_name)
+    process_lui_batches(notes_needing_lui, cache, language_name)
 
-    print(f"{language_name} morphological analysis (LLM) completed.")
+    print(f"{language_name} lexical unit identification (LLM) completed.")
 
 
 if __name__ == "__main__":
@@ -246,7 +249,7 @@ if __name__ == "__main__":
         lang_notes = [note for note in test_notes if note.kindle_language == lang_code]
         if lang_notes:
             print(f"\n=== Testing {lang_code} ===")
-            process_notes_with_llm_ma(lang_notes, lang_code, "en", ignore_cache=False, use_test_cache=True)
+            process_notes_with_llm_lui(lang_notes, lang_code, "en", ignore_cache=False, use_test_cache=True)
 
             for note in lang_notes:
                 print(f"Word: {note.kindle_word}")
