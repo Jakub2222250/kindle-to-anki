@@ -4,6 +4,7 @@ from openai import OpenAI
 from anki.anki_note import AnkiNote
 from collocation.collocation_cache import CollocationCache
 from language.language_helper import get_language_name_in_english
+from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 
 # Configuration
@@ -18,28 +19,6 @@ def get_llm_collocation_instructions(source_language_name: str, target_language_
 
 Output JSON as an object where keys are the UIDs and values are objects with:
 - "collocations": A JSON list of 0-3 short collocations in {source_language_name} that commonly use the input word form"""
-
-
-def estimate_collocation_cost(input_chars, notes_count, model):
-    """Estimate cost for collocation API calls"""
-    pricing = {
-        "gpt-5": {"input_cost_per_1m_tokens": 1.25, "output_cost_per_1m_tokens": 10.00},
-        "gpt-4.1": {"input_cost_per_1m_tokens": 2.00, "output_cost_per_1m_tokens": 8.00},
-        "gpt-5-mini": {"input_cost_per_1m_tokens": 0.25, "output_cost_per_1m_tokens": 2.00},
-    }
-
-    ESTIMATED_CHARS_PER_COLLOCATION = 100
-
-    input_tokens = input_chars / 4
-    output_tokens = ESTIMATED_CHARS_PER_COLLOCATION * notes_count / 4
-
-    if model not in pricing:
-        return None
-
-    input_cost = (input_tokens / 1_000_000) * pricing[model]["input_cost_per_1m_tokens"]
-    output_cost = (output_tokens / 1_000_000) * pricing[model]["output_cost_per_1m_tokens"]
-
-    return input_cost + output_cost
 
 
 def make_batch_collocation_call(batch_notes, processing_timestamp, source_language_name, target_language_name):
@@ -61,7 +40,7 @@ Words to analyze:
 Respond with valid JSON. No additional text."""
 
     input_chars = len(prompt)
-    estimate_cost_value = estimate_collocation_cost(input_chars, len(batch_notes), COLLOCATION_LLM)
+    estimate_cost_value = estimate_llm_cost(prompt, len(batch_notes), COLLOCATION_LLM)
     estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
     print(f"  Making batch collocation API call for {len(batch_notes)} notes ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
     start_time = time.time()
@@ -73,10 +52,13 @@ Respond with valid JSON. No additional text."""
     )
 
     elapsed = time.time() - start_time
-    output_chars = len(response.choices[0].message.content)
-    print(f"  Batch collocation API call completed in {elapsed:.2f}s ({output_chars} output chars)")
+    output_text = response.choices[0].message.content
+    output_chars = len(output_text)
+    actual_cost = calculate_llm_cost(prompt, output_text, COLLOCATION_LLM)
+    actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
+    print(f"  Batch collocation API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
-    return json.loads(response.choices[0].message.content), COLLOCATION_LLM, processing_timestamp
+    return json.loads(output_text), COLLOCATION_LLM, processing_timestamp
 
 
 def process_collocation_batches(notes_needing_collocations: list[AnkiNote], cache: CollocationCache, source_language_name: str, target_language_name: str):

@@ -3,6 +3,7 @@ import time
 from openai import OpenAI
 from anki.anki_note import AnkiNote
 from wsd.wsd_cache import WSDCache
+from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 # Configuration
 BATCH_SIZE = 40
@@ -16,27 +17,6 @@ def get_wsd_llm_instructions(source_language_name: str, target_language_name: st
 1. definition: {target_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
 2. original_language_definition: {source_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
 3. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
-
-
-def estimate_cost(input_chars, notes_count, model):
-    pricing = {
-        "gpt-5": {"input_cost_per_1m_tokens": 1.25, "output_cost_per_1m_tokens": 10.00},
-        "gpt-4.1": {"input_cost_per_1m_tokens": 2.00, "output_cost_per_1m_tokens": 8.00},
-        "gpt-5-mini": {"input_cost_per_1m_tokens": 0.25, "output_cost_per_1m_tokens": 2.00},
-    }
-
-    ESTIMATED_CHARS_PER_NOTE = 300  # Reduced since we no longer include translation or collocations
-
-    input_tokens = input_chars / 4
-    output_tokens = ESTIMATED_CHARS_PER_NOTE * notes_count / 4
-
-    if model not in pricing:
-        return None
-
-    input_cost = (input_tokens / 1_000_000) * pricing[model]["input_cost_per_1m_tokens"]
-    output_cost = (output_tokens / 1_000_000) * pricing[model]["output_cost_per_1m_tokens"]
-
-    return input_cost + output_cost
 
 
 def make_batch_llm_call(batch_notes, processing_timestamp, source_language_name, target_language_name):
@@ -58,7 +38,7 @@ For each item, {get_wsd_llm_instructions(source_language_name, target_language_n
 Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
 
     input_chars = len(prompt)
-    estimate_cost_value = estimate_cost(input_chars, len(batch_notes), BATCH_LLM)
+    estimate_cost_value = estimate_llm_cost(prompt, len(batch_notes), BATCH_LLM)
     estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
     print(f"  Making batch API call for {len(batch_notes)} notes ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
     start_time = time.time()
@@ -70,10 +50,13 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
     )
 
     elapsed = time.time() - start_time
-    output_chars = len(response.choices[0].message.content)
-    print(f"  Batch API call completed in {elapsed:.2f}s ({output_chars} output chars)")
+    output_text = response.choices[0].message.content
+    output_chars = len(output_text)
+    actual_cost = calculate_llm_cost(prompt, output_text, BATCH_LLM)
+    actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
+    print(f"  Batch API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
-    return json.loads(response.choices[0].message.content), BATCH_LLM, processing_timestamp
+    return json.loads(output_text), BATCH_LLM, processing_timestamp
 
 
 def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache, source_language_name, target_language_name):
