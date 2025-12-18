@@ -7,9 +7,9 @@ from anki.anki_deck import AnkiDeck
 from anki.anki_note import AnkiNote
 from collocation.collocation import process_collocation_generation
 from metadata.metdata_manager import MetadataManager, load_metadata
-from translation.context_translation import process_context_translation
+from translation.translation import process_context_translation
 from wsd.wsd import provide_word_sense_disambiguation
-from ma.morphological_analyzer import process_morphological_enrichment
+from ma.ma import process_morphological_enrichment
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 import datetime
@@ -239,7 +239,8 @@ def export_kindle_vocab():
     db_path = get_vocab_db()
 
     # Load existing metadata
-    metadata = MetadataManager.load_metadata()
+    metadata_manager = MetadataManager()
+    metadata = metadata_manager.load_metadata()
 
     # Get latest kindle vocab data
     kindle_vocab_data = get_latest_kindle_vocab_data(db_path, metadata)
@@ -297,10 +298,10 @@ def export_kindle_vocab():
         anki_connect_instance.create_notes_batch(anki_deck, notes)
 
     # Save script run timestamp
-    MetadataManager.save_script_run_timestamp(metadata)
+    metadata_manager.save_script_run_timestamp(metadata)
 
     # Save timestamp for future incremental imports
-    MetadataManager.save_latest_vocab_builder_entry_timestamp(kindle_vocab_data, metadata)
+    metadata_manager.save_latest_vocab_builder_entry_timestamp(kindle_vocab_data, metadata)
 
     print("\nKindle to Anki export process completed successfully.")
 

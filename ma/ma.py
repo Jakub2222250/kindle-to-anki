@@ -1,4 +1,4 @@
-from ma.pl_en.ma_polish_hybrid import process_notes_with_morfeusz
+from ma.providers.ma_polish_hybrid import process_notes_with_morfeusz
 
 
 def process_morphological_enrichment(notes, source_language_code: str, target_language_code: str, ignore_cache: bool = False):

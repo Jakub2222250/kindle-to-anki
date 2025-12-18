@@ -1,5 +1,5 @@
 from translation.pl_en.polish_translator_local import translate_polish_context_to_english
-from translation.translator_llm import translate_context_with_llm
+from translation.providers.translator_llm import translate_context_with_llm
 
 
 def process_context_translation(notes, source_lang_code: str, target_lang_code: str, ignore_cache=False, use_llm=False):
