@@ -38,12 +38,12 @@ Tags
 
 # Running integration/unit tests
 
-py -m ma.pl_en.ma_polish_hybrid
-py -m ma.pl_en.ma_polish_sgjp_helper
+py -m ma.providers.ma_polish_hybrid
+py -m ma.providers.pl_en.ma_polish_sgjp_helper
 
 py -m pruning.pruning
 
-py -m wsd.wsd_llm
+py -m wsd.providers.wsd_llm
 
-py -m translation.pl_en.polish_translator_local
-py -m translation.translator_llm
+py -m translation.providers.polish_translator_local
+py -m translation.providers.translator_llm

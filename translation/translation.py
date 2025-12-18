@@ -1,4 +1,4 @@
-from translation.pl_en.polish_translator_local import translate_polish_context_to_english
+from translation.providers.polish_translator_local import translate_polish_context_to_english
 from translation.providers.translator_llm import translate_context_with_llm
 
 
