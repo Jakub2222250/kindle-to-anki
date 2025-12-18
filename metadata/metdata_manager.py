@@ -1,12 +1,11 @@
+from datetime import datetime
 import json
 import time
-from pathlib import Path
 
 
 class MetadataManager:
 
-    def __init__(self):
-        script_dir = Path(__file__).parent
+    def __init__(self, script_dir):
         self.metadata_path = script_dir / ".metadata" / "metadata.json"
 
     def load_metadata(self):
@@ -17,6 +16,7 @@ class MetadataManager:
                     return json.load(f)
             except (json.JSONDecodeError, FileNotFoundError):
                 print("Warning: Could not read metadata.json, starting fresh")
+                exit()
 
         return {}
 
@@ -37,3 +37,16 @@ class MetadataManager:
         current_time_ms = int(time.time() * 1000)
         metadata['last_script_run'] = current_time_ms
         self.save_metadata(metadata)
+
+    def save_latest_vocab_builder_entry_timestamp(self, vocab_data, metadata):
+        """Save the max timestamp from current import for future incremental imports"""
+        if not vocab_data:
+            return
+
+        max_timestamp = max(row[6] for row in vocab_data)  # timestamp is at index 6
+        human_readable_time = datetime.fromtimestamp(max_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        print(f"\nMax timestamp from this import: {human_readable_time}")
+
+        metadata['last_timestamp_import'] = max_timestamp
+        self.save_metadata(metadata)
+        print("Timestamp saved. Future runs will offer to import only newer notes.")

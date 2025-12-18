@@ -6,7 +6,7 @@ from pathlib import Path
 from anki.anki_deck import AnkiDeck
 from anki.anki_note import AnkiNote
 from collocation.collocation import process_collocation_generation
-from metadata.metdata_manager import MetadataManager, load_metadata
+from metadata.metdata_manager import MetadataManager
 from translation.translation import process_context_translation
 from wsd.wsd import provide_word_sense_disambiguation
 from ma.ma import process_morphological_enrichment
@@ -54,20 +54,6 @@ def handle_incremental_import_choice(db_path, last_timestamp):
 
     print("Importing only new kindle vocab builder entries...")
     return read_vocab_from_db(db_path, last_timestamp)
-
-
-def save_latest_vocab_builder_entry_timestamp(vocab_data, metadata):
-    """Save the max timestamp from current import for future incremental imports"""
-    if not vocab_data:
-        return
-
-    max_timestamp = max(row[6] for row in vocab_data)  # timestamp is at index 6
-    human_readable_time = datetime.datetime.fromtimestamp(max_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
-    print(f"\nMax timestamp from this import: {human_readable_time}")
-
-    metadata['last_timestamp_import'] = max_timestamp
-    MetadataManager.save_metadata(metadata)
-    print("Timestamp saved. Future runs will offer to import only newer notes.")
 
 
 def read_vocab_from_db(db_path, timestamp=None):
@@ -195,6 +181,8 @@ def get_vocab_db():
 def get_latest_kindle_vocab_data(db_path, metadata):
     last_timestamp = metadata.get('last_timestamp_import')
 
+    print(last_timestamp)
+
     # Handle import choice (incremental vs full)
     if last_timestamp:
         kindle_vocab_data = handle_incremental_import_choice(db_path, last_timestamp)
@@ -219,6 +207,13 @@ def get_anki_decks_by_source_language():
             ready_deck_name="Polish Vocab Discovery::Ready",
             staging_deck_name="Polish Vocab Discovery::Import"
         ),
+        AnkiDeck(
+            source_lang_code="es",
+            target_lang_code="en",
+            parent_deck_name="Spanish Vocab Discovery",
+            ready_deck_name="Spanish Vocab Discovery::Ready",
+            staging_deck_name="Spanish Vocab Discovery::Import"
+        )
     ]
 
     anki_decks_by_source_language = {}
@@ -239,7 +234,8 @@ def export_kindle_vocab():
     db_path = get_vocab_db()
 
     # Load existing metadata
-    metadata_manager = MetadataManager()
+    script_dir = Path(__file__).parent
+    metadata_manager = MetadataManager(script_dir)
     metadata = metadata_manager.load_metadata()
 
     # Get latest kindle vocab data
