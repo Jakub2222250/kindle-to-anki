@@ -21,7 +21,7 @@ Your task is to identify the MINIMUM lexical unit that a learner needs to unders
 
 For each word/phrase, provide:
 - "lemma": The dictionary form (infinitive for verbs, singular nominative for nouns, etc.)
-- "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj
+- "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase, idiom
 - "aspect": For verbs only: "perf" (perfective), "impf" (imperfective), or "" (not applicable/unknown)
 - "original_form": The exact lexical unit from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
 - "unit_type": One of: "lemma" (single word/basic form), "reflexive" (verb with reflexive pronoun), "idiom" (multi-word expression/phrase)
