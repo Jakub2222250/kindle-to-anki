@@ -33,6 +33,7 @@ Fields to write out in order (ordering based on manual categorizing ease in Anki
 14: Location
 15: Status
 16: Cloze_Enabled
+17: Unit_Type
 Tags
 
 

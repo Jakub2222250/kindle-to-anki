@@ -168,6 +168,11 @@ def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl-en_hybri
     for note in notes:
         if "się" in note.morfeusz_lemma:
             note.original_form = absorb_nearest_sie(note.kindle_word, note.kindle_usage)
+            # Set unit_type to reflexive for verbs with się
+            note.unit_type = "reflexive"
+        else:
+            # Set unit_type to lemma for regular words
+            note.unit_type = "lemma"
 
         # Normalize morfeusz lemma to best lemma for Anki learning now that final POS is known
         # Morfeusz lemma already has "się" absorbed if applicable for verbs
@@ -327,6 +332,10 @@ if __name__ == "__main__":
 
     for i, test in enumerate(test_cases):
         note = notes[i]
+
+        # Determine expected unit_type based on whether się appears in the expected lemma
+        expected_unit_type = "reflexive" if "się" in test['expected_lemma'] else "lemma"
+
         if test['expected_lemma'] != note.expression:
             print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected lemma '{test['expected_lemma']}', got '{note.expression}'")
         else:
@@ -346,3 +355,8 @@ if __name__ == "__main__":
             print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected aspect '{test['expected_aspect']}', got '{note.aspect}'")
         else:
             print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected aspect '{note.aspect}'")
+
+        if expected_unit_type != note.unit_type:
+            print(f"Test FAILED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': expected unit_type '{expected_unit_type}', got '{note.unit_type}'")
+        else:
+            print(f"Test PASSED for word '{note.kindle_word}' in sentence '{note.kindle_usage}': got expected unit_type '{note.unit_type}'")

@@ -9,7 +9,7 @@ from collocation.collocation import process_collocation_generation
 from metadata.metdata_manager import MetadataManager
 from translation.translation import process_context_translation
 from wsd.wsd import provide_word_sense_disambiguation
-from lexical_unit_identification.lexical_unit_identification import process_morphological_enrichment
+from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 import datetime
@@ -264,7 +264,7 @@ def export_kindle_vocab():
         notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
 
         # Enrich notes with morphological analysis
-        process_morphological_enrichment(notes, source_lang_code, target_lang_code)
+        complete_lexical_unit_identification(notes, source_lang_code, target_lang_code)
 
         if not notes:
             print(f"No new notes to process for language: {source_lang_code}")

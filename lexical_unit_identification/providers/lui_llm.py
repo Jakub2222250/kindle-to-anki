@@ -24,6 +24,7 @@ For each word/phrase, provide:
 - "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj
 - "aspect": For verbs only: "perf" (perfective), "impf" (imperfective), or "" (not applicable/unknown)
 - "original_form": The exact lexical unit from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
+- "unit_type": One of: "lemma" (single word/basic form), "reflexive" (verb with reflexive pronoun), "idiom" (multi-word expression/phrase)
 
 CRITICAL LEXICAL UNIT IDENTIFICATION RULES:
 1. SUBSTRING REQUIREMENT: The "original_form" MUST be an exact substring of the provided context sentence. It can absorb surrounding text but must match the sentence text exactly.
@@ -84,6 +85,7 @@ Output JSON as an object where keys are the UIDs and values are objects with:
 - "part_of_speech": grammatical category  
 - "aspect": verb aspect ("perf"/"impf"/"")
 - "original_form": lexical unit to be learned (must be exact substring of sentence)
+- "unit_type": classification ("lemma"/"reflexive"/"idiom")
 
 Respond with valid JSON. No additional text."""
 
@@ -133,7 +135,8 @@ def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, langu
                         "lemma": lui_data.get("lemma", ""),
                         "part_of_speech": lui_data.get("part_of_speech", ""),
                         "aspect": lui_data.get("aspect", ""),
-                        "original_form": lui_data.get("original_form", note.kindle_word)
+                        "original_form": lui_data.get("original_form", note.kindle_word),
+                        "unit_type": lui_data.get("unit_type", "lemma")
                     }
 
                     # Save to cache
@@ -144,6 +147,7 @@ def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, langu
                     note.part_of_speech = lui_result["part_of_speech"]
                     note.aspect = lui_result["aspect"]
                     note.original_form = lui_result["original_form"]
+                    note.unit_type = lui_result["unit_type"]
 
                     print(f"  SUCCESS - identified {note.kindle_word} → lemma: {note.expression}, pos: {note.part_of_speech}")
                 else:
@@ -188,6 +192,7 @@ def process_notes_with_llm_lui(notes: List[AnkiNote], source_language_code: str,
                 note.part_of_speech = cached_result.get('part_of_speech', '')
                 note.aspect = cached_result.get('aspect', '')
                 note.original_form = cached_result.get('original_form', note.kindle_word)
+                note.unit_type = cached_result.get('unit_type', 'lemma')
             else:
                 notes_needing_lui.append(note)
 

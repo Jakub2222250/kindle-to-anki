@@ -1,6 +1,6 @@
 from anki.anki_connect import AnkiConnect
 from anki.anki_note import AnkiNote
-from lexical_unit_identification.lexical_unit_identification import process_morphological_enrichment
+from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
 
 
 def get_all_notes(anki_connect_instance: AnkiConnect, lang: str) -> list[dict]:
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         for note in notes_to_reprocess:
             print(note.kindle_word)
 
-        process_morphological_enrichment(notes_to_reprocess, lang, "en", ignore_cache=False)
+        complete_lexical_unit_identification(notes_to_reprocess, lang, "en", ignore_cache=False)
 
         # Save morphological analysis updated fields back to Anki only
         card_updates = generate_card_updates(uid_to_old_note_info_dict, notes_to_reprocess)

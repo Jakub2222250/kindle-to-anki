@@ -20,6 +20,7 @@ class AnkiNote:
         self.part_of_speech = ""
         self.definition = ""
         self.aspect = ""
+        self.unit_type = "lemma"
         self.context_sentence = self.kindle_usage or ""
         self.context_sentence_cloze = ""
         self.context_translation = ""
@@ -151,4 +152,5 @@ class AnkiNote:
                 f"{self.location}\t"
                 f"{self.status}\t"
                 f"{self.get_cloze_enabled_output()}\t"
+                f"{self.unit_type}\t"
                 f"{self.tags}\n")
