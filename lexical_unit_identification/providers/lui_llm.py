@@ -35,6 +35,7 @@ CRITICAL LEXICAL UNIT IDENTIFICATION RULES:
 6. Prioritize what a language learner should memorize as a unit for effective comprehension and learning.
 
 Examples for different languages:
+- Polish sentence "Zrobił to szybko" with target "szybko" → original_form: "szybko"
 - Polish sentence "Boi się ciemności" with target word "się" → original_form: "boi się" (if both words appear together)
 - Spanish sentence "Se da cuenta de todo" with target word "da" → original_form: "se da cuenta" (if all appear together)
 - German sentence "Er freut sich sehr" with target word "freut" → original_form: "freut sich" (if both appear together)
