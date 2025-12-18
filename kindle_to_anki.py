@@ -9,7 +9,7 @@ from collocation.collocation import process_collocation_generation
 from metadata.metdata_manager import MetadataManager
 from translation.translation import process_context_translation
 from wsd.wsd import provide_word_sense_disambiguation
-from ma.ma import process_morphological_enrichment
+from lexical_unit_identification.ma import process_morphological_enrichment
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 import datetime

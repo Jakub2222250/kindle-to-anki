@@ -3,7 +3,7 @@
 Simple test script to verify the new LLM-based morphological analysis works correctly.
 """
 
-from ma.ma import process_morphological_enrichment
+from lexical_unit_identification.ma import process_morphological_enrichment
 from anki.anki_note import AnkiNote
 import sys
 from pathlib import Path

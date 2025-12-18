@@ -5,8 +5,8 @@ from openai import OpenAI
 
 
 from anki.anki_note import AnkiNote
-from ma.ma_cache import MACache
-from ma.providers.pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
+from lexical_unit_identification.ma_cache import MACache
+from lexical_unit_identification.providers.pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
 
 
 MA_WSD_LLM = "gpt-5-mini"

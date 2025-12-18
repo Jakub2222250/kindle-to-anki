@@ -4,7 +4,7 @@ from typing import List
 from openai import OpenAI
 
 from anki.anki_note import AnkiNote
-from ma.ma_cache import MACache
+from lexical_unit_identification.ma_cache import MACache
 from language.language_helper import get_language_name_in_english
 
 

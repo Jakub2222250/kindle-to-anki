@@ -1,6 +1,6 @@
 from anki.anki_connect import AnkiConnect
 from anki.anki_note import AnkiNote
-from ma.ma import process_morphological_enrichment
+from lexical_unit_identification.ma import process_morphological_enrichment
 
 
 def get_all_notes(anki_connect_instance: AnkiConnect, lang: str) -> list[dict]:
