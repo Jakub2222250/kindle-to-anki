@@ -1,5 +1,5 @@
-from lexical_unit_identification.providers.ma_llm import process_notes_with_llm_ma
-from lexical_unit_identification.providers.ma_polish_hybrid import process_notes_with_morfeusz
+from lexical_unit_identification.providers.lui_llm import process_notes_with_llm_ma
+from lexical_unit_identification.providers.lui_polish_hybrid import process_notes_with_morfeusz
 
 
 def process_morphological_enrichment(notes, source_language_code: str, target_language_code: str, ignore_cache: bool = False, use_hybrid: bool = False):
