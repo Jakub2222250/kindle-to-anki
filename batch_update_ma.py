@@ -118,7 +118,7 @@ if __name__ == "__main__":
         for note in notes_to_reprocess:
             print(note.kindle_word)
 
-        process_morphological_enrichment(notes_to_reprocess, lang, ignore_cache=False)
+        process_morphological_enrichment(notes_to_reprocess, lang, "en", ignore_cache=False)
 
         # Save morphological analysis updated fields back to Anki only
         card_updates = generate_card_updates(uid_to_old_note_info_dict, notes_to_reprocess)

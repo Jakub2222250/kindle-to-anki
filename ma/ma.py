@@ -1,18 +1,27 @@
+from ma.providers.ma_llm import process_notes_with_llm_ma
 from ma.providers.ma_polish_hybrid import process_notes_with_morfeusz
 
 
-def process_morphological_enrichment(notes, source_language_code: str, target_language_code: str, ignore_cache: bool = False):
-    """Process morfeusz enrichment for a list of notes"""
+def process_morphological_enrichment(notes, source_language_code: str, target_language_code: str, ignore_cache: bool = False, use_hybrid: bool = False):
+    """Process morphological enrichment for a list of notes
+
+    Args:
+        notes: List of AnkiNote objects to process
+        source_language_code: Source language code (e.g., 'pl', 'es', 'de')
+        target_language_code: Target language code (e.g., 'en')
+        ignore_cache: Whether to ignore cached results
+        use_hybrid: Whether to use language-specific hybrid approach (Polish only) instead of LLM
+    """
 
     print("\nStarting morphological enrichment...")
 
-    if source_language_code == "pl" and target_language_code == "en":
+    if use_hybrid and source_language_code == "pl" and target_language_code == "en":
+        # Use the Polish-specific hybrid approach (Morfeusz2 + LLM)
+        print("Using Polish hybrid morphological analysis (Morfeusz2 + LLM)...")
         process_notes_with_morfeusz(notes, ignore_cache=ignore_cache)
-    elif source_language_code == "es":
-        print("Not supported yet")
-        exit()
     else:
-        print("Not supported yet")
-        exit()
+        # Use the language-agnostic LLM approach (default)
+        print(f"Using LLM-based morphological analysis for {source_language_code}...")
+        process_notes_with_llm_ma(notes, source_language_code, target_language_code, ignore_cache=ignore_cache)
 
     print("Morphological enrichment completed.")

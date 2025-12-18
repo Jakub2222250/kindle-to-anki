@@ -38,6 +38,7 @@ Tags
 
 # Running integration/unit tests
 
+py -m ma.providers.ma_llm
 py -m ma.providers.ma_polish_hybrid
 py -m ma.providers.pl_en.ma_polish_sgjp_helper
 
