@@ -11,7 +11,7 @@ from llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexica
 
 # Configuration
 BATCH_SIZE = 30
-LUI_LLM = "gpt-5-mini"
+LUI_LLM = "gpt-5"
 
 
 def make_batch_lui_call(batch_notes, processing_timestamp, language_name, language_code=""):

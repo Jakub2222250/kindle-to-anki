@@ -9,7 +9,7 @@ from lexical_unit_identification.ma_cache import MACache
 from lexical_unit_identification.providers.pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
 
 
-MA_WSD_LLM = "gpt-5-mini"
+MA_WSD_LLM = "gpt-5"
 
 
 def disambiguate_lemma_pos(
