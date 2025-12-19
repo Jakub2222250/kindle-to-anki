@@ -107,3 +107,115 @@ def get_supported_models():
 def get_model_info(model):
     """Get pricing and encoding info for a specific model"""
     return MODEL_PRICING.get(model, None)
+
+
+def get_llm_lexical_unit_identification_instructions(language_name: str, language_code: str = "") -> str:
+    """Get LLM instructions for lexical unit identification, with language-specific customizations"""
+
+    # Language-specific instructions
+    if language_code == "pl":
+        return get_polish_lui_instructions(language_name)
+    elif language_code == "es":
+        return get_spanish_lui_instructions(language_name)
+    else:
+        return get_generic_lui_instructions(language_name)
+
+
+def get_polish_lui_instructions(language_name: str) -> str:
+    """Get Polish-specific LLM instructions for lexical unit identification"""
+    return f"""You are a lexical unit identifier for {language_name} focused on language learning.
+
+Your task is to identify the MINIMUM lexical unit that a learner needs to understand and memorize to comprehend the sentence and learn effectively.
+
+For each word/phrase, provide:
+- "lemma": The dictionary form (infinitive for verbs, singular nominative for nouns, etc.)
+- "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase, idiom
+- "aspect": For verbs only: "perf" (perfective), "impf" (imperfective), or "" (not applicable/unknown)
+- "original_form": The exact lexical unit from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
+- "unit_type": One of: "lemma" (single word/basic form), "reflexive" (verb with reflexive pronoun), "idiom" (multi-word expression/phrase)
+
+CRITICAL POLISH LEXICAL UNIT IDENTIFICATION RULES:
+1. SUBSTRING REQUIREMENT: The "original_form" MUST be an exact substring of the provided context sentence. It can absorb surrounding text but must match the sentence text exactly.
+2. MINIMAL LEARNING UNIT: Identify the smallest unit that, when learned, enables comprehension and effective language acquisition.
+
+SPECIAL RULES FOR POLISH "SIĘ":
+- DO NOT include "się" when it functions as a standalone reflexive pronoun separate from the verb (e.g., "Widzi się w lustrze" with target "widzi" → original_form: "widzi")
+- DO include "się" when it forms an inseparable reflexive verb construction (e.g., "Boi się ciemności" with target "boi" → original_form: "boi się")
+- DO include "się" in idiomatic expressions where the meaning changes significantly (e.g., "Dał się oszukać" with target "dał" → original_form: "dał się" for the idiom "give in/be fooled")
+- For true reflexive verbs, include "się" in both lemma and original_form (e.g., "bać się" not just "bać")
+
+POLISH-SPECIFIC EXAMPLES:
+1. NO ABSORPTION: "Ona się myje codziennie" with target "myje" → lemma: "myć", original_form: "myje" (standard reflexive use)
+2. APPROPRIATE ABSORPTION: "Martwi się o dzieci" with target "martwi" → lemma: "martwić się", original_form: "martwi się" (inherently reflexive verb)
+3. IDIOM ABSORPTION: "Dał się nabrać na tę historię" with target "dał" → lemma: "dać się", original_form: "dał się", unit_type: "idiom" (idiomatic meaning "to be fooled")
+
+4. Other Polish particles and prepositions: Include only if semantically bound and adjacent in the sentence.
+5. Aspect marking: Carefully distinguish perfective vs imperfective verb forms.
+
+IMPORTANT: The original_form must exactly match text that appears in the provided sentence - no additions or modifications allowed."""
+
+
+def get_spanish_lui_instructions(language_name: str) -> str:
+    """Get Spanish-specific LLM instructions for lexical unit identification"""
+    return f"""You are a lexical unit identifier for {language_name} focused on language learning.
+
+Your task is to identify the MINIMUM lexical unit that a learner needs to understand and memorize to comprehend the sentence and learn effectively.
+
+For each word/phrase, provide:
+- "lemma": The dictionary form (infinitive for verbs, singular nominative for nouns, etc.)
+- "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase, idiom
+- "aspect": For verbs only: "perf" (perfective), "impf" (imperfective), or "" (not applicable/unknown)
+- "original_form": The exact lexical unit from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
+- "unit_type": One of: "lemma" (single word/basic form), "reflexive" (verb with reflexive pronoun), "idiom" (multi-word expression/phrase)
+
+CRITICAL SPANISH LEXICAL UNIT IDENTIFICATION RULES:
+1. SUBSTRING REQUIREMENT: The "original_form" MUST be an exact substring of the provided context sentence. It can absorb surrounding text but must match the sentence text exactly.
+2. MINIMAL LEARNING UNIT: Identify the smallest unit that, when learned, enables comprehension and effective language acquisition.
+
+SPECIAL RULES FOR SPANISH REFLEXIVE PRONOUNS (se, me, te, nos, os):
+- Include reflexive pronouns with inherently reflexive verbs (e.g., "llamarse", "acordarse")
+- Include in phrasal verb constructions where meaning changes (e.g., "darse cuenta", "irse")
+- Do NOT include when the pronoun is used for passive constructions (e.g., "se habla español")
+
+SPANISH-SPECIFIC CONSIDERATIONS:
+- Phrasal verbs: Include prepositions that are semantically bound (e.g., "contar con", "pensar en")
+- Ser vs Estar: Treat as separate lemmas with distinct meanings
+- Subjunctive mood: Preserve mood information in grammatical analysis
+- Diminutives and augmentatives: Generally use base form as lemma unless lexicalized
+
+SPANISH EXAMPLES:
+- "Se da cuenta de todo" with target "da" → lemma: "darse cuenta", original_form: "se da cuenta", unit_type: "idiom"
+- "Habla español muy bien" with target "habla" → lemma: "hablar", original_form: "habla"
+- "Está corriendo en el parque" with target "corriendo" → lemma: "correr", original_form: "corriendo"
+
+IMPORTANT: The original_form must exactly match text that appears in the provided sentence - no additions or modifications allowed."""
+
+
+def get_generic_lui_instructions(language_name: str) -> str:
+    """Get generic LLM instructions for lexical unit identification (fallback for unsupported languages)"""
+    return f"""You are a lexical unit identifier for {language_name} focused on language learning.
+
+Your task is to identify the MINIMUM lexical unit that a learner needs to understand and memorize to comprehend the sentence and learn effectively.
+
+For each word/phrase, provide:
+- "lemma": The dictionary form (infinitive for verbs, singular nominative for nouns, etc.)
+- "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase, idiom
+- "aspect": For verbs only: "perf" (perfective), "impf" (imperfective), or "" (not applicable/unknown)
+- "original_form": The exact lexical unit from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
+- "unit_type": One of: "lemma" (single word/basic form), "reflexive" (verb with reflexive pronoun), "idiom" (multi-word expression/phrase)
+
+CRITICAL LEXICAL UNIT IDENTIFICATION RULES:
+1. SUBSTRING REQUIREMENT: The "original_form" MUST be an exact substring of the provided context sentence. It can absorb surrounding text but must match the sentence text exactly.
+2. MINIMAL LEARNING UNIT: Identify the smallest unit that, when learned, enables comprehension and effective language acquisition.
+3. For reflexive verbs: Include reflexive pronouns (się, se, si, etc.) if they're essential to the verb's meaning and appear in the sentence.
+4. For phrasal verbs and idioms: Include the full phrase only if the parts appear together in the sentence and learning them separately would be confusing.
+5. For particles that change meaning: Include them only if they appear adjacent to the target word in the sentence and are semantically bound.
+6. Prioritize what a language learner should memorize as a unit for effective comprehension and learning.
+
+Examples for different languages:
+- Polish sentence "Zrobił to szybko" with target "szybko" → original_form: "szybko"
+- Polish sentence "Boi się ciemności" with target word "się" → original_form: "boi się" (if both words appear together)
+- Spanish sentence "Se da cuenta de todo" with target word "da" → original_form: "se da cuenta" (if all appear together)
+- German sentence "Er freut sich sehr" with target word "freut" → original_form: "freut się" (if both appear together)
+
+IMPORTANT: The original_form must exactly match text that appears in the provided sentence - no additions or modifications allowed."""

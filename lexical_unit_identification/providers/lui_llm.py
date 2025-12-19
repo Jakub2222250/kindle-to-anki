@@ -6,7 +6,7 @@ from openai import OpenAI
 from anki.anki_note import AnkiNote
 from lexical_unit_identification.ma_cache import MACache
 from language.language_helper import get_language_name_in_english
-from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
+from llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexical_unit_identification_instructions
 
 
 # Configuration
@@ -14,37 +14,7 @@ BATCH_SIZE = 30
 LUI_LLM = "gpt-5-mini"
 
 
-def get_llm_lexical_unit_identification_instructions(language_name: str) -> str:
-    """Get LLM instructions for lexical unit identification"""
-    return f"""You are a lexical unit identifier for {language_name} focused on language learning.
-
-Your task is to identify the MINIMUM lexical unit that a learner needs to understand and memorize to comprehend the sentence and learn effectively.
-
-For each word/phrase, provide:
-- "lemma": The dictionary form (infinitive for verbs, singular nominative for nouns, etc.)
-- "part_of_speech": One of: verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase, idiom
-- "aspect": For verbs only: "perf" (perfective), "impf" (imperfective), or "" (not applicable/unknown)
-- "original_form": The exact lexical unit from the sentence that should be learned (may include particles, reflexive pronouns, etc.)
-- "unit_type": One of: "lemma" (single word/basic form), "reflexive" (verb with reflexive pronoun), "idiom" (multi-word expression/phrase)
-
-CRITICAL LEXICAL UNIT IDENTIFICATION RULES:
-1. SUBSTRING REQUIREMENT: The "original_form" MUST be an exact substring of the provided context sentence. It can absorb surrounding text but must match the sentence text exactly.
-2. MINIMAL LEARNING UNIT: Identify the smallest unit that, when learned, enables comprehension and effective language acquisition.
-3. For reflexive verbs: Include reflexive pronouns (się, se, si, etc.) if they're essential to the verb's meaning and appear in the sentence.
-4. For phrasal verbs and idioms: Include the full phrase only if the parts appear together in the sentence and learning them separately would be confusing.
-5. For particles that change meaning: Include them only if they appear adjacent to the target word in the sentence and are semantically bound.
-6. Prioritize what a language learner should memorize as a unit for effective comprehension and learning.
-
-Examples for different languages:
-- Polish sentence "Zrobił to szybko" with target "szybko" → original_form: "szybko"
-- Polish sentence "Boi się ciemności" with target word "się" → original_form: "boi się" (if both words appear together)
-- Spanish sentence "Se da cuenta de todo" with target word "da" → original_form: "se da cuenta" (if all appear together)
-- German sentence "Er freut sich sehr" with target word "freut" → original_form: "freut sich" (if both appear together)
-
-IMPORTANT: The original_form must exactly match text that appears in the provided sentence - no additions or modifications allowed."""
-
-
-def make_batch_lui_call(batch_notes, processing_timestamp, language_name):
+def make_batch_lui_call(batch_notes, processing_timestamp, language_name, language_code=""):
     """Make batch LLM API call for lexical unit identification"""
     items_list = []
     for note in batch_notes:
@@ -58,7 +28,7 @@ def make_batch_lui_call(batch_notes, processing_timestamp, language_name):
 Words to identify:
 {items_json}
 
-{get_llm_lexical_unit_identification_instructions(language_name)}
+{get_llm_lexical_unit_identification_instructions(language_name, language_code)}
 
 Output JSON as an object where keys are the UIDs and values are objects with:
 - "lemma": dictionary form
@@ -91,7 +61,7 @@ Respond with valid JSON. No additional text."""
     return json.loads(output_text), LUI_LLM, processing_timestamp
 
 
-def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, language_name: str):
+def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, language_name: str, language_code: str = ""):
     """Process notes in batches for lexical unit identification"""
 
     # Capture timestamp at the start of LUI processing
@@ -107,7 +77,7 @@ def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, langu
         print(f"\nProcessing lexical unit identification batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
         try:
-            batch_results, model_used, timestamp = make_batch_lui_call(batch, processing_timestamp, language_name)
+            batch_results, model_used, timestamp = make_batch_lui_call(batch, processing_timestamp, language_name, language_code)
 
             for note in batch:
                 if note.uid in batch_results:
@@ -195,7 +165,7 @@ def process_notes_with_llm_lui(notes: List[AnkiNote], source_language_code: str,
             exit()
 
     # Process notes in batches
-    process_lui_batches(notes_needing_lui, cache, language_name)
+    process_lui_batches(notes_needing_lui, cache, language_name, source_language_code)
 
     print(f"{language_name} lexical unit identification (LLM) completed.")
 
