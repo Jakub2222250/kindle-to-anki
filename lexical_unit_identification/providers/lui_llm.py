@@ -23,21 +23,7 @@ def make_batch_lui_call(batch_notes, processing_timestamp, language_name, langua
 
     items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-    prompt = f"""Identify the lexical units of the following {language_name} words in context.
-
-Words to identify:
-{items_json}
-
-{get_llm_lexical_unit_identification_instructions(language_name, language_code)}
-
-Output JSON as an object where keys are the UIDs and values are objects with:
-- "lemma": dictionary form
-- "part_of_speech": grammatical category  
-- "aspect": verb aspect ("perf"/"impf"/"")
-- "original_form": lexical unit to be learned (must be exact substring of sentence)
-- "unit_type": classification ("lemma"/"reflexive"/"idiom")
-
-Respond with valid JSON. No additional text."""
+    prompt = get_llm_lexical_unit_identification_instructions(items_json, language_name, language_code)
 
     input_chars = len(prompt)
     estimate_cost_value = estimate_llm_cost(prompt, len(batch_notes), LUI_LLM)
