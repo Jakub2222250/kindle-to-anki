@@ -114,16 +114,16 @@ def get_llm_lexical_unit_identification_instructions(language_name: str, languag
 
     # Language-specific instructions
     if language_code == "pl":
-        return get_polish_lui_instructions(language_name)
+        return get_polish_lui_instructions()
     elif language_code == "es":
-        return get_spanish_lui_instructions(language_name)
+        return get_spanish_lui_instructions()
     else:
         return get_generic_lui_instructions(language_name)
 
 
-def get_polish_lui_instructions(language_name: str) -> str:
+def get_polish_lui_instructions() -> str:
     """Get Polish-specific LLM instructions for lexical unit identification"""
-    return f"""You are a lexical unit identifier for {language_name} focused on language learning.
+    return f"""You are a lexical unit identifier for Polish focused on language learning.
 
 Your task is to identify the MINIMUM lexical unit that a learner needs to understand and memorize to comprehend the sentence and learn effectively.
 
@@ -155,9 +155,9 @@ POLISH-SPECIFIC EXAMPLES:
 IMPORTANT: The original_form must exactly match text that appears in the provided sentence - no additions or modifications allowed."""
 
 
-def get_spanish_lui_instructions(language_name: str) -> str:
+def get_spanish_lui_instructions() -> str:
     """Get Spanish-specific LLM instructions for lexical unit identification"""
-    return f"""You are a lexical unit identifier for {language_name} focused on language learning.
+    return f"""You are a lexical unit identifier for Spanish focused on language learning.
 
 Your task is to identify the MINIMUM lexical unit that a learner needs to understand and memorize to comprehend the sentence and learn effectively.
 
