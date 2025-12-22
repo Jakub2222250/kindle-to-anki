@@ -1,3 +1,13 @@
+# Installation Guide
+py -m pip install openai
+py -m pip install thefuzz
+Set OPENAI_API_KEY = <> environment variable
+Add Anki Add-On: AnkiConnect  (2055492159)
+Add Anki Add-On: Advanced Browser (874215009)
+
+# TODO
+Publish autopep8 formatting ruleset
+
 # Importing Cards
 kindle_to_anki.bat
 

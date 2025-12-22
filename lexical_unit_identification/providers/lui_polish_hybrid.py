@@ -1,4 +1,3 @@
-import morfeusz2
 import string
 
 from lexical_unit_identification.providers.pl_en.ma_polish_hybrid_llm import update_notes_with_llm
@@ -140,6 +139,11 @@ def absorb_nearest_sie(kindle_word, usage_text):
 
 
 def process_notes_with_morfeusz(notes: list[AnkiNote], cache_suffix='pl-en_hybrid', ignore_cache=False, verbose=False):
+
+    try:
+        import morfeusz2
+    except ImportError:
+        raise ImportError("morfeusz2 library is required for Polish morphological analysis. Please install it via 'pip install morfeusz2'.")
 
     morf = morfeusz2.Morfeusz()
     notes_requiring_llm_ma = []
