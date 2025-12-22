@@ -45,19 +45,19 @@ class AnkiNote:
         # Set tags based on language and book abbreviation
         self.set_tags(language)
 
-    def apply_llm_enrichment(self, llm_data):
-        """Apply LLM enrichment data to the note (excluding translation and collocations which are handled separately)"""
-        if not llm_data:
+    def apply_wsd_results(self, wsd_data):
+        """Apply WSD data to the note (excluding translation and collocations which are handled separately)"""
+        if not wsd_data:
             return []
 
-        if llm_data.get('definition'):
-            self.definition = llm_data['definition']  # Override glosbe_url with LLM definition
+        if wsd_data.get('definition'):
+            self.definition = wsd_data['definition']  # Override glosbe_url with LLM definition
 
-        if llm_data.get('original_language_definition'):
-            self.original_language_hint = llm_data['original_language_definition']
+        if wsd_data.get('original_language_definition'):
+            self.original_language_hint = wsd_data['original_language_definition']
 
-        if llm_data.get('cloze_deletion_score') is not None:
-            score = llm_data['cloze_deletion_score']
+        if wsd_data.get('cloze_deletion_score') is not None:
+            score = wsd_data['cloze_deletion_score']
             # Enable cloze if score is 7 or higher
             self.cloze_deletion_score = score
             self.cloze_enabled = score if score >= 7 else None

@@ -189,7 +189,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
 
 
 def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
-    """Process MA enrichment for all notes"""
+    """Process morphological analysis for all notes"""
 
     print("\nStarting LLM MA processing...")
 

@@ -79,7 +79,7 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache,
                 if note.uid in batch_results:
                     llm_data = batch_results[note.uid]
                     cache.set(note.uid, llm_data, model_used, timestamp)
-                    note.apply_llm_enrichment(llm_data)
+                    note.apply_wsd_results(llm_data)
                     print(f"  SUCCESS - enriched {note.kindle_word}")
                 else:
                     print(f"  FAILED - no result for {note.kindle_word}")
@@ -90,15 +90,15 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache,
             failing_notes.extend(batch)
 
     if len(failing_notes) > 0:
-        print(f"{len(failing_notes)} notes failed LLM enrichment.")
+        print(f"{len(failing_notes)} notes failed LLM based Word Sense Disambiguation.")
         print("All successful LLM results already saved to cache. Running script again usually fixes the issue. Exiting.")
         exit()
 
 
 def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_language_name, ignore_cache=False, use_test_cache=False):
-    """Process LLM enrichment for all notes"""
+    """Process Word Sense Disambiguation via LLM for all notes"""
 
-    print("\nStarting LLM enrichment process...")
+    print("\nStarting Word Sense Disambiguation via LLM process...")
 
     language_pair_code = f"{source_language_name}-{target_language_name}"
     cache_suffix = language_pair_code + "_llm"
@@ -106,7 +106,7 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
         cache_suffix += "_test"
     cache = WSDCache(cache_suffix=cache_suffix)
 
-    # Phase 1: Collect notes that need LLM enrichment
+    # Phase 1: Collect notes that need Word Sense Disambiguation via LLM
     notes_needing_llm = []
 
     if not ignore_cache:
@@ -119,7 +119,7 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
             cached_result = cache.get(note.uid)
             if cached_result:
                 cached_count += 1
-                note.apply_llm_enrichment(cached_result)
+                note.apply_wsd_results(cached_result)
             else:
                 notes_needing_llm.append(note)
 
@@ -134,18 +134,18 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
     if len(notes_needing_llm) > 200:
         result = input(f"\nDo you want to proceed with LLM API calls for {len(notes_needing_llm)} notes? (y/n): ").strip().lower()
         if result != 'y' and result != 'yes':
-            print("LLM enrichment process aborted by user.")
+            print("Word Sense Disambiguation via LLM process aborted by user.")
             exit()
 
     # Phase 2: Process notes in batches
     process_notes_in_batches(notes_needing_llm, cache, source_language_name, target_language_name)
 
-    print("LLM enrichment process completed.")
+    print("Word Sense Disambiguation via LLM process completed.")
 
 
 if __name__ == "__main__":
 
-    # Integration test of LLM enrichment - focus on plural forms with singular lemmas
+    # Integration test of Word Sense Disambiguation via LLM - focus on plural forms with singular lemmas
     test_cases = [
         {
             'kindle_word': 'dzieci',  # plural
@@ -206,7 +206,7 @@ if __name__ == "__main__":
         notes.append(note)
 
     print("=" * 80)
-    print("LLM ENRICHMENT INTEGRATION TEST")
+    print("WORD SENSE DISAMBIGUATION VIA LLM INTEGRATION TEST")
     print("=" * 80)
     print("Testing plural forms with singular lemmas to assess if definitions match lemma forms")
     print()

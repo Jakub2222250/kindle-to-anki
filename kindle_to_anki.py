@@ -87,7 +87,7 @@ def read_vocab_from_db(db_path, timestamp=None):
 
 
 def create_anki_notes(kindle_vocab_data):
-    """Create AnkiNotes from vocab_data with morfeusz enrichment only"""
+    """Create AnkiNotes from vocab_data retrieved from Kindle vocab.db"""
     notes_by_language = {}
     total_words = len([row for row in kindle_vocab_data if row[1]])  # Count words with stems
     processed_count = 0

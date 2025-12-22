@@ -113,7 +113,7 @@ if __name__ == "__main__":
                 num_of_unsuitable_notes += 1
 
         print(f"Identified {num_of_unsuitable_notes} unsuitable notes with multiple word original_form. Skipping these.")
-        print(f"\nReprocessing {len(notes_to_reprocess)} notes for morphological enrichment...")
+        print(f"\nReprocessing {len(notes_to_reprocess)} notes for lexical unit identification...")
 
         for note in notes_to_reprocess:
             print(note.kindle_word)
