@@ -5,6 +5,11 @@ Set OPENAI_API_KEY = <> environment variable
 Add Anki Add-On: AnkiConnect  (2055492159)
 Add Anki Add-On: Advanced Browser (874215009)
 
+# Optionally clean out Vocab Builder time to time
+Remove Internal Storage/vocabulary/vocab.db
+Remove Internal Storage/vocabulary/vocab.db-* auxiliary files
+Disconnect, restart kindle, look up a word (pretty quickly after to avoid some cache recovering original)
+
 # TODO
 Publish autopep8 formatting ruleset
 
