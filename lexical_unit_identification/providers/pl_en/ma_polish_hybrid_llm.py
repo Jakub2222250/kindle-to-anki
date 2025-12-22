@@ -181,11 +181,8 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
         except Exception as e:
             print(f"  BATCH FAILED - {str(e)}")
             failing_notes.extend(batch)
-
-    if len(failing_notes) > 0:
-        print(f"{len(failing_notes)} notes failed MA processing.")
-        print("All successful MA results already saved to cache. Running script again usually fixes the issue. Exiting.")
-        exit()
+            
+    return failing_notes
 
 
 def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
@@ -230,7 +227,21 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
             print("LLM MA processing aborted by user.")
             exit()
 
-    # Phase 2: Process notes in batches
-    process_notes_in_batches(notes_needing_llm, cache)
+    # Phase 2: Process notes in batches with retry logic
+    MAX_RETRIES = 1
+    retries = 0
+    failing_notes = process_notes_in_batches(notes_needing_llm, cache)
+
+    while len(failing_notes) > 0:
+        print(f"{len(failing_notes)} notes failed LLM MA processing.")
+        
+        if retries >= MAX_RETRIES:
+            print("All successful MA results already saved to cache. Running script again usually fixes the issue. Exiting.")
+            exit()
+        
+        if retries < MAX_RETRIES:
+            retries += 1
+            print(f"Retrying {len(failing_notes)} failed notes (attempt {retries} of {MAX_RETRIES})...")
+            failing_notes = process_notes_in_batches(failing_notes, cache)
 
     print("LLM MA processing completed.")

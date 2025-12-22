@@ -88,11 +88,10 @@ def process_notes_in_batches(notes_needing_llm: list[AnkiNote], cache: WSDCache,
         except Exception as e:
             print(f"  BATCH FAILED - {str(e)}")
             failing_notes.extend(batch)
+            
+    return failing_notes
 
-    if len(failing_notes) > 0:
-        print(f"{len(failing_notes)} notes failed LLM based Word Sense Disambiguation.")
-        print("All successful LLM results already saved to cache. Running script again usually fixes the issue. Exiting.")
-        exit()
+    
 
 
 def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_language_name, ignore_cache=False, use_test_cache=False):
@@ -132,7 +131,21 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
         return
 
     # Phase 2: Process notes in batches
-    process_notes_in_batches(notes_needing_llm, cache, source_language_name, target_language_name)
+    MAX_RETRIES = 1
+    retries = 0
+    failing_notes = process_notes_in_batches(notes_needing_llm, cache, source_language_name, target_language_name)
+
+    while len(failing_notes) > 0:
+        print(f"{len(failing_notes)} notes failed LLM based Word Sense Disambiguation.")
+        
+        if retries >= MAX_RETRIES:
+            print("All successful LLM results already saved to cache. Running script again usually fixes the issue. Exiting.")
+            exit()
+        
+        if retries < MAX_RETRIES:
+            retries += 1
+            print(f"Retrying {len(failing_notes)} failed notes (attempt {retries} of {MAX_RETRIES})...")
+            failing_notes = process_notes_in_batches(failing_notes, cache, source_language_name, target_language_name)
 
     print("Word Sense Disambiguation via LLM process completed.")
 

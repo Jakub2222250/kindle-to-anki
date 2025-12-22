@@ -102,11 +102,8 @@ def process_translation_batches(notes_needing_translation: list[AnkiNote], cache
         except Exception as e:
             print(f"  BATCH FAILED - {str(e)}")
             failing_notes.extend(batch)
-
-    if len(failing_notes) > 0:
-        print(f"{len(failing_notes)} notes failed LLM translation.")
-        print("All successful translation results already saved to cache. Running script again usually fixes the issue. Exiting.")
-        exit()
+            
+    return failing_notes
 
 
 def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, target_lang_code: str, ignore_cache=False, use_test_cache=False):
@@ -151,8 +148,22 @@ def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, tar
         print(f"{source_language_name} context translation (LLM) completed (all from cache).")
         return
 
-    # Process notes in batches
-    process_translation_batches(notes_needing_translation, cache, source_language_name, target_language_name)
+    # Process notes in batches with retry logic
+    MAX_RETRIES = 1
+    retries = 0
+    failing_notes = process_translation_batches(notes_needing_translation, cache, source_language_name, target_language_name)
+
+    while len(failing_notes) > 0:
+        print(f"{len(failing_notes)} notes failed LLM translation.")
+        
+        if retries >= MAX_RETRIES:
+            print("All successful translation results already saved to cache. Running script again usually fixes the issue. Exiting.")
+            exit()
+        
+        if retries < MAX_RETRIES:
+            retries += 1
+            print(f"Retrying {len(failing_notes)} failed notes (attempt {retries} of {MAX_RETRIES})...")
+            failing_notes = process_translation_batches(failing_notes, cache, source_language_name, target_language_name)
 
     print(f"{source_language_name} context translation (LLM) completed.")
 

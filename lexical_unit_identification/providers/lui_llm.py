@@ -96,11 +96,8 @@ def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, langu
         except Exception as e:
             print(f"  BATCH FAILED - {str(e)}")
             failing_notes.extend(batch)
-
-    if len(failing_notes) > 0:
-        print(f"{len(failing_notes)} notes failed LLM lexical unit identification.")
-        print("All successful identification results already saved to cache. Running script again usually fixes the issue. Exiting.")
-        exit()
+            
+    return failing_notes
 
 
 def process_notes_with_llm_lui(notes: List[AnkiNote], source_language_code: str, target_language_code: str, ignore_cache=False, use_test_cache=False):
@@ -144,8 +141,22 @@ def process_notes_with_llm_lui(notes: List[AnkiNote], source_language_code: str,
         print(f"{language_name} lexical unit identification (LLM) completed (all from cache).")
         return
 
-    # Process notes in batches
-    process_lui_batches(notes_needing_lui, cache, language_name, source_language_code)
+    # Process notes in batches with retry logic
+    MAX_RETRIES = 1
+    retries = 0
+    failing_notes = process_lui_batches(notes_needing_lui, cache, language_name, source_language_code)
+
+    while len(failing_notes) > 0:
+        print(f"{len(failing_notes)} notes failed LLM lexical unit identification.")
+        
+        if retries >= MAX_RETRIES:
+            print("All successful identification results already saved to cache. Running script again usually fixes the issue. Exiting.")
+            exit()
+        
+        if retries < MAX_RETRIES:
+            retries += 1
+            print(f"Retrying {len(failing_notes)} failed notes (attempt {retries} of {MAX_RETRIES})...")
+            failing_notes = process_lui_batches(failing_notes, cache, language_name, source_language_code)
 
     print(f"{language_name} lexical unit identification (LLM) completed.")
 
