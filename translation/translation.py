@@ -7,8 +7,8 @@ def process_context_translation(notes, source_lang_code: str, target_lang_code: 
 
     Args:
         notes: List of AnkiNote objects to translate
-        language: Language code (e.g., 'pl', 'es') 
-        cache_suffix: Cache file suffix for translation cache
+        source_lang_code: Source language code (e.g., 'pl', 'es') 
+        target_lang_code: Target language code (e.g., 'en')
         ignore_cache: Whether to ignore existing cache
         use_llm: Whether to use LLM translator instead of local model (for Polish only)
     """

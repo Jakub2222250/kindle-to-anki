@@ -262,8 +262,14 @@ def export_kindle_vocab():
 
         # Prune notes previously identified as redundant
         notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
+        
+        if len(notes) > 100:
+            response = input(f"\nYou are about to process {len(notes)} notes for language: {source_lang_code}. Do you want to continue? (y/n): ").strip().lower()
+            if response != 'y' and response != 'yes':
+                print("Process aborted by user.")
+                exit()
 
-        # Enrich notes with morphological analysis
+        # Enrich notes with lexical unit identification
         complete_lexical_unit_identification(notes, source_lang_code, target_lang_code)
 
         if not notes:

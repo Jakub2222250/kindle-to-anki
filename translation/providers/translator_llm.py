@@ -151,12 +151,6 @@ def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, tar
         print(f"{source_language_name} context translation (LLM) completed (all from cache).")
         return
 
-    if len(notes_needing_translation) > 100:
-        result = input(f"\nDo you want to proceed with LLM translation API calls for {len(notes_needing_translation)} notes? (y/n): ").strip().lower()
-        if result != 'y' and result != 'yes':
-            print("LLM translation process aborted by user.")
-            exit()
-
     # Process notes in batches
     process_translation_batches(notes_needing_translation, cache, source_language_name, target_language_name)
 

@@ -144,12 +144,6 @@ def process_notes_with_llm_lui(notes: List[AnkiNote], source_language_code: str,
         print(f"{language_name} lexical unit identification (LLM) completed (all from cache).")
         return
 
-    if len(notes_needing_lui) > 100:
-        result = input(f"\nDo you want to proceed with LLM lexical unit identification API calls for {len(notes_needing_lui)} notes? (y/n): ").strip().lower()
-        if result != 'y' and result != 'yes':
-            print("LLM lexical unit identification process aborted by user.")
-            exit()
-
     # Process notes in batches
     process_lui_batches(notes_needing_lui, cache, language_name, source_language_code)
 

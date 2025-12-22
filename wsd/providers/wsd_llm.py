@@ -131,12 +131,6 @@ def provide_wsd_with_llm(notes: list[AnkiNote], source_language_name, target_lan
     if not notes_needing_llm:
         return
 
-    if len(notes_needing_llm) > 200:
-        result = input(f"\nDo you want to proceed with LLM API calls for {len(notes_needing_llm)} notes? (y/n): ").strip().lower()
-        if result != 'y' and result != 'yes':
-            print("Word Sense Disambiguation via LLM process aborted by user.")
-            exit()
-
     # Phase 2: Process notes in batches
     process_notes_in_batches(notes_needing_llm, cache, source_language_name, target_language_name)
 

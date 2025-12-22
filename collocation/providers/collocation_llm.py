@@ -156,12 +156,6 @@ def generate_collocations_llm(notes: list[AnkiNote], source_language_code: str, 
         print(f"{source_language_name} collocation generation (LLM) completed (all from cache).")
         return
 
-    if len(notes_needing_collocations) > 100:
-        result = input(f"\nDo you want to proceed with LLM collocation API calls for {len(notes_needing_collocations)} notes? (y/n): ").strip().lower()
-        if result != 'y' and result != 'yes':
-            print("LLM collocation process aborted by user.")
-            exit()
-
     # Process notes in batches
     process_collocation_batches(notes_needing_collocations, cache, source_language_name, target_language_name)
 
