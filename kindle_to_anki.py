@@ -13,6 +13,7 @@ from lexical_unit_identification.lexical_unit_identification import complete_lex
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 import datetime
+from time import sleep
 
 
 def get_kindle_vocab_count(db_path, timestamp=None):
@@ -262,7 +263,8 @@ def export_kindle_vocab():
 
         # Prune notes previously identified as redundant
         notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
-        
+        sleep(5)  # Opportunity to read output
+
         if len(notes) > 100:
             response = input(f"\nYou are about to process {len(notes)} notes for language: {source_lang_code}. Do you want to continue? (y/n): ").strip().lower()
             if response != 'y' and response != 'yes':
@@ -271,6 +273,7 @@ def export_kindle_vocab():
 
         # Enrich notes with lexical unit identification
         complete_lexical_unit_identification(notes, source_lang_code, target_lang_code)
+        sleep(5)  # Opportunity to read output
 
         if not notes:
             print(f"No new notes to process for language: {source_lang_code}")
@@ -278,12 +281,14 @@ def export_kindle_vocab():
 
         # Provide word sense disambiguation via LLM
         provide_word_sense_disambiguation(notes, source_lang_code, target_lang_code, ignore_cache=False)
+        sleep(5)  # Opportunity to read output
 
         # Prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=language_pair_code)
 
         # Prune duplicates new notes leaving the best one
         notes = prune_new_notes_against_eachother(notes)
+        sleep(5)  # Opportunity to read output
 
         if len(notes) == 0:
             print(f"No new notes to add to Anki after pruning for language: {source_lang_code}")
@@ -291,13 +296,16 @@ def export_kindle_vocab():
 
         # Provide translations
         process_context_translation(notes, source_lang_code, target_lang_code, ignore_cache=False, use_llm=True)
+        sleep(5)  # Opportunity to read output
 
         # Provide collocations
         process_collocation_generation(notes, source_lang_code, target_lang_code, ignore_cache=False)
+        sleep(5)  # Opportunity to read output
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, source_lang_code)
         anki_connect_instance.create_notes_batch(anki_deck, notes)
+        sleep(5)  # Opportunity to read output
 
     # Save script run timestamp
     metadata_manager.save_script_run_timestamp(metadata)
