@@ -8,7 +8,7 @@ from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 
 # Configuration
-BATCH_SIZE = 40
+BATCH_SIZE = 30
 COLLOCATION_LLM = "gpt-5-mini"
 
 # LLM collocation instructions

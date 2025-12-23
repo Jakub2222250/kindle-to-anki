@@ -148,7 +148,7 @@ def connect_to_anki():
 def get_vocab_db():
     # Attempt to copy vocab.db via batch script call
 
-    print("Attempting to copy vocab.db from Kindle device...")
+    print("\nAttempting to copy vocab.db from Kindle device...")
 
     try:
         retcode = subprocess.run(["copy_vocab.bat"], check=True).returncode
@@ -181,8 +181,6 @@ def get_vocab_db():
 
 def get_latest_kindle_vocab_data(db_path, metadata):
     last_timestamp = metadata.get('last_timestamp_import')
-
-    print(last_timestamp)
 
     # Handle import choice (incremental vs full)
     if last_timestamp:
