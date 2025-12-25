@@ -15,6 +15,12 @@ from anki.anki_connect import AnkiConnect
 import datetime
 from time import sleep
 
+# Project paths
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+INPUTS_DIR = DATA_DIR / "inputs"
+OUTPUTS_DIR = DATA_DIR / "outputs"
+
 
 def get_kindle_vocab_count(db_path, timestamp=None):
     """Get count of kindle vocab builder entries available for import"""
@@ -119,9 +125,9 @@ def create_anki_notes(kindle_vocab_data):
 
 def write_anki_import_file(notes, language):
     print("\nWriting Anki import file...")
-    Path("outputs").mkdir(exist_ok=True)
+    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    anki_path = Path(f"outputs/{language}_anki_import_{timestamp}.txt")
+    anki_path = OUTPUTS_DIR / f"{language}_anki_import_{timestamp}.txt"
 
     # Write notes to file
     with open(anki_path, "w", encoding="utf-8") as f:
@@ -151,7 +157,8 @@ def get_vocab_db():
     print("\nAttempting to copy vocab.db from Kindle device...")
 
     try:
-        retcode = subprocess.run(["copy_vocab.bat"], check=True).returncode
+        copy_vocab_script = Path(__file__).parent / "copy_vocab.bat"
+        retcode = subprocess.run([str(copy_vocab_script)], check=True).returncode
     except subprocess.CalledProcessError as e:
         retcode = 1
 
@@ -159,21 +166,20 @@ def get_vocab_db():
         print(f"Error: Failed to copy vocab.db from Kindle device. Continuing.")
     else:
         # Overwrite vocab.db in inputs/ with vocab_powershell_copy.db
-        script_dir = Path(__file__).parent
-        out_dir = script_dir / "inputs"
-        src_db = out_dir / "vocab_powershell_copy.db"
-        dest_db = out_dir / "vocab.db"
+        INPUTS_DIR.mkdir(parents=True, exist_ok=True)
+        src_db = INPUTS_DIR / "vocab_powershell_copy.db"
+        dest_db = INPUTS_DIR / "vocab.db"
         src_db.replace(dest_db)
 
         print(f'vocab.db copied from Kindle device successfully.')
 
-    # Get script directory and construct path to inputs/vocab.db
-    script_dir = Path(__file__).parent
-    db_path = script_dir / "inputs" / "vocab.db"
+    # Get path to inputs/vocab.db
+    INPUTS_DIR.mkdir(parents=True, exist_ok=True)
+    db_path = INPUTS_DIR / "vocab.db"
 
     if not db_path.exists():
         print(f"Error: vocab.db not found at {db_path}")
-        print("Please place your Kindle vocab.db file in the 'inputs' folder relative to this script.")
+        print("Please place your Kindle vocab.db file in the 'data/inputs' folder at the project root.")
         sys.exit(1)
 
     return db_path

@@ -7,9 +7,13 @@ from thefuzz import fuzz
 
 
 class PruningCache:
-    def __init__(self, cache_dir=".cache", cache_suffix='default'):
+    def __init__(self, cache_dir=None, cache_suffix='default'):
+        if cache_dir is None:
+            # Default to project root .cache directory
+            project_root = Path(__file__).parent.parent.parent.parent
+            cache_dir = project_root / ".cache"
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_file = self.cache_dir / f"pruning_cache_{cache_suffix}.json"
 
         # Load existing cache

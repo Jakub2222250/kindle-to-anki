@@ -6,7 +6,9 @@ import time
 class MetadataManager:
 
     def __init__(self, script_dir):
-        self.metadata_path = script_dir / ".metadata" / "metadata.json"
+        # Use project root for .metadata folder
+        project_root = script_dir.parent.parent
+        self.metadata_path = project_root / ".metadata" / "metadata.json"
 
     def load_metadata(self):
         """Load metadata from metadata/metadata.json if it exists"""

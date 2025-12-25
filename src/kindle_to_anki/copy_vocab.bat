@@ -3,7 +3,7 @@ setlocal
 
 rem --- Determine output directory relative to this batch file ---
 set "BASEDIR=%~dp0"
-set "OUTDIR=%BASEDIR%inputs"
+set "OUTDIR=%BASEDIR%..\..\data\inputs"
 if not exist "%OUTDIR%" mkdir "%OUTDIR%"
 
 rem --- Copy vocab.db from Kindle via Shell.Application COM with desired filename ---
