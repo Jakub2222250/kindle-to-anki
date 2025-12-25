@@ -54,13 +54,17 @@ Tags
 
 # Running integration/unit tests
 
-py -m ma.providers.ma_llm
-py -m ma.providers.ma_polish_hybrid
-py -m ma.providers.pl_en.ma_polish_sgjp_helper
+# Run all tests at once:
+py tests/run_all_tests.py
 
-py -m pruning.pruning
+# Run individual integration tests:
+py tests/kindle_to_anki/lexical_unit_identification/providers/test_lui_llm.py
+py tests/kindle_to_anki/lexical_unit_identification/providers/test_lui_polish_hybrid.py
+py tests/kindle_to_anki/lexical_unit_identification/providers/pl_en/test_ma_polish_sgjp_helper.py
 
-py -m wsd.providers.wsd_llm
+py tests/kindle_to_anki/pruning/test_pruning.py
 
-py -m translation.providers.polish_translator_local
-py -m translation.providers.translator_llm
+py tests/kindle_to_anki/wsd/providers/test_wsd_llm.py
+
+py tests/kindle_to_anki/translation/providers/test_polish_translator_local.py
+py tests/kindle_to_anki/translation/providers/test_translator_llm.py

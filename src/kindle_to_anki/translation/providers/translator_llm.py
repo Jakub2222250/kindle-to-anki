@@ -168,32 +168,4 @@ def translate_context_with_llm(notes: list[AnkiNote], source_lang_code: str, tar
     print(f"{source_language_name} context translation (LLM) completed.")
 
 
-if __name__ == "__main__":
-    # Example usage and testing
-    notes = [
-        AnkiNote(
-            word="przykład",
-            stem="przykład",
-            usage="To jest przykład zdania do przetłumaczenia.",
-            language="pl",
-            book_name="Sample Book",
-            position="123-456",
-            timestamp="2024-01-01T12:00:00Z"
-        ),
-        AnkiNote(
-            word="bawół",
-            stem="bawołem",
-            usage="Nie zapominajcie o czarodzieju Baruffio, który źle wypowiedział spółgłoskę i znalazł się na podłodze, przygnieciony bawołem.",
-            language="pl",
-            book_name="Sample Book",
-            position="789-1011",
-            timestamp="2024-01-01T12:05:00Z"
-        )
-    ]
 
-    translate_context_with_llm(notes, "pl", "en", ignore_cache=False, use_test_cache=True)
-
-    print()
-    for note in notes:
-        print(f"Original: {note.context_sentence}")
-        print(f"Translated: {note.context_translation}")

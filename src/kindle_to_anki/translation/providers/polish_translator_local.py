@@ -72,32 +72,4 @@ def translate_polish_context_to_english(notes: list[AnkiNote], ignore_cache=Fals
     print("Polish context translation completed.")
 
 
-if __name__ == "__main__":
-    # Example usage
-    notes = [
-        AnkiNote(
-            word="przykład",
-            stem="przykład",
-            usage="To jest przykład zdania.",
-            language="pl",
-            book_name="Sample Book",
-            position="123-456",
-            timestamp="2024-01-01T12:00:00Z"
-        ),
-        AnkiNote(
-            word="bawół",
-            stem="bawołem",
-            usage="Nie zapominajcie o czarodzieju Baruffio, który źle wypowiedział spółgłoskę i znalazł się na podłodze, przygnieciony bawołem.",
-            language="pl",
-            book_name="Sample Book",
-            position="789-1011",
-            timestamp="2024-01-01T12:05:00Z"
-        )
-    ]
 
-    translate_polish_context_to_english(notes, ignore_cache=False, use_test_cache=True)
-
-    print()
-    for note in notes:
-        print(f"Original: {note.context_sentence}")
-        print(f"Translated: {note.context_translation}")
