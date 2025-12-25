@@ -5,7 +5,7 @@ from openai import OpenAI
 
 
 from anki.anki_note import AnkiNote
-from lexical_unit_identification.ma_cache import MACache
+from kindle_to_anki.lexical_unit_identification.lui_cache import LUICache
 from lexical_unit_identification.providers.pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
 
 
@@ -112,7 +112,7 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
     return disambiguate_lemma_pos_response
 
 
-def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
+def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache):
 
     # Capture timestamp at the start of MA processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -188,13 +188,13 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: MACache):
 def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
     """Process morphological analysis for all notes"""
 
-    print("\nStarting LLM MA processing...")
+    print("\nStarting LLM LUI processing...")
 
-    cache = MACache(cache_suffix=cache_suffix)
+    cache = LUICache(cache_suffix=cache_suffix)
     notes_needing_llm = []
 
     if not ignore_cache:
-        print(f"Loaded MA cache with {len(cache.cache)} entries")
+        print(f"Loaded LUI cache with {len(cache.cache)} entries")
 
         # Phase 1: Collect notes that need LLM MA processing
 

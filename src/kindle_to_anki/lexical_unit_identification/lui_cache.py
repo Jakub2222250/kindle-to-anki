@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 
 
-class MACache:
+class LUICache:
     def __init__(self, cache_dir=None, cache_suffix='default'):
         if cache_dir is None:
             # Default to project root .cache directory
@@ -10,7 +10,7 @@ class MACache:
             cache_dir = project_root / ".cache"
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_file = self.cache_dir / f"ma_cache_{cache_suffix}.json"
+        self.cache_file = self.cache_dir / f"lui_cache_{cache_suffix}.json"
 
         # Load existing cache
         self.cache = self.load_cache()

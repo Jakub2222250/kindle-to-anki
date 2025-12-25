@@ -4,7 +4,7 @@ from typing import List
 from openai import OpenAI
 
 from anki.anki_note import AnkiNote
-from lexical_unit_identification.ma_cache import MACache
+from kindle_to_anki.lexical_unit_identification.lui_cache import LUICache
 from language.language_helper import get_language_name_in_english
 from llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexical_unit_identification_instructions
 
@@ -47,7 +47,7 @@ def make_batch_lui_call(batch_notes, processing_timestamp, language_name, langua
     return json.loads(output_text), LUI_LLM, processing_timestamp
 
 
-def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: MACache, language_name: str, language_code: str = ""):
+def process_lui_batches(notes_needing_lui: List[AnkiNote], cache: LUICache, language_name: str, language_code: str = ""):
     """Process notes in batches for lexical unit identification"""
 
     # Capture timestamp at the start of LUI processing
@@ -112,7 +112,7 @@ def process_notes_with_llm_lui(notes: List[AnkiNote], source_language_code: str,
     if use_test_cache:
         cache_suffix += "_test"
 
-    cache = MACache(cache_suffix=cache_suffix)
+    cache = LUICache(cache_suffix=cache_suffix)
 
     # Filter notes that need LUI and collect cached results
     notes_needing_lui = []
