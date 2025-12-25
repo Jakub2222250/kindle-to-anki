@@ -1,6 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
-import time
 
 
 class MetadataManager:
@@ -24,20 +23,18 @@ class MetadataManager:
 
     def save_metadata(self, metadata):
         """Save metadata to metadata/metadata.json"""
-
-        print("\nSaving last run time to metadata...")
-
+        print("\nSaving metadata...")
         self.metadata_path.parent.mkdir(exist_ok=True)
-
+        
         with open(self.metadata_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
-
+        
         print(f"Metadata saved to {self.metadata_path}")
 
     def save_script_run_timestamp(self, metadata):
         """Save the current timestamp as script run time to metadata"""
-        current_time_ms = int(time.time() * 1000)
-        metadata['last_script_run'] = current_time_ms
+        current_time_utc = datetime.now(timezone.utc).isoformat()
+        metadata['last_script_run'] = current_time_utc
         self.save_metadata(metadata)
 
     def save_latest_vocab_builder_entry_timestamp(self, vocab_data, metadata):
@@ -46,9 +43,11 @@ class MetadataManager:
             return
 
         max_timestamp = max(row[6] for row in vocab_data)  # timestamp is at index 6
-        human_readable_time = datetime.fromtimestamp(max_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
-        print(f"\nMax timestamp from this import: {human_readable_time}")
+        max_datetime_utc = datetime.fromtimestamp(max_timestamp / 1000, tz=timezone.utc)
+        max_iso_timestamp = max_datetime_utc.isoformat()
+        
+        print(f"\nMax timestamp from this import: {max_datetime_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
-        metadata['last_timestamp_import'] = max_timestamp
+        metadata['last_timestamp_import'] = max_iso_timestamp
         self.save_metadata(metadata)
         print("Timestamp saved. Future runs will offer to import only newer notes.")
