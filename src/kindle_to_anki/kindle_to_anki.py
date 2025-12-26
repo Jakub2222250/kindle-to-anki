@@ -2,10 +2,12 @@ from anki.anki_connect import AnkiConnect
 from collocation.collocation import process_collocation_generation
 from configuration.config_manager import ConfigManager
 from export.export_anki import write_anki_import_file
+from platforms.openai_platform import OpenAIPlatform
+from tasks.translation.provider import TranslationProvider
+from tasks.translation.runtime_chat_completion import ChatCompletionTranslation
 from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
 from metadata.metdata_manager import MetadataManager
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
-from translation.translation import process_context_translation
 from vocab.vocab import get_vocab_db, get_latest_vocab_data
 from wsd.wsd import provide_word_sense_disambiguation
 
@@ -15,6 +17,14 @@ from time import sleep
 def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
+    
+    # Setup the platform and runtime
+    platform = OpenAIPlatform()
+    runtime = ChatCompletionTranslation(platform=platform, model_name="gpt-5", batch_size=30)
+    
+    # Setup the provider
+    runtimes = {"gpt-5": runtime}
+    translation_provider = TranslationProvider(runtimes=runtimes)
 
     # Initialize configuration manager
     config_manager = ConfigManager()
@@ -80,7 +90,14 @@ def export_kindle_vocab():
             continue
 
         # Provide translations
-        process_context_translation(notes, source_lang_code, target_lang_code, ignore_cache=False, use_llm=True)
+        translation_provider.translate(
+            notes=notes,
+            runtime_choice="gpt-5",
+            source_lang=source_lang_code,
+            target_lang=target_lang_code,
+            ignore_cache=False,
+            use_test_cache=False
+        )
         sleep(5)  # Opportunity to read output
 
         # Provide collocations

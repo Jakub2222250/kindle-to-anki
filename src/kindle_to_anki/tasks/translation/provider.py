@@ -1,8 +1,8 @@
 # tasks/translation/provider.py
 from typing import List
 
-from kindle_to_anki.anki.anki_note import AnkiNote
-from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
+from anki.anki_note import AnkiNote
+from .schema import TranslationInput, TranslationOutput
 
 
 class TranslationProvider:

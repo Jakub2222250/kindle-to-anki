@@ -2,7 +2,7 @@
 import os
 from openai import OpenAI
 
-from kindle_to_anki.platforms.chat_completion_platform import ChatCompletionPlatform
+from .chat_completion_platform import ChatCompletionPlatform
 
 class OpenAIPlatform(ChatCompletionPlatform):
     def __init__(self, api_key: str = None):
