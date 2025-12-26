@@ -1,12 +1,15 @@
 from datetime import datetime, timezone
 import json
+from pathlib import Path
 
 
 class MetadataManager:
 
-    def __init__(self, script_dir):
+    def __init__(self):
+        # Determine script directory from this file's location
+        script_dir = Path(__file__).parent.parent
         # Use project root for .metadata folder
-        project_root = script_dir.parent.parent
+        project_root = script_dir.parent
         self.metadata_path = project_root / ".metadata" / "metadata.json"
 
     def load_metadata(self):

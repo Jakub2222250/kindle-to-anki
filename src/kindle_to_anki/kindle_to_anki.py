@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from anki.anki_deck import AnkiDeck
 from export.export_anki import write_anki_import_file
 from collocation.collocation import process_collocation_generation
@@ -10,6 +8,7 @@ from lexical_unit_identification.lexical_unit_identification import complete_lex
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 from vocab.vocab import get_vocab_db, get_latest_vocab_data
+
 from time import sleep
 
 
@@ -46,8 +45,7 @@ def export_kindle_vocab():
     anki_decks_by_source_language = get_anki_decks_by_source_language()
 
     # Load existing metadata
-    script_dir = Path(__file__).parent
-    metadata_manager = MetadataManager(script_dir)
+    metadata_manager = MetadataManager()
     metadata = metadata_manager.load_metadata()
 
     # Get latest kindle vocab data
