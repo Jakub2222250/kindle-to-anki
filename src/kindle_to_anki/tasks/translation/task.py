@@ -1,4 +1,4 @@
-from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
+from .schema import TranslationInput, TranslationOutput
 
 
 class TranslationTask:

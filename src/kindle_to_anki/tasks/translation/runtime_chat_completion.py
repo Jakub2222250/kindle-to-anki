@@ -2,11 +2,11 @@ import json
 import time
 from typing import List, Tuple, Dict, Any
 
-from kindle_to_anki.platforms.chat_completion_platform import ChatCompletionPlatform
-from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
-from kindle_to_anki.language.language_helper import get_language_name_in_english
-from kindle_to_anki.caching.translation_cache import TranslationCache
-from kindle_to_anki.llm.llm_helper import estimate_llm_cost, calculate_llm_cost
+from platforms.chat_completion_platform import ChatCompletionPlatform
+from tasks.translation.schema import TranslationInput, TranslationOutput
+from language.language_helper import get_language_name_in_english
+from caching.translation_cache import TranslationCache
+from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 
 class ChatCompletionTranslation:

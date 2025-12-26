@@ -1,4 +1,4 @@
-from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
+from .schema import CollocationInput, CollocationOutput
 
 
 class CollocationTask:

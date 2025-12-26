@@ -2,7 +2,7 @@
 from typing import List
 
 from anki.anki_note import AnkiNote
-from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
+from tasks.lui.schema import LUIInput, LUIOutput
 
 
 class LUIProvider:

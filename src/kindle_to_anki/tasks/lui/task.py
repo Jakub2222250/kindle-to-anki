@@ -1,4 +1,4 @@
-from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
+from .schema import LUIInput, LUIOutput
 
 
 class LUITask:

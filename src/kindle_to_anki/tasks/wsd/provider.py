@@ -2,7 +2,7 @@
 from typing import List
 
 from anki.anki_note import AnkiNote
-from kindle_to_anki.tasks.wsd.schema import WSDInput, WSDOutput
+from .schema import WSDInput, WSDOutput
 
 
 class WSDProvider:

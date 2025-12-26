@@ -2,11 +2,11 @@ import json
 import time
 from typing import List, Tuple, Dict, Any
 
-from kindle_to_anki.platforms.chat_completion_platform import ChatCompletionPlatform
-from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
-from kindle_to_anki.language.language_helper import get_language_name_in_english
-from kindle_to_anki.lexical_unit_identification.lui_cache import LUICache
-from kindle_to_anki.llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexical_unit_identification_instructions
+from platforms.chat_completion_platform import ChatCompletionPlatform
+from .schema import LUIInput, LUIOutput
+from language.language_helper import get_language_name_in_english
+from lexical_unit_identification.lui_cache import LUICache
+from llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexical_unit_identification_instructions
 
 
 class ChatCompletionLUI:
@@ -171,7 +171,7 @@ class ChatCompletionLUI:
         )
 
         elapsed = time.time() - start_time
-        output_text = response.choices[0].message.content
+        output_text = response
         output_chars = len(output_text)
         actual_cost = calculate_llm_cost(prompt, output_text, self.model_name)
         actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"

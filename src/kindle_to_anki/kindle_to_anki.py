@@ -2,12 +2,12 @@ from datetime import datetime
 
 from anki.anki_connect import AnkiConnect
 from configuration.config_manager import ConfigManager
-from kindle_to_anki.tasks.translation.runtime_polish_local import PolishLocalTranslation
 from platforms.openai_platform import OpenAIPlatform
 
 from tasks.collect_candidates.provider import CollectCandidatesProvider
 from tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
 from tasks.translation.provider import TranslationProvider
+from tasks.translation.runtime_polish_local import PolishLocalTranslation
 from tasks.translation.runtime_chat_completion import ChatCompletionTranslation
 from tasks.wsd.provider import WSDProvider
 from tasks.wsd.runtime_chat_completion import ChatCompletionWSD

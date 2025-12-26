@@ -1,8 +1,8 @@
 import time
 from typing import List
 
-from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
-from kindle_to_anki.caching.translation_cache import TranslationCache
+from .schema import TranslationInput, TranslationOutput
+from caching.translation_cache import TranslationCache
 
 
 class PolishLocalTranslation:
