@@ -1,3 +1,4 @@
+from ..anki.anki_note import AnkiNote
 from .providers.vocab_kindle import KindleVocabProvider
 
 
@@ -15,7 +16,7 @@ def get_vocab_db():
     return provider.get_vocab_db()
 
 
-def get_latest_vocab_data(db_path, metadata):
+def get_latest_vocab_data(db_path, metadata) -> tuple[dict[str, list[AnkiNote]], int]:
     """Get latest vocab data using default provider"""
     provider = get_vocab_provider()
     return provider.get_latest_vocab_data(db_path, metadata)

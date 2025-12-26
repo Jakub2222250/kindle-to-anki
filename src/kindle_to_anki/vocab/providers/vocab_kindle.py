@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 import datetime
 
+from ...anki.anki_note import AnkiNote
+
 
 class KindleVocabProvider:
     """Kindle vocab.db provider for vocabulary data"""
@@ -132,4 +134,38 @@ class KindleVocabProvider:
             print("No new notes to import.")
             exit()
 
-        return kindle_vocab_data
+        # Get the latest timestamp from the vocab data (timestamp is at index 6)
+        latest_vocab_entry_timestamp = max(row[6] for row in kindle_vocab_data) if kindle_vocab_data else None
+
+        notes_by_language = self.create_anki_notes(kindle_vocab_data)
+        
+        return notes_by_language, latest_vocab_entry_timestamp
+    
+    def create_anki_notes(self, kindle_vocab_data):
+        """Create AnkiNotes from vocab_data retrieved from Kindle vocab.db"""
+        notes_by_language = {}
+        total_words = len([row for row in kindle_vocab_data if row[1]])  # Count words with stems
+        processed_count = 0
+
+        for word, stem, usage, lang, book_title, pos, timestamp in kindle_vocab_data:
+            if stem:
+                processed_count += 1
+                print(f"[{processed_count}/{total_words}] Found word: {word}")
+
+                # Create AnkiNote with all data - setup is handled in constructor
+                note = AnkiNote(
+                    word=word,
+                    stem=stem,
+                    usage=usage,
+                    language=lang,
+                    book_name=book_title,
+                    position=pos,
+                    timestamp=timestamp
+                )
+
+                # Group by language
+                if lang not in notes_by_language:
+                    notes_by_language[lang] = []
+                notes_by_language[lang].append(note)
+
+        return notes_by_language

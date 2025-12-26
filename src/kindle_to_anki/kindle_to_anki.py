@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from anki.anki_deck import AnkiDeck
-from anki.anki_note import AnkiNote
 from collocation.collocation import process_collocation_generation
 from metadata.metdata_manager import MetadataManager
 from translation.translation import process_context_translation
@@ -20,39 +19,6 @@ INPUTS_DIR = DATA_DIR / "inputs"
 OUTPUTS_DIR = DATA_DIR / "outputs"
 
 
-
-
-
-def create_anki_notes(kindle_vocab_data):
-    """Create AnkiNotes from vocab_data retrieved from Kindle vocab.db"""
-    notes_by_language = {}
-    total_words = len([row for row in kindle_vocab_data if row[1]])  # Count words with stems
-    processed_count = 0
-
-    for word, stem, usage, lang, book_title, pos, timestamp in kindle_vocab_data:
-        if stem:
-            processed_count += 1
-            print(f"[{processed_count}/{total_words}] Found word: {word}")
-
-            # Create AnkiNote with all data - setup is handled in constructor
-            note = AnkiNote(
-                word=word,
-                stem=stem,
-                usage=usage,
-                language=lang,
-                book_name=book_title,
-                position=pos,
-                timestamp=timestamp
-            )
-
-            # Group by language
-            if lang not in notes_by_language:
-                notes_by_language[lang] = []
-            notes_by_language[lang].append(note)
-
-    return notes_by_language
-
-
 def write_anki_import_file(notes, language):
     print("\nWriting Anki import file...")
     OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -69,22 +35,6 @@ def write_anki_import_file(notes, language):
             f.write(note.to_csv_line())
 
     print(f"Created Anki import file with {len(notes)} records at {anki_path}")
-
-
-def connect_to_anki():
-    print("\nChecking AnkiConnect reachability...")
-    anki_connect_instance = AnkiConnect()
-    if not anki_connect_instance.is_reachable():
-        print("AnkiConnect not reachable. Exiting.")
-        exit(0)
-    print("AnkiConnect is reachable.")
-    return anki_connect_instance
-
-
-
-
-
-
 
 
 def get_anki_decks_by_source_language():
@@ -126,13 +76,10 @@ def export_kindle_vocab():
 
     # Get latest kindle vocab data
     db_path = get_vocab_db()
-    kindle_vocab_data = get_latest_vocab_data(db_path, metadata)
-
-    # Create Anki notes from kindle vocab data
-    notes_by_language = create_anki_notes(kindle_vocab_data)
+    notes_by_language, latest_vocab_entry_timestamp = get_latest_vocab_data(db_path, metadata)
 
     # Connect to AnkiConnect
-    anki_connect_instance = connect_to_anki()
+    anki_connect_instance = AnkiConnect()
 
     for source_lang_code, notes in notes_by_language.items():
 
@@ -197,7 +144,7 @@ def export_kindle_vocab():
     metadata_manager.save_script_run_timestamp(metadata)
 
     # Save timestamp for future incremental imports
-    metadata_manager.save_latest_vocab_builder_entry_timestamp(kindle_vocab_data, metadata)
+    metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_vocab_entry_timestamp, metadata)
 
     print("\nKindle to Anki export process completed successfully.")
 
