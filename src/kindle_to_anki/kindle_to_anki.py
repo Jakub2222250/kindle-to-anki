@@ -1,6 +1,6 @@
 from anki.anki_connect import AnkiConnect
 from collocation.collocation import process_collocation_generation
-from configuration.config_manager import get_anki_decks_by_source_language
+from configuration.config_manager import ConfigManager
 from export.export_anki import write_anki_import_file
 from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
 from metadata.metdata_manager import MetadataManager
@@ -16,8 +16,11 @@ def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
 
+    # Initialize configuration manager
+    config_manager = ConfigManager()
+    
     # Get available anki decks by language pair
-    anki_decks_by_source_language = get_anki_decks_by_source_language()
+    anki_decks_by_source_language = config_manager.get_anki_decks_by_source_language()
 
     # Load existing metadata
     metadata_manager = MetadataManager()
