@@ -7,9 +7,7 @@ class MetadataManager:
 
     def __init__(self):
         # Determine script directory from this file's location
-        script_dir = Path(__file__).parent.parent
-        # Use project root for .metadata folder
-        project_root = script_dir.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         self.metadata_path = project_root / ".metadata" / "metadata.json"
 
     def load_metadata(self):
@@ -37,7 +35,7 @@ class MetadataManager:
     def save_script_run_timestamp(self, metadata):
         """Save the current timestamp as script run time to metadata"""
         current_time_utc = datetime.now(timezone.utc).isoformat()
-        metadata['last_script_run'] = current_time_utc
+        metadata['last_script_run_timestamp'] = current_time_utc
         self.save_metadata(metadata)
 
     def save_latest_vocab_builder_entry_timestamp(self, max_timestamp, metadata):
@@ -47,6 +45,6 @@ class MetadataManager:
 
         print(f"\nMax timestamp from this import: {max_datetime_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
-        metadata['last_timestamp_import'] = max_iso_timestamp
+        metadata['last_vocab_entry_timestamp'] = max_iso_timestamp
         self.save_metadata(metadata)
         print("Timestamp saved. Future runs will offer to import only newer notes.")

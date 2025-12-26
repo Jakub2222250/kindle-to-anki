@@ -1,3 +1,4 @@
+from datetime import datetime
 from anki.anki_connect import AnkiConnect
 from collocation.collocation import process_collocation_generation
 from configuration.config_manager import ConfigManager
@@ -38,7 +39,14 @@ def export_kindle_vocab():
 
     # Get latest kindle vocab data
     db_path = get_vocab_db()
-    notes_by_language, latest_vocab_entry_timestamp = get_latest_vocab_data(db_path, metadata)
+    print(metadata)
+    lastest_vocab_entry_timestamp = metadata.get('last_vocab_entry_timestamp')
+    if lastest_vocab_entry_timestamp:
+        lastest_vocab_entry_timestamp = datetime.fromisoformat(lastest_vocab_entry_timestamp)
+    else:
+        print("bad")
+        exit()
+    notes_by_language, latest_vocab_entry_timestamp = get_latest_vocab_data(db_path, lastest_vocab_entry_timestamp)
 
     # Connect to AnkiConnect
     anki_connect_instance = AnkiConnect()

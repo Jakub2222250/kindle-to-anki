@@ -2,7 +2,7 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
-import datetime
+from datetime import datetime
 
 from anki.anki_note import AnkiNote
 
@@ -47,7 +47,7 @@ class KindleVocabProvider:
         """Handle user choice for incremental vs full import"""
         new_count, total_count = self.get_kindle_vocab_count(db_path, last_timestamp)
 
-        last_time = datetime.datetime.fromtimestamp(last_timestamp / 1000)
+        last_time = datetime.fromtimestamp(last_timestamp / 1000)
 
         print(f"\nFound previous import timestamp: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"New kindle vocab builder entries since last import: {new_count}")
@@ -118,9 +118,9 @@ class KindleVocabProvider:
 
         return db_path
 
-    def get_latest_vocab_data(self, db_path, metadata):
+    def get_latest_vocab_data(self, db_path, last_vocab_entry_timestamp: datetime = None):
         """Get latest vocab data from Kindle database"""
-        last_timestamp = metadata.get('last_timestamp_import')
+        last_timestamp = last_vocab_entry_timestamp.timestamp() * 1000 if last_vocab_entry_timestamp else None
 
         # Handle import choice (incremental vs full)
         if last_timestamp:
@@ -150,7 +150,7 @@ class KindleVocabProvider:
         for word, stem, usage, lang, book_title, pos, timestamp in kindle_vocab_data:
             if stem:
                 processed_count += 1
-                print(f"[{processed_count}/{total_words}] Found word: {word}")
+                # print(f"[{processed_count}/{total_words}] Found word: {word}")
 
                 # Create AnkiNote with all data - setup is handled in constructor
                 note = AnkiNote(
