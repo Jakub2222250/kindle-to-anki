@@ -1,17 +1,26 @@
 from datetime import datetime
+
 from anki.anki_connect import AnkiConnect
-from collocation.collocation import process_collocation_generation
 from configuration.config_manager import ConfigManager
-from export.export_anki import write_anki_import_file
 from kindle_to_anki.tasks.translation.runtime_polish_local import PolishLocalTranslation
 from platforms.openai_platform import OpenAIPlatform
+
+from tasks.collect_candidates.provider import CollectCandidatesProvider
+from tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
 from tasks.translation.provider import TranslationProvider
 from tasks.translation.runtime_chat_completion import ChatCompletionTranslation
-from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
+from tasks.wsd.provider import WSDProvider
+from tasks.wsd.runtime_chat_completion import ChatCompletionWSD
+from tasks.collocation.provider import CollocationProvider
+from tasks.collocation.runtime_chat_completion import ChatCompletionCollocation
+from tasks.lui.provider import LUIProvider
+from tasks.lui.runtime_chat_completion import ChatCompletionLUI
+
 from metadata.metdata_manager import MetadataManager
+
+from export.export_anki import write_anki_import_file
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
-from vocab.vocab import get_vocab_db, get_latest_vocab_data
-from wsd.wsd import provide_word_sense_disambiguation
+from vocab.vocab import get_vocab_db
 
 from time import sleep
 
@@ -20,14 +29,34 @@ def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
     
-    # Setup the platform and runtime
+    # Setup the platform and runtimes
     platform = OpenAIPlatform()
-    runtime = ChatCompletionTranslation(platform=platform, model_name="gpt-5", batch_size=30)
-    polish_translator_local = PolishLocalTranslation(batch_size=30)
     
-    # Setup the providers
-    runtimes = {"gpt-5": runtime, "polish_local": polish_translator_local}
-    translation_provider = TranslationProvider(runtimes=runtimes)
+    # Setup translation runtimes and provider
+    translation_runtime = ChatCompletionTranslation(platform=platform, model_name="gpt-5", batch_size=30)
+    polish_translator_local = PolishLocalTranslation(batch_size=30)
+    translation_runtimes = {"gpt-5": translation_runtime, "polish_local": polish_translator_local}
+    translation_provider = TranslationProvider(runtimes=translation_runtimes)
+    
+    # Setup candidate collection runtimes and provider
+    kindle_runtime = KindleCandidateRuntime()
+    candidate_runtimes = {"kindle": kindle_runtime}
+    candidate_provider = CollectCandidatesProvider(runtimes=candidate_runtimes)
+    
+    # Setup WSD runtimes and provider
+    wsd_runtime = ChatCompletionWSD(platform=platform, model_name="gpt-5", batch_size=30)
+    wsd_runtimes = {"gpt-5": wsd_runtime}
+    wsd_provider = WSDProvider(runtimes=wsd_runtimes)
+    
+    # Setup collocation runtimes and provider
+    collocation_runtime = ChatCompletionCollocation(platform=platform, model_name="gpt-5", batch_size=30)
+    collocation_runtimes = {"gpt-5": collocation_runtime}
+    collocation_provider = CollocationProvider(runtimes=collocation_runtimes)
+    
+    # Setup LUI runtimes and provider
+    lui_runtime = ChatCompletionLUI(platform=platform, model_name="gpt-5", batch_size=30)
+    lui_runtimes = {"gpt-5": lui_runtime}
+    lui_provider = LUIProvider(runtimes=lui_runtimes)
 
     # Initialize configuration manager
     config_manager = ConfigManager()
@@ -48,7 +77,12 @@ def export_kindle_vocab():
     else:
         print("bad")
         exit()
-    notes_by_language, latest_vocab_entry_timestamp = get_latest_vocab_data(db_path, lastest_vocab_entry_timestamp)
+    notes_by_language, latest_vocab_entry_timestamp = candidate_provider.collect_candidates(
+        db_path=db_path,
+        runtime_choice="kindle",
+        last_vocab_entry_timestamp=lastest_vocab_entry_timestamp,
+        incremental=True
+    )
 
     # Connect to AnkiConnect
     anki_connect_instance = AnkiConnect()
@@ -77,7 +111,13 @@ def export_kindle_vocab():
                 exit()
 
         # Enrich notes with lexical unit identification
-        complete_lexical_unit_identification(notes, source_lang_code, target_lang_code)
+        lui_provider.identify(
+            notes=notes,
+            runtime_choice="gpt-5",
+            source_lang=source_lang_code,
+            target_lang=target_lang_code,
+            ignore_cache=False
+        )
         sleep(5)  # Opportunity to read output
 
         if not notes:
@@ -85,7 +125,13 @@ def export_kindle_vocab():
             continue
 
         # Provide word sense disambiguation via LLM
-        provide_word_sense_disambiguation(notes, source_lang_code, target_lang_code, ignore_cache=False)
+        wsd_provider.disambiguate(
+            notes=notes,
+            runtime_choice="gpt-5",
+            source_lang=source_lang_code,
+            target_lang=target_lang_code,
+            ignore_cache=False
+        )
         sleep(5)  # Opportunity to read output
 
         # Prune existing notes automatically based on definition similarity
@@ -111,7 +157,13 @@ def export_kindle_vocab():
         sleep(5)  # Opportunity to read output
 
         # Provide collocations
-        process_collocation_generation(notes, source_lang_code, target_lang_code, ignore_cache=False)
+        collocation_provider.generate_collocations(
+            notes=notes,
+            runtime_choice="gpt-5",
+            source_lang=source_lang_code,
+            target_lang=target_lang_code,
+            ignore_cache=False
+        )
         sleep(5)  # Opportunity to read output
 
         # Save results to Anki import file and via AnkiConnect
