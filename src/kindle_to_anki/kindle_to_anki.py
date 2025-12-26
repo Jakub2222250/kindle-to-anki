@@ -1,6 +1,3 @@
-import sqlite3
-import subprocess
-import sys
 from pathlib import Path
 
 from anki.anki_deck import AnkiDeck
@@ -12,6 +9,7 @@ from wsd.wsd import provide_word_sense_disambiguation
 from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
+from vocab.vocab import get_vocab_db, get_latest_vocab_data
 import datetime
 from time import sleep
 
@@ -22,75 +20,7 @@ INPUTS_DIR = DATA_DIR / "inputs"
 OUTPUTS_DIR = DATA_DIR / "outputs"
 
 
-def get_kindle_vocab_count(db_path, timestamp=None):
-    """Get count of kindle vocab builder entries available for import"""
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
 
-    if timestamp:
-        query = """
-        SELECT COUNT(*) FROM LOOKUPS
-        JOIN WORDS ON LOOKUPS.word_key = WORDS.id
-        WHERE WORDS.stem IS NOT NULL AND LOOKUPS.timestamp > ?
-        """
-        new_count = cur.execute(query, (timestamp,)).fetchone()[0]
-    else:
-        new_count = None
-
-    # Get total count
-    total_query = """
-    SELECT COUNT(*) FROM LOOKUPS
-    JOIN WORDS ON LOOKUPS.word_key = WORDS.id
-    WHERE WORDS.stem IS NOT NULL
-    """
-    total_count = cur.execute(total_query).fetchone()[0]
-
-    conn.close()
-    return new_count, total_count
-
-
-def handle_incremental_import_choice(db_path, last_timestamp):
-    """Handle user choice for incremental vs full import"""
-    new_count, total_count = get_kindle_vocab_count(db_path, last_timestamp)
-
-    last_time = datetime.datetime.fromtimestamp(last_timestamp / 1000)
-
-    print(f"\nFound previous import timestamp: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"New kindle vocab builder entries since last import: {new_count}")
-    print(f"Total kindle vocab builder entries available: {total_count}")
-
-    print("Importing only new kindle vocab builder entries...")
-    return read_vocab_from_db(db_path, last_timestamp)
-
-
-def read_vocab_from_db(db_path, timestamp=None):
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-
-    if timestamp:
-        query = """
-        SELECT WORDS.word, WORDS.stem, LOOKUPS.usage, WORDS.lang, 
-               BOOK_INFO.title, LOOKUPS.pos, LOOKUPS.timestamp
-        FROM LOOKUPS
-        JOIN WORDS ON LOOKUPS.word_key = WORDS.id
-        LEFT JOIN BOOK_INFO ON LOOKUPS.book_key = BOOK_INFO.id
-        WHERE LOOKUPS.timestamp > ?
-        ORDER BY LOOKUPS.timestamp;
-        """
-        rows = cur.execute(query, (timestamp,)).fetchall()
-    else:
-        query = """
-        SELECT WORDS.word, WORDS.stem, LOOKUPS.usage, WORDS.lang, 
-               BOOK_INFO.title, LOOKUPS.pos, LOOKUPS.timestamp
-        FROM LOOKUPS
-        JOIN WORDS ON LOOKUPS.word_key = WORDS.id
-        LEFT JOIN BOOK_INFO ON LOOKUPS.book_key = BOOK_INFO.id
-        ORDER BY LOOKUPS.timestamp;
-        """
-        rows = cur.execute(query).fetchall()
-
-    conn.close()
-    return rows
 
 
 def create_anki_notes(kindle_vocab_data):
@@ -151,56 +81,10 @@ def connect_to_anki():
     return anki_connect_instance
 
 
-def get_vocab_db():
-    # Attempt to copy vocab.db via batch script call
-
-    print("\nAttempting to copy vocab.db from Kindle device...")
-
-    try:
-        copy_vocab_script = Path(__file__).parent / "copy_vocab.bat"
-        retcode = subprocess.run([str(copy_vocab_script)], check=True).returncode
-    except subprocess.CalledProcessError as e:
-        retcode = 1
-
-    if retcode != 0:
-        print(f"Error: Failed to copy vocab.db from Kindle device. Continuing.")
-    else:
-        # Overwrite vocab.db in inputs/ with vocab_powershell_copy.db
-        INPUTS_DIR.mkdir(parents=True, exist_ok=True)
-        src_db = INPUTS_DIR / "vocab_powershell_copy.db"
-        dest_db = INPUTS_DIR / "vocab.db"
-        src_db.replace(dest_db)
-
-        print(f'vocab.db copied from Kindle device successfully.')
-
-    # Get path to inputs/vocab.db
-    INPUTS_DIR.mkdir(parents=True, exist_ok=True)
-    db_path = INPUTS_DIR / "vocab.db"
-
-    if not db_path.exists():
-        print(f"Error: vocab.db not found at {db_path}")
-        print("Please place your Kindle vocab.db file in the 'data/inputs' folder at the project root.")
-        sys.exit(1)
-
-    return db_path
 
 
-def get_latest_kindle_vocab_data(db_path, metadata):
-    last_timestamp = metadata.get('last_timestamp_import')
 
-    # Handle import choice (incremental vs full)
-    if last_timestamp:
-        kindle_vocab_data = handle_incremental_import_choice(db_path, last_timestamp)
-    else:
-        _, total_count = get_kindle_vocab_count(db_path)
-        print(f"No previous import found, importing all {total_count} notes...")
-        kindle_vocab_data = read_vocab_from_db(db_path)
 
-    if not kindle_vocab_data:
-        print("No new notes to import.")
-        exit()
-
-    return kindle_vocab_data
 
 
 def get_anki_decks_by_source_language():
@@ -235,16 +119,14 @@ def export_kindle_vocab():
     # Get available anki decks by language pair
     anki_decks_by_source_language = get_anki_decks_by_source_language()
 
-    # Get path to vocab.db
-    db_path = get_vocab_db()
-
     # Load existing metadata
     script_dir = Path(__file__).parent
     metadata_manager = MetadataManager(script_dir)
     metadata = metadata_manager.load_metadata()
 
     # Get latest kindle vocab data
-    kindle_vocab_data = get_latest_kindle_vocab_data(db_path, metadata)
+    db_path = get_vocab_db()
+    kindle_vocab_data = get_latest_vocab_data(db_path, metadata)
 
     # Create Anki notes from kindle vocab data
     notes_by_language = create_anki_notes(kindle_vocab_data)
