@@ -1,4 +1,4 @@
-# tasks/collect_candidate/provider.py
+# tasks/collect_candidates/provider.py
 from typing import List, Dict
 from datetime import datetime
 

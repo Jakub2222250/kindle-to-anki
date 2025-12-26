@@ -58,7 +58,7 @@ Tags
 py tests/run_all_tests.py
 
 # Run individual integration tests for new tasks architecture:
-py tests/kindle_to_anki/tasks/collect_candidate/test_runtime_kindle.py
+py tests/kindle_to_anki/tasks/collect_candidates/test_runtime_kindle.py
 py tests/kindle_to_anki/tasks/translation/test_runtime_chat_completion.py
 py tests/kindle_to_anki/tasks/translation/test_runtime_llm.py
 py tests/kindle_to_anki/tasks/wsd/test_runtime_llm.py

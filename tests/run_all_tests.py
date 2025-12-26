@@ -18,7 +18,7 @@ def run_all_tests():
     print()
     
     test_modules = [
-        ('tests.kindle_to_anki.tasks.collect_candidate.test_runtime_kindle', 'Kindle Candidate Collection Runtime'),
+        ('tests.kindle_to_anki.tasks.collect_candidates.test_runtime_kindle', 'Kindle Candidate Collection Runtime'),
         ('tests.kindle_to_anki.tasks.translation.test_runtime_chat_completion', 'Translation Chat Completion Runtime (existing)'),
         ('tests.kindle_to_anki.tasks.translation.test_runtime_llm', 'Translation LLM Runtime'),
         ('tests.kindle_to_anki.tasks.wsd.test_runtime_llm', 'Word Sense Disambiguation LLM Runtime'),
