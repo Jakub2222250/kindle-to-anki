@@ -1,7 +1,7 @@
-from anki.anki_deck import AnkiDeck
 from export.export_anki import write_anki_import_file
 from collocation.collocation import process_collocation_generation
 from metadata.metdata_manager import MetadataManager
+from configuration.config_manager import get_anki_decks_by_source_language
 from translation.translation import process_context_translation
 from wsd.wsd import provide_word_sense_disambiguation
 from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
@@ -10,31 +10,6 @@ from anki.anki_connect import AnkiConnect
 from vocab.vocab import get_vocab_db, get_latest_vocab_data
 
 from time import sleep
-
-
-def get_anki_decks_by_source_language():
-    anki_decks_list = [
-        AnkiDeck(
-            source_lang_code="pl",
-            target_lang_code="en",
-            parent_deck_name="Polish Vocab Discovery",
-            ready_deck_name="Polish Vocab Discovery::Ready",
-            staging_deck_name="Polish Vocab Discovery::Import"
-        ),
-        AnkiDeck(
-            source_lang_code="es",
-            target_lang_code="en",
-            parent_deck_name="Spanish Vocab Discovery",
-            ready_deck_name="Spanish Vocab Discovery::Ready",
-            staging_deck_name="Spanish Vocab Discovery::Import"
-        )
-    ]
-
-    anki_decks_by_source_language = {}
-    for deck in anki_decks_list:
-        anki_decks_by_source_language[deck.source_lang_code] = deck
-
-    return anki_decks_by_source_language
 
 
 def export_kindle_vocab():
