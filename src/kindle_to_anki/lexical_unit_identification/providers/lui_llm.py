@@ -4,7 +4,7 @@ from typing import List
 from openai import OpenAI
 
 from anki.anki_note import AnkiNote
-from kindle_to_anki.lexical_unit_identification.lui_cache import LUICache
+from lexical_unit_identification.lui_cache import LUICache
 from language.language_helper import get_language_name_in_english
 from llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexical_unit_identification_instructions
 

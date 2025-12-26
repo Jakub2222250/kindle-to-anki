@@ -1,5 +1,5 @@
-from ..anki.anki_note import AnkiNote
-from .providers.vocab_kindle import KindleVocabProvider
+from anki.anki_note import AnkiNote
+from vocab.providers.vocab_kindle import KindleVocabProvider
 
 
 def get_vocab_provider(provider_type='kindle'):

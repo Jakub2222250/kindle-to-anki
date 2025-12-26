@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 import datetime
 
-from ...anki.anki_note import AnkiNote
+from anki.anki_note import AnkiNote
 
 
 class KindleVocabProvider:
@@ -91,7 +91,7 @@ class KindleVocabProvider:
         print("\nAttempting to copy vocab.db from Kindle device...")
 
         try:
-            copy_vocab_script = Path(__file__).parent.parent / "copy_vocab.bat"
+            copy_vocab_script = Path(__file__).parent.parent.parent / "copy_vocab.bat"
             retcode = subprocess.run([str(copy_vocab_script)], check=True).returncode
         except subprocess.CalledProcessError as e:
             retcode = 1
