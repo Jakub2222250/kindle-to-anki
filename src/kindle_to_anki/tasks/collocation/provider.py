@@ -2,7 +2,7 @@
 from typing import List
 
 from anki.anki_note import AnkiNote
-from .schema import CollocationInput, CollocationOutput
+from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
 
 
 class CollocationProvider:

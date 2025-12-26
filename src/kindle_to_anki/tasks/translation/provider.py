@@ -2,7 +2,7 @@
 from typing import List
 
 from anki.anki_note import AnkiNote
-from .schema import TranslationInput, TranslationOutput
+from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
 
 
 class TranslationProvider:

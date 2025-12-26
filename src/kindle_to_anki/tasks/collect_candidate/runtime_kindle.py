@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
-from tasks.collect_candidates.schema import CandidateInput, CandidateOutput
+from kindle_to_anki.tasks.collect_candidate.schema import CandidateInput, CandidateOutput
 
 
 class KindleCandidateRuntime:

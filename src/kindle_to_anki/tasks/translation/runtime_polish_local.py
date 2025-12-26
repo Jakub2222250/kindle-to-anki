@@ -1,7 +1,7 @@
 import time
 from typing import List
 
-from tasks.translation.schema import TranslationInput, TranslationOutput
+from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
 from kindle_to_anki.caching.translation_cache import TranslationCache
 
 

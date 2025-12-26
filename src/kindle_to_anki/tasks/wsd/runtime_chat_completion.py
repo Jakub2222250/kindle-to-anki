@@ -2,11 +2,11 @@ import json
 import time
 from typing import List, Tuple, Dict, Any
 
-from platforms.chat_completion_platform import ChatCompletionPlatform
-from tasks.wsd.schema import WSDInput, WSDOutput
-from language.language_helper import get_language_name_in_english
-from wsd.wsd_cache import WSDCache
-from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
+from kindle_to_anki.platforms.chat_completion_platform import ChatCompletionPlatform
+from kindle_to_anki.tasks.wsd.schema import WSDInput, WSDOutput
+from kindle_to_anki.language.language_helper import get_language_name_in_english
+from kindle_to_anki.wsd.wsd_cache import WSDCache
+from kindle_to_anki.llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 
 class ChatCompletionWSD:

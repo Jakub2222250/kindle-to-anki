@@ -3,7 +3,7 @@ from typing import List, Dict
 from datetime import datetime
 
 from anki.anki_note import AnkiNote
-from .schema import CandidateInput, CandidateOutput
+from kindle_to_anki.tasks.collect_candidate.schema import CandidateInput, CandidateOutput
 
 
 class CollectCandidatesProvider:
