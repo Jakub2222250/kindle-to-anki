@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from anki.anki_deck import AnkiDeck
+from export.export_anki import write_anki_import_file
 from collocation.collocation import process_collocation_generation
 from metadata.metdata_manager import MetadataManager
 from translation.translation import process_context_translation
@@ -9,32 +10,7 @@ from lexical_unit_identification.lexical_unit_identification import complete_lex
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 from anki.anki_connect import AnkiConnect
 from vocab.vocab import get_vocab_db, get_latest_vocab_data
-import datetime
 from time import sleep
-
-# Project paths
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
-INPUTS_DIR = DATA_DIR / "inputs"
-OUTPUTS_DIR = DATA_DIR / "outputs"
-
-
-def write_anki_import_file(notes, language):
-    print("\nWriting Anki import file...")
-    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    anki_path = OUTPUTS_DIR / f"{language}_anki_import_{timestamp}.txt"
-
-    # Write notes to file
-    with open(anki_path, "w", encoding="utf-8") as f:
-        f.write("#separator:tab\n")
-        f.write("#html:true\n")
-        f.write("#tags:kindle_to_anki\n")
-
-        for note in notes:
-            f.write(note.to_csv_line())
-
-    print(f"Created Anki import file with {len(notes)} records at {anki_path}")
 
 
 def get_anki_decks_by_source_language():
