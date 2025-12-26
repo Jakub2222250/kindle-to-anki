@@ -3,6 +3,7 @@ from anki.anki_connect import AnkiConnect
 from collocation.collocation import process_collocation_generation
 from configuration.config_manager import ConfigManager
 from export.export_anki import write_anki_import_file
+from kindle_to_anki.tasks.translation.runtime_polish_local import PolishLocalTranslation
 from platforms.openai_platform import OpenAIPlatform
 from tasks.translation.provider import TranslationProvider
 from tasks.translation.runtime_chat_completion import ChatCompletionTranslation
@@ -22,9 +23,10 @@ def export_kindle_vocab():
     # Setup the platform and runtime
     platform = OpenAIPlatform()
     runtime = ChatCompletionTranslation(platform=platform, model_name="gpt-5", batch_size=30)
+    polish_translator_local = PolishLocalTranslation(batch_size=30)
     
-    # Setup the provider
-    runtimes = {"gpt-5": runtime}
+    # Setup the providers
+    runtimes = {"gpt-5": runtime, "polish_local": polish_translator_local}
     translation_provider = TranslationProvider(runtimes=runtimes)
 
     # Initialize configuration manager

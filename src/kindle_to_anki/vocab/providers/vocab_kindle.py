@@ -1,3 +1,7 @@
+# NOTE: This file will be deleted soon. 
+# It has been replaced by runtime_kindle.py in tasks/vocab/
+# which follows the new runtime architecture pattern.
+
 import sqlite3
 import subprocess
 import sys

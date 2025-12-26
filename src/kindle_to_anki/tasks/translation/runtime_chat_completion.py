@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Any
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from tasks.translation.schema import TranslationInput, TranslationOutput
 from language.language_helper import get_language_name_in_english
-from translation.translation_cache import TranslationCache
+from caching.translation_cache import TranslationCache
 from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 
@@ -58,8 +58,7 @@ class ChatCompletionTranslation:
                 if cached_result:
                     cached_count += 1
                     translation_output = TranslationOutput(
-                        translation=cached_result.get('context_translation', ''),
-                        confidence=cached_result.get('confidence')
+                        translation=cached_result.get('context_translation', '')
                     )
                     outputs.append(translation_output)
                 else:
@@ -103,13 +102,12 @@ class ChatCompletionTranslation:
                 cached_result = cache.get(translation_input.uid)
                 if cached_result:
                     translation_output = TranslationOutput(
-                        translation=cached_result.get('context_translation', ''),
-                        confidence=cached_result.get('confidence')
+                        translation=cached_result.get('context_translation', '')
                     )
                     translated_outputs.append(translation_output)
                 else:
                     # This shouldn't happen if everything worked correctly
-                    translated_outputs.append(TranslationOutput(translation="", confidence=None))
+                    translated_outputs.append(TranslationOutput(translation=""))
             else:
                 translated_outputs.append(output)
 

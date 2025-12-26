@@ -52,19 +52,25 @@ Fields to write out in order (ordering based on manual categorizing ease in Anki
 Tags
 
 
-# Running integration/unit tests
+# Running integration/unit tests - NEW TASKS ARCHITECTURE
 
 # Run all tests at once:
 py tests/run_all_tests.py
 
-# Run individual integration tests:
-py tests/kindle_to_anki/lexical_unit_identification/providers/test_lui_llm.py
-py tests/kindle_to_anki/lexical_unit_identification/providers/test_lui_polish_hybrid.py
-py tests/kindle_to_anki/lexical_unit_identification/providers/pl_en/test_ma_polish_sgjp_helper.py
+# Run individual integration tests for new tasks architecture:
+py tests/kindle_to_anki/tasks/collect_candidate/test_runtime_kindle.py
+py tests/kindle_to_anki/tasks/translation/test_runtime_chat_completion.py
+py tests/kindle_to_anki/tasks/translation/test_runtime_llm.py
+py tests/kindle_to_anki/tasks/wsd/test_runtime_llm.py
+py tests/kindle_to_anki/tasks/collocation/test_runtime_llm.py
 
+# Legacy tests (for old architecture - will be deprecated):
 py tests/kindle_to_anki/pruning/test_pruning.py
 
-py tests/kindle_to_anki/wsd/providers/test_wsd_llm.py
-
-py tests/kindle_to_anki/translation/providers/test_polish_translator_local.py
-py tests/kindle_to_anki/translation/providers/test_translator_llm.py
+# DEPRECATED - Old provider architecture tests (use tasks/ tests instead):
+# py tests/kindle_to_anki/lexical_unit_identification/providers/test_lui_llm.py
+# py tests/kindle_to_anki/lexical_unit_identification/providers/test_lui_polish_hybrid.py
+# py tests/kindle_to_anki/lexical_unit_identification/providers/pl_en/test_ma_polish_sgjp_helper.py
+# py tests/kindle_to_anki/wsd/providers/test_wsd_llm.py
+# py tests/kindle_to_anki/translation/providers/test_polish_translator_local.py
+# py tests/kindle_to_anki/translation/providers/test_translator_llm.py

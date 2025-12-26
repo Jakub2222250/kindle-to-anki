@@ -103,6 +103,4 @@ def test_direct_runtime_usage():
         print(f"UID: {translation_input.uid}")
         print(f"Original: {translation_input.context}")
         print(f"Translated: {translation_output.translation}")
-        if translation_output.confidence:
-            print(f"Confidence: {translation_output.confidence}")
         print()
