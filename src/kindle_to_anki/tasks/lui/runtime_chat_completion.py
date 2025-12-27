@@ -7,8 +7,8 @@ from core.runtimes.runtime_config import RuntimeConfig
 from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_dimension import UsageDimension
 from core.pricing.usage_breakdown import UsageBreakdown
-from ...core.models.registry import ModelRegistry
-from ...platforms.platform_registry import PlatformRegistry
+from core.models.registry import ModelRegistry
+from platforms.platform_registry import PlatformRegistry
 
 from .schema import LUIInput, LUIOutput
 from language.language_helper import get_language_name_in_english

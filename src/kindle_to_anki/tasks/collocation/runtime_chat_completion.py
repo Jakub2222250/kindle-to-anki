@@ -7,7 +7,7 @@ from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_breakdown import UsageBreakdown
 from core.runtimes.runtime_config import RuntimeConfig
 
-from ...platforms.platform_registry import PlatformRegistry
+from platforms.platform_registry import PlatformRegistry
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import CollocationInput, CollocationOutput
 from language.language_helper import get_language_name_in_english
