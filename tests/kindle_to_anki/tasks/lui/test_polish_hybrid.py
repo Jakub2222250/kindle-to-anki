@@ -87,7 +87,7 @@ def test_polish_hybrid_cases():
     runtimes = {"gpt-5": runtime}
     provider = LUIProvider(runtimes=runtimes)
     
-    print("\\n=== Testing Polish LUI Cases with Provider ===")
+    print("\n=== Testing Polish LUI Cases with Provider ===")
     
     # Test via provider
     provider.identify(
@@ -106,7 +106,7 @@ def test_polish_hybrid_cases():
         # Determine expected unit_type based on whether się appears in the expected lemma
         expected_unit_type = "reflexive" if "się" in test_case['expected_lemma'] else "lemma"
         
-        print(f"\\n--- Test Case {i+1}: {test_case['kindle_word']} ---")
+        print(f"\n--- Test Case {i+1}: {test_case['kindle_word']} ---")
         print(f"Sentence: {test_case['sentence']}")
         print(f"Expected: lemma='{test_case['expected_lemma']}', pos='{test_case['expected_pos']}', aspect='{test_case['expected_aspect']}'")
         print(f"Actual:   lemma='{note.expression}', pos='{note.part_of_speech}', aspect='{note.aspect}'")
@@ -159,7 +159,7 @@ def test_direct_runtime_polish():
         )
     ]
     
-    print("\\n=== Testing Direct Runtime Usage with Polish ===")
+    print("\n=== Testing Direct Runtime Usage with Polish ===")
     
     outputs = runtime.identify(
         polish_inputs,
@@ -170,7 +170,7 @@ def test_direct_runtime_polish():
     )
     
     for lui_input, lui_output in zip(polish_inputs, outputs):
-        print(f"\\nInput - Word: {lui_input.word}")
+        print(f"\nInput - Word: {lui_input.word}")
         print(f"        Sentence: {lui_input.sentence}")
         print(f"Output - Lemma: {lui_output.lemma}")
         print(f"         POS: {lui_output.part_of_speech}")

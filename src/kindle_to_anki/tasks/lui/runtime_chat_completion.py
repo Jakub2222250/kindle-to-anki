@@ -29,7 +29,7 @@ class ChatCompletionLUI:
         """
         Perform Lexical Unit Identification on a list of LUIInput objects and return LUIOutput objects.
         """
-        print(f"\\nStarting lexical unit identification (LLM) for {source_lang}...")
+        print(f"\nStarting lexical unit identification (LLM) for {source_lang}...")
 
         language_pair_code = f"{source_lang}-{target_lang}"
         language_name = get_language_name_in_english(source_lang)
@@ -107,7 +107,7 @@ class ChatCompletionLUI:
             batch = lui_inputs[i:i + self.batch_size]
             batch_num = (i // self.batch_size) + 1
 
-            print(f"\\nProcessing lexical unit identification batch {batch_num}/{total_batches} ({len(batch)} inputs)")
+            print(f"\nProcessing lexical unit identification batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
                 batch_results, model_used, timestamp = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code)
@@ -155,7 +155,7 @@ class ChatCompletionLUI:
         for lui_input in batch_inputs:
             items_list.append(f'{{"uid": "{lui_input.uid}", "word": "{lui_input.word}", "sentence": "{lui_input.sentence}"}}')
 
-        items_json = "[\\n  " + ",\\n  ".join(items_list) + "\\n]"
+        items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
         prompt = get_llm_lexical_unit_identification_instructions(items_json, language_name, language_code)
 

@@ -63,7 +63,7 @@ def test_runtime_chat_completion():
         lang_notes = [note for note in test_notes if note.kindle_language == lang_code]
         
         if lang_notes:
-            print(f"\\n=== Testing {lang_code} using Provider ===")
+            print(f"\n=== Testing {lang_code} using Provider ===")
             
             # Test via provider
             provider.identify(
@@ -107,7 +107,7 @@ def test_runtime_direct():
         )
     ]
     
-    print("\\n=== Testing Direct Runtime Usage ===")
+    print("\n=== Testing Direct Runtime Usage ===")
     
     # Test Polish
     pl_inputs = [lui_inputs[0]]

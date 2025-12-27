@@ -5,8 +5,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
+from .schema import CandidateOutput
 from metadata.metdata_manager import MetadataManager
-from tasks.collect_candidates.schema import CandidateOutput
 
 
 class KindleCandidateRuntime:
