@@ -68,6 +68,9 @@ class CollectCandidatesProvider:
             if candidate_output.timestamp > latest_timestamp:
                 latest_timestamp = candidate_output.timestamp
 
-        latest_candidate_timestamp = datetime.fromtimestamp(latest_timestamp / 1000)
+        if latest_timestamp > 0:
+            latest_candidate_timestamp = datetime.fromtimestamp(latest_timestamp / 1000)
+        else:
+            latest_candidate_timestamp = None
 
         return notes_by_language, latest_candidate_timestamp

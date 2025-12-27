@@ -64,6 +64,10 @@ def export_kindle_vocab():
     notes_by_language, latest_candidate_timestamp = candidate_provider.collect_candidates(
         runtime_choice="kindle"
     )
+    
+    if not notes_by_language or len(notes_by_language) == 0:
+        print("No candidate notes collected. Exiting process.")
+        return
 
     # Connect to AnkiConnect
     anki_connect_instance = AnkiConnect()
@@ -153,9 +157,10 @@ def export_kindle_vocab():
         sleep(5)  # Opportunity to read output
 
     # Save timestamp for future incremental imports
-    metadata_manager = MetadataManager()
-    metadata = metadata_manager.load_metadata()
-    metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_candidate_timestamp, metadata)
+    if latest_candidate_timestamp:
+        metadata_manager = MetadataManager()
+        metadata = metadata_manager.load_metadata()
+        metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_candidate_timestamp, metadata)
 
     print("\nKindle to Anki export process completed successfully.")
 
