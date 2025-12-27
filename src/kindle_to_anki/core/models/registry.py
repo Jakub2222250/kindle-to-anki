@@ -1,15 +1,17 @@
 class ModelRegistry:
-    def __init__(self):
-        self._models = {}
+    _models: dict[tuple[str, str], object] = {}
+    
+    @classmethod
+    def register(cls, model):
+        cls._models[(model.platform, model.id)] = model
 
-    def register(self, model):
-        self._models[(model.platform, model.id)] = model
+    @classmethod
+    def get(cls, platform: str, model_id: str):
+        return cls._models[(platform, model_id)]
 
-    def get(self, platform: str, model_id: str):
-        return self._models[(platform, model_id)]
-
-    def list(self, family=None):
+    @classmethod
+    def list(cls, family=None):
         return [
-            m for m in self._models.values()
+            m for m in cls._models.values()
             if family is None or m.family == family
         ]

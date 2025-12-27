@@ -30,34 +30,28 @@ from pruning.pruning import prune_existing_notes_automatically, prune_existing_n
 from time import sleep
 
 
-def get_platform_registry():
-    platform_registry = PlatformRegistry()
-    platform_registry.register(OpenAIPlatform())
-    return platform_registry
+def bootstrap_platform_registry():
+    PlatformRegistry.register(OpenAIPlatform())
 
 
-def get_model_registry():
-    model_registry = ModelRegistry()
-    model_registry.register(models.GPT_5_1)
-    model_registry.register(models.GPT_5_MINI)
-    return model_registry
+def bootstrap_model_registry():
+    ModelRegistry.register(models.GPT_5_1)
+    ModelRegistry.register(models.GPT_5_MINI)
 
 
-def get_runtime_registry():
-    runtime_registry = RuntimeRegistry()
-    runtime_registry.register(ChatCompletionLUI())
-    runtime_registry.register(ChatCompletionTranslation())
-    runtime_registry.register(ChatCompletionWSD())
-    runtime_registry.register(ChatCompletionCollocation())
-    runtime_registry.register(PolishLocalTranslation())
-    runtime_registry.register(KindleCandidateRuntime())
-    return runtime_registry
+def bootstrap_runtime_registry():
+    RuntimeRegistry.register(ChatCompletionLUI())
+    RuntimeRegistry.register(ChatCompletionTranslation())
+    RuntimeRegistry.register(ChatCompletionWSD())
+    RuntimeRegistry.register(ChatCompletionCollocation())
+    RuntimeRegistry.register(PolishLocalTranslation())
+    RuntimeRegistry.register(KindleCandidateRuntime())
 
 
-def show_all_options(model_registry, runtime_registry):
+def show_all_options():
 
     for task in TASKS:
-        for runtime in runtime_registry.list():
+        for runtime in RuntimeRegistry.list():
 
             if task not in runtime.supported_tasks:
                 continue
@@ -68,7 +62,7 @@ def show_all_options(model_registry, runtime_registry):
                 print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {'n/a':16s}, Cost/1000: ${usage_estimate:.4f}")
             else:
                 models_for_runtime = [
-                    m for m in model_registry.list()
+                    m for m in ModelRegistry.list()
                     if m.family in supports_model_families
                 ]
                 for model in models_for_runtime:
@@ -92,20 +86,21 @@ def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
     
-    platform_registry = get_platform_registry()
-    model_registry = get_model_registry()
-    runtime_registry = get_runtime_registry()
     
-    show_all_options(model_registry, runtime_registry)
+    bootstrap_platform_registry()
+    bootstrap_model_registry()
+    bootstrap_runtime_registry()
+    
+    show_all_options()
     
     exit()
     
     # Setup providers with their runtimes
-    translation_provider = TranslationProvider(runtimes=runtime_registry.find_by_task("translation"))
-    candidate_provider = CollectCandidatesProvider(runtimes=runtime_registry.find_by_task("candidate"))
-    wsd_provider = WSDProvider(runtimes=runtime_registry.find_by_task("wsd"))
-    collocation_provider = CollocationProvider(runtimes=runtime_registry.find_by_task("collocation"))
-    lui_provider = LUIProvider(runtimes=runtime_registry.find_by_task("lui"))
+    translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task("translation"))
+    candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task("candidate"))
+    wsd_provider = WSDProvider(runtimes=RuntimeRegistry.find_by_task("wsd"))
+    collocation_provider = CollocationProvider(runtimes=RuntimeRegistry.find_by_task("collocation"))
+    lui_provider = LUIProvider(runtimes=RuntimeRegistry.find_by_task("lui"))
 
     # Initialize configuration manager
     config_manager = ConfigManager()

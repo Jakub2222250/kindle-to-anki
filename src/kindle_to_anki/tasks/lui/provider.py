@@ -2,7 +2,7 @@
 from typing import List
 
 from anki.anki_note import AnkiNote
-from ...core.runtimes.runtime_config import RuntimeConfig
+from core.runtimes.runtime_config import RuntimeConfig
 from tasks.lui.schema import LUIInput, LUIOutput
 
 

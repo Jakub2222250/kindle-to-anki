@@ -7,6 +7,7 @@ from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_breakdown import UsageBreakdown
 from core.runtimes.runtime_config import RuntimeConfig
 
+from ...platforms.platform_registry import PlatformRegistry
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import WSDInput, WSDOutput
 from language.language_helper import get_language_name_in_english
@@ -48,7 +49,7 @@ class ChatCompletionWSD:
         )
         return usage_breakdown
 
-    def disambiguate(self, wsd_inputs: List[WSDInput], source_lang: str, target_lang: str, ignore_cache: bool = False, use_test_cache: bool = False) -> List[WSDOutput]:
+    def disambiguate(self, wsd_inputs: List[WSDInput], source_lang: str, target_lang: str, config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[WSDOutput]:
         """
         Perform Word Sense Disambiguation on a list of WSDInput objects and return WSDOutput objects.
         """
@@ -99,11 +100,15 @@ class ChatCompletionWSD:
         if not inputs_needing_wsd:
             print(f"{source_language_name} Word Sense Disambiguation (LLM) completed (all from cache).")
             return [output for output in outputs if output is not None]
+        
+        # Get model and platform
+        model_id = config.model_id
+        platform = PlatformRegistry.get(model_id)
 
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        failing_inputs = self._process_wsd_batches(inputs_needing_wsd, cache, source_language_name, target_language_name)
+        failing_inputs = self._process_wsd_batches(inputs_needing_wsd, cache, source_language_name, target_language_name, platform, model_id)
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM Word Sense Disambiguation.")
@@ -115,7 +120,7 @@ class ChatCompletionWSD:
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                failing_inputs = self._process_wsd_batches(failing_inputs, cache, source_language_name, target_language_name)
+                failing_inputs = self._process_wsd_batches(failing_inputs, cache, source_language_name, target_language_name, platform, model_id)
 
         # Fill in the WSD results
         wsd_outputs = []
@@ -146,7 +151,7 @@ class ChatCompletionWSD:
 2. original_language_definition: {source_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
 3. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
 
-    def _make_batch_wsd_call(self, batch_inputs: List[WSDInput], processing_timestamp: str, source_language_name: str, target_language_name: str) -> Tuple[Dict[str, Any], str, str]:
+    def _make_batch_wsd_call(self, batch_inputs: List[WSDInput], processing_timestamp: str, source_language_name: str, target_language_name: str, platform=None, model_id="") -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for WSD"""
         items_list = []
         for input_item in batch_inputs:
@@ -170,17 +175,17 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
         start_time = time.time()
 
         messages = [{"role": "user", "content": prompt}]
-        response_text = self.platform.call_api(self.model_name, messages)
+        response_text = platform.call_api(model_id, messages)
 
         elapsed = time.time() - start_time
         output_chars = len(response_text)
-        actual_cost = calculate_llm_cost(prompt, response_text, self.model_name)
+        actual_cost = calculate_llm_cost(prompt, response_text, model_id)
         actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
         print(f"  Batch WSD API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
-        return json.loads(response_text), self.model_name, processing_timestamp
+        return json.loads(response_text), model_id, processing_timestamp
 
-    def _process_wsd_batches(self, inputs_needing_wsd: List[WSDInput], cache: WSDCache, source_language_name: str, target_language_name: str) -> List[WSDInput]:
+    def _process_wsd_batches(self, inputs_needing_wsd: List[WSDInput], cache: WSDCache, source_language_name: str, target_language_name: str, platform=None, model_id="") -> List[WSDInput]:
         """Process inputs in batches for WSD"""
 
         # Capture timestamp at the start of WSD processing
@@ -196,7 +201,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
             print(f"\nProcessing WSD batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
-                batch_results, model_used, timestamp = self._make_batch_wsd_call(batch, processing_timestamp, source_language_name, target_language_name)
+                batch_results, model_used, timestamp = self._make_batch_wsd_call(batch, processing_timestamp, source_language_name, target_language_name, platform, model_id)
 
                 for input_item in batch:
                     if input_item.uid in batch_results:

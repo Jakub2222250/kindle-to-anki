@@ -14,12 +14,14 @@ class OpenAIPlatform(ChatCompletionPlatform):
             raise RuntimeError("OPENAI_API_KEY is not set")
         self.client = OpenAI(api_key=self.api_key)
 
-    def call_api(self, model: str, messages: list[dict], **kwargs) -> str:
+    def call_api(self, model: str, prompt: str, **kwargs) -> str:
         """
         Call OpenAI ChatCompletion API.
         messages: list of dicts [{"role": "user", "content": "..."}]
         kwargs: optional OpenAI parameters (temperature, max_tokens, etc.)
         """
+        messages = [{"role": "user", "content": prompt}]
+        
         response = self.client.chat.completions.create(
             model=model, 
             messages=messages, 

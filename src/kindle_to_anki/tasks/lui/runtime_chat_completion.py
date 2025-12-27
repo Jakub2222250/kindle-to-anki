@@ -1,11 +1,14 @@
 import json
 import time
+from turtle import mode
 from typing import List, Tuple, Dict, Any
 
 from core.runtimes.runtime_config import RuntimeConfig
 from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_dimension import UsageDimension
 from core.pricing.usage_breakdown import UsageBreakdown
+from ...core.models.registry import ModelRegistry
+from ...platforms.platform_registry import PlatformRegistry
 
 from .schema import LUIInput, LUIOutput
 from language.language_helper import get_language_name_in_english
@@ -92,11 +95,15 @@ class ChatCompletionLUI:
         if not inputs_needing_lui:
             print(f"{language_name} lexical unit identification (LLM) completed (all from cache).")
             return lui_outputs
+        
+        # Get the model and platform
+        model = ModelRegistry.get(config.model_id)
+        platform = PlatformRegistry.get(model.platform)
 
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        new_outputs, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang)
+        new_outputs, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang, platform, model.id)
         lui_outputs.extend(new_outputs)
 
         while len(failing_inputs) > 0:
@@ -109,13 +116,13 @@ class ChatCompletionLUI:
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                retry_outputs, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang)
+                retry_outputs, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang, platform, model.id)
                 lui_outputs.extend(retry_outputs)
 
         print(f"{language_name} lexical unit identification (LLM) completed.")
         return lui_outputs
 
-    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str = "") -> Tuple[List[LUIOutput], List[LUIInput]]:
+    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str = "", platform=None, model_id="") -> Tuple[List[LUIOutput], List[LUIInput]]:
         """Process inputs in batches for lexical unit identification"""
 
         # Capture timestamp at the start of LUI processing
@@ -132,7 +139,7 @@ class ChatCompletionLUI:
             print(f"\nProcessing lexical unit identification batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
-                batch_results, model_used, timestamp = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code)
+                batch_results, model_used, timestamp = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code, platform, model_id)
 
                 for lui_input in batch:
                     if lui_input.uid in batch_results:
@@ -171,7 +178,7 @@ class ChatCompletionLUI:
                 
         return lui_outputs, failing_inputs
 
-    def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str = "") -> Tuple[Dict[str, Any], str, str]:
+    def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str = "", platform=None, model_id="") -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for lexical unit identification"""
         items_list = []
         for lui_input in batch_inputs:
@@ -186,10 +193,10 @@ class ChatCompletionLUI:
         estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
         print(f"  Making batch lexical unit identification API call for {len(batch_inputs)} inputs ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
         start_time = time.time()
-
+        
         response = self.platform.call_api(
             model=self.model_name,
-            messages=[{"role": "user", "content": prompt}]
+            prompt=prompt
         )
 
         elapsed = time.time() - start_time

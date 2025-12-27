@@ -7,6 +7,7 @@ from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_breakdown import UsageBreakdown
 from core.runtimes.runtime_config import RuntimeConfig
 
+from ...platforms.platform_registry import PlatformRegistry
 from tasks.translation.schema import TranslationInput, TranslationOutput
 from language.language_helper import get_language_name_in_english
 from caching.translation_cache import TranslationCache
@@ -47,7 +48,7 @@ class ChatCompletionTranslation:
         )
         return usage_breakdown
 
-    def translate(self, translation_inputs: List[TranslationInput], source_lang: str, target_lang: str, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
+    def translate(self, translation_inputs: List[TranslationInput], source_lang: str, target_lang: str, config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
         """
         Translate a list of TranslationInput objects and return TranslationOutput objects.
         """
@@ -97,10 +98,14 @@ class ChatCompletionTranslation:
             print(f"{source_language_name} context translation (LLM) completed (all from cache).")
             return [output for output in outputs if output is not None]
 
+        # Get model and platform
+        model_id = config.model_id
+        platform = PlatformRegistry.get(model_id)
+
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        failing_inputs = self._process_translation_batches(inputs_needing_translation, cache, source_language_name, target_language_name)
+        failing_inputs = self._process_translation_batches(inputs_needing_translation, cache, source_language_name, target_language_name, platform, model_id)
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM translation.")
@@ -112,7 +117,7 @@ class ChatCompletionTranslation:
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                failing_inputs = self._process_translation_batches(failing_inputs, cache, source_language_name, target_language_name)
+                failing_inputs = self._process_translation_batches(failing_inputs, cache, source_language_name, target_language_name, platform, model_id)
 
         # Fill in the translated results
         translated_outputs = []
@@ -142,7 +147,7 @@ class ChatCompletionTranslation:
 Output JSON as an object where keys are the UIDs and values are objects with:
 - "context_translation": {target_language_name} translation of the sentence"""
 
-    def _make_batch_translation_call(self, batch_inputs: List[TranslationInput], processing_timestamp: str, source_language_name: str, target_language_name: str) -> Tuple[Dict[str, Any], str, str]:
+    def _make_batch_translation_call(self, batch_inputs: List[TranslationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, platform=None, model_id="") -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for translation"""
         items_list = []
         for input_item in batch_inputs:
@@ -166,17 +171,16 @@ Respond with valid JSON. No additional text."""
         start_time = time.time()
 
         messages = [{"role": "user", "content": prompt}]
-        response_text = self.platform.call_api(self.model_name, messages)
+        response_text = platform.call_api(model_id, messages)
 
         elapsed = time.time() - start_time
         output_chars = len(response_text)
-        actual_cost = calculate_llm_cost(prompt, response_text, self.model_name)
+        actual_cost = calculate_llm_cost(prompt, response_text, model_id)
         actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
         print(f"  Batch translation API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
-        return json.loads(response_text), self.model_name, processing_timestamp
-
-    def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache, source_language_name: str, target_language_name: str) -> List[TranslationInput]:
+        return json.loads(response_text), model_id, processing_timestamp
+    def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache, source_language_name: str, target_language_name: str, platform=None, model_id="") -> List[TranslationInput]:
         """Process inputs in batches for translation"""
 
         # Capture timestamp at the start of translation processing
@@ -192,7 +196,7 @@ Respond with valid JSON. No additional text."""
             print(f"\nProcessing translation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
-                batch_results, model_used, timestamp = self._make_batch_translation_call(batch, processing_timestamp, source_language_name, target_language_name)
+                batch_results, model_used, timestamp = self._make_batch_translation_call(batch, processing_timestamp, source_language_name, target_language_name, platform, model_id)
 
                 for input_item in batch:
                     if input_item.uid in batch_results:
