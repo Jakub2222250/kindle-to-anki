@@ -32,12 +32,11 @@ class MetadataManager:
         
         print(f"Metadata saved to {self.metadata_path}")
 
-    def save_latest_vocab_builder_entry_timestamp(self, max_timestamp, metadata):
+    def save_latest_vocab_builder_entry_timestamp(self, max_timestamp: datetime, metadata):
         """Save the max timestamp from current import for future incremental imports"""
-        max_datetime_utc = datetime.fromtimestamp(max_timestamp / 1000, tz=timezone.utc)
-        max_iso_timestamp = max_datetime_utc.isoformat()
+        max_iso_timestamp = max_timestamp.isoformat()
 
-        print(f"\nMax timestamp from this import: {max_datetime_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        print(f"\nMax timestamp from this import: {max_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
         metadata['last_vocab_entry_timestamp'] = max_iso_timestamp
         self.save_metadata(metadata)

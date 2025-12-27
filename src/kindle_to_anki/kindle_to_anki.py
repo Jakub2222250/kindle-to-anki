@@ -84,9 +84,16 @@ def export_kindle_vocab():
 
         # Prune existing notes by UID
         notes = prune_existing_notes_by_UID(notes, existing_notes)
+        if len(notes) == 0:
+            print(f"No new notes to add to Anki after UID pruning for language: {source_lang_code}")
+            continue
 
         # Prune notes previously identified as redundant
         notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
+        if len(notes) == 0:
+            print(f"No new notes to add to Anki after redundancy pruning for language: {source_lang_code}")
+            continue
+
         sleep(5)  # Opportunity to read output
 
         if len(notes) > 100:
