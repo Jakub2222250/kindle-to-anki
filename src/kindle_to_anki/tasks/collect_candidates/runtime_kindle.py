@@ -5,7 +5,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
-from tasks.collect_candidates.schema import CandidateInput, CandidateOutput
+from metadata.metdata_manager import MetadataManager
+from tasks.collect_candidates.schema import CandidateOutput
 
 
 class KindleCandidateRuntime:
@@ -22,18 +23,24 @@ class KindleCandidateRuntime:
         self.INPUTS_DIR = self.DATA_DIR / "inputs"
         self.OUTPUTS_DIR = self.DATA_DIR / "outputs"
 
-    def collect_candidates(self, candidate_input: CandidateInput) -> List[CandidateOutput]:
+    def collect_candidates(self) -> List[CandidateOutput]:
         """
         Collect candidate data from Kindle database.
         """
         print("\nStarting Kindle candidate collection...")
         
         # Ensure we have the vocab database
-        db_path = self._ensure_vocab_db(candidate_input.db_path)
+        db_path = self.INPUTS_DIR / "vocab.db"
+        
+        metadata_manager = MetadataManager()
+        metadata = metadata_manager.load_metadata()
+        
+        last_timestamp_str = metadata.get("last_vocab_entry_timestamp")
+        last_timestamp = datetime.fromisoformat(last_timestamp_str) if last_timestamp_str else None
         
         # Get candidate data based on input parameters
-        if candidate_input.incremental and candidate_input.last_timestamp:
-            vocab_data = self._handle_incremental_import(db_path, candidate_input.last_timestamp)
+        if last_timestamp:
+            vocab_data = self._handle_incremental_import(db_path, last_timestamp)
         else:
             _, total_count = self._get_kindle_vocab_count(db_path)
             print(f"No previous import found, collecting all {total_count} candidates...")

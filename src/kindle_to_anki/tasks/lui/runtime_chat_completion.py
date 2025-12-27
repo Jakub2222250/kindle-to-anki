@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Any
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import LUIInput, LUIOutput
 from language.language_helper import get_language_name_in_english
-from lexical_unit_identification.lui_cache import LUICache
+from caching.lui_cache import LUICache
 from llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexical_unit_identification_instructions
 
 

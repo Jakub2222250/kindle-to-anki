@@ -32,12 +32,6 @@ class MetadataManager:
         
         print(f"Metadata saved to {self.metadata_path}")
 
-    def save_script_run_timestamp(self, metadata):
-        """Save the current timestamp as script run time to metadata"""
-        current_time_utc = datetime.now(timezone.utc).isoformat()
-        metadata['last_script_run_timestamp'] = current_time_utc
-        self.save_metadata(metadata)
-
     def save_latest_vocab_builder_entry_timestamp(self, max_timestamp, metadata):
         """Save the max timestamp from current import for future incremental imports"""
         max_datetime_utc = datetime.fromtimestamp(max_timestamp / 1000, tz=timezone.utc)

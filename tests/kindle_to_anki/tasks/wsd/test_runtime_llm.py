@@ -8,10 +8,10 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from kindle_to_anki.tasks.wsd.runtime_chat_completion import ChatCompletionWSD
-from kindle_to_anki.tasks.wsd.schema import WSDInput
-from kindle_to_anki.platforms.openai_platform import OpenAIPlatform
-from kindle_to_anki.anki.anki_note import AnkiNote
+from tasks.wsd.runtime_chat_completion import ChatCompletionWSD
+from tasks.wsd.schema import WSDInput
+from platforms.openai_platform import OpenAIPlatform
+from anki.anki_note import AnkiNote
 
 
 def test_wsd_runtime_llm():

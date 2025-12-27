@@ -8,8 +8,8 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from kindle_to_anki.wsd.providers.wsd_llm import provide_wsd_with_llm
-from kindle_to_anki.anki.anki_note import AnkiNote
+from wsd.providers.wsd_llm import provide_wsd_with_llm
+from anki.anki_note import AnkiNote
 
 
 def test_wsd_llm():

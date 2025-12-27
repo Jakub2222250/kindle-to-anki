@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from anki.anki_connect import AnkiConnect
 from configuration.config_manager import ConfigManager
 from platforms.openai_platform import OpenAIPlatform
@@ -20,7 +18,6 @@ from metadata.metdata_manager import MetadataManager
 
 from export.export_anki import write_anki_import_file
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
-from vocab.vocab import get_vocab_db
 
 from time import sleep
 
@@ -64,24 +61,8 @@ def export_kindle_vocab():
     # Get available anki decks by language pair
     anki_decks_by_source_language = config_manager.get_anki_decks_by_source_language()
 
-    # Load existing metadata
-    metadata_manager = MetadataManager()
-    metadata = metadata_manager.load_metadata()
-
-    # Get latest kindle vocab data
-    db_path = get_vocab_db()
-    print(metadata)
-    lastest_vocab_entry_timestamp = metadata.get('last_vocab_entry_timestamp')
-    if lastest_vocab_entry_timestamp:
-        lastest_vocab_entry_timestamp = datetime.fromisoformat(lastest_vocab_entry_timestamp)
-    else:
-        print("bad")
-        exit()
-    notes_by_language, latest_vocab_entry_timestamp = candidate_provider.collect_candidates(
-        db_path=db_path,
-        runtime_choice="kindle",
-        last_vocab_entry_timestamp=lastest_vocab_entry_timestamp,
-        incremental=True
+    notes_by_language, latest_candidate_timestamp = candidate_provider.collect_candidates(
+        runtime_choice="kindle"
     )
 
     # Connect to AnkiConnect
@@ -171,11 +152,10 @@ def export_kindle_vocab():
         anki_connect_instance.create_notes_batch(anki_deck, notes)
         sleep(5)  # Opportunity to read output
 
-    # Save script run timestamp
-    metadata_manager.save_script_run_timestamp(metadata)
-
     # Save timestamp for future incremental imports
-    metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_vocab_entry_timestamp, metadata)
+    metadata_manager = MetadataManager()
+    metadata = metadata_manager.load_metadata()
+    metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_candidate_timestamp, metadata)
 
     print("\nKindle to Anki export process completed successfully.")
 

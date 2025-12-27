@@ -8,8 +8,8 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from kindle_to_anki.translation.providers.translator_llm import translate_context_with_llm
-from kindle_to_anki.anki.anki_note import AnkiNote
+from translation.providers.translator_llm import translate_context_with_llm
+from anki.anki_note import AnkiNote
 
 
 def test_translator_llm():

@@ -1,9 +1,9 @@
 # tasks/collect_candidates/provider.py
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from datetime import datetime
 
 from anki.anki_note import AnkiNote
-from .schema import CandidateInput, CandidateOutput
+from .schema import CandidateOutput
 
 
 class CollectCandidatesProvider:
@@ -23,11 +23,8 @@ class CollectCandidatesProvider:
 
     def collect_candidates(
         self,
-        db_path: str,
-        runtime_choice: str = None,
-        last_vocab_entry_timestamp: datetime = None,
-        incremental: bool = True
-    ) -> tuple[Dict[str, List[AnkiNote]], int]:
+        runtime_choice: str = None
+    ) -> Tuple[Dict[str, List[AnkiNote]], datetime]:
         """
         Collect candidate data using the selected runtime.
         If runtime_choice is None, pick a default runtime.
@@ -39,15 +36,8 @@ class CollectCandidatesProvider:
             # Pick default runtime (first in dict)
             runtime = next(iter(self.runtimes.values()))
 
-        # Create CandidateInput for the runtime
-        candidate_input = CandidateInput(
-            db_path=db_path,
-            last_timestamp=last_vocab_entry_timestamp,
-            incremental=incremental
-        )
-
         # Collect candidate data using the runtime
-        candidate_outputs: List[CandidateOutput] = runtime.collect_candidates(candidate_input)
+        candidate_outputs: List[CandidateOutput] = runtime.collect_candidates()
 
         if not candidate_outputs:
             print("No candidate data collected")
@@ -78,4 +68,6 @@ class CollectCandidatesProvider:
             if candidate_output.timestamp > latest_timestamp:
                 latest_timestamp = candidate_output.timestamp
 
-        return notes_by_language, latest_timestamp
+        latest_candidate_timestamp = datetime.fromtimestamp(latest_timestamp / 1000)
+
+        return notes_by_language, latest_candidate_timestamp

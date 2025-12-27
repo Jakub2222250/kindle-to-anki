@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Any
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import CollocationInput, CollocationOutput
 from language.language_helper import get_language_name_in_english
-from collocation.collocation_cache import CollocationCache
+from caching.collocation_cache import CollocationCache
 from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 

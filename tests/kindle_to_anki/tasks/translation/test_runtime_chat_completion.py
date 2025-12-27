@@ -9,11 +9,11 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from kindle_to_anki.anki.anki_note import AnkiNote
-from kindle_to_anki.platforms.openai_platform import OpenAIPlatform
-from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatCompletionTranslation
-from kindle_to_anki.tasks.translation.provider import TranslationProvider
-from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
+from anki.anki_note import AnkiNote
+from platforms.openai_platform import OpenAIPlatform
+from tasks.translation.runtime_chat_completion import ChatCompletionTranslation
+from tasks.translation.provider import TranslationProvider
+from tasks.translation.schema import TranslationInput, TranslationOutput
 
 
 def test_runtime_chat_completion():

@@ -5,7 +5,7 @@ from openai import OpenAI
 
 
 from anki.anki_note import AnkiNote
-from lexical_unit_identification.lui_cache import LUICache
+from caching.lui_cache import LUICache
 from lexical_unit_identification.providers.pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
 
 

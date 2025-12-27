@@ -10,8 +10,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
 from pathlib import Path
-from kindle_to_anki.tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
-from kindle_to_anki.tasks.collect_candidates.schema import CandidateInput
+from tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
 
 
 def test_collect_candidate_runtime_kindle():

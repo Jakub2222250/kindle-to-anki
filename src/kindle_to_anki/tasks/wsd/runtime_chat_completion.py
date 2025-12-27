@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Any
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import WSDInput, WSDOutput
 from language.language_helper import get_language_name_in_english
-from wsd.wsd_cache import WSDCache
+from caching.wsd_cache import WSDCache
 from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 
