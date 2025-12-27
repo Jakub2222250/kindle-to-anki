@@ -1,5 +1,8 @@
+from turtle import mode
 from anki.anki_connect import AnkiConnect
 from configuration.config_manager import ConfigManager
+from .tasks.tasks import TASKS
+from .core.runtimes.runtime_registry import RuntimeRegistry
 from .platforms.platform_registry import PlatformRegistry
 from .core.models.registry import ModelRegistry
 from platforms.openai_platform import OpenAIPlatform
@@ -37,11 +40,36 @@ def get_all_registries():
     model_registry.register(models.GPT_5_1)
 
     # Register runtimes
+    runtime_registry = RuntimeRegistry()
+    runtime_registry.register(ChatCompletionLUI())
+    
+    return platform_registry, model_registry, runtime_registry
+
+def show_all_options(platform_registry, model_registry, runtime_registry):
+    for task in TASKS:
+        for runtime in runtime_registry.list():
+
+            if not runtime.supports_task(task):
+                continue
+
+            supports_model_families = runtime.supported_model_families
+            if not supports_model_families or len(supports_model_families) == 0:
+                ...
+            else:
+                models_for_runtime = [
+                    m for m in model_registry.list()
+                    if m.family in supports_model_families
+                ]
+                for model in models_for_runtime:
+                    print(f"Task: {task}, Runtime: {runtime.id}, Model: {model.id}")
 
 
 def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
+    
+    platform_registry, model_registry, runtime_registry = get_all_registries()
+    show_all_options(platform_registry, model_registry, runtime_registry)
     
     # Setup the platform and runtimes
     platform = OpenAIPlatform()
