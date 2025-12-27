@@ -6,6 +6,7 @@ from core.pricing.usage_dimension import UsageDimension
 from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_breakdown import UsageBreakdown
 from core.runtimes.runtime_config import RuntimeConfig
+from core.models.registry import ModelRegistry
 
 from platforms.platform_registry import PlatformRegistry
 from platforms.chat_completion_platform import ChatCompletionPlatform
@@ -48,7 +49,7 @@ class ChatCompletionCollocation:
         )
         return usage_breakdown
 
-    def generate_collocations(self, collocation_inputs: List[CollocationInput], source_lang: str, target_lang: str, config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[CollocationOutput]:
+    def generate_collocations(self, collocation_inputs: List[CollocationInput], source_lang: str, target_lang: str, runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[CollocationOutput]:
         """
         Generate collocations for a list of CollocationInput objects and return CollocationOutput objects.
         """
@@ -99,14 +100,10 @@ class ChatCompletionCollocation:
             print(f"{source_language_name} collocation generation (LLM) completed (all from cache).")
             return [output for output in outputs if output is not None]
 
-        # Get model and platform
-        model_name = config.model_id
-        platform = PlatformRegistry.get(model_name)
-
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        failing_inputs = self._process_collocation_batches(inputs_needing_collocations, cache, source_language_name, target_language_name, platform, model_name)
+        failing_inputs = self._process_collocation_batches(inputs_needing_collocations, cache, source_language_name, target_language_name, runtime_config)
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM collocation analysis.")
@@ -118,7 +115,7 @@ class ChatCompletionCollocation:
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                failing_inputs = self._process_collocation_batches(failing_inputs, cache, source_language_name, target_language_name, platform, model_name)
+                failing_inputs = self._process_collocation_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config)
 
         # Fill in the collocation results
         collocation_outputs = []
@@ -148,7 +145,7 @@ class ChatCompletionCollocation:
 Output JSON as an object where keys are the UIDs and values are objects with:
 - "collocations": A JSON list of 0-3 short collocations in {source_language_name} that commonly use the input word form"""
 
-    def _make_batch_collocation_call(self, batch_inputs: List[CollocationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, platform, model_id: str) -> Tuple[Dict[str, Any], str, str]:
+    def _make_batch_collocation_call(self, batch_inputs: List[CollocationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for collocation generation"""
         items_list = []
         for input_item in batch_inputs:
@@ -166,39 +163,43 @@ Words to analyze:
 Respond with valid JSON. No additional text."""
 
         input_chars = len(prompt)
-        estimate_cost_value = estimate_llm_cost(prompt, len(batch_inputs), self.model_name)
+        estimate_cost_value = estimate_llm_cost(prompt, len(batch_inputs), runtime_config.model_id)
         estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
         print(f"  Making batch collocation API call for {len(batch_inputs)} inputs ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
         start_time = time.time()
+        
+        # Get the model and platform
+        model = ModelRegistry.get(runtime_config.model_id)
+        platform = PlatformRegistry.get(model.platform_id)
 
         messages = [{"role": "user", "content": prompt}]
-        response_text = platform.call_api(model_id, messages)
+        response_text = platform.call_api(runtime_config.model_id, messages)
 
         elapsed = time.time() - start_time
         output_chars = len(response_text)
-        actual_cost = calculate_llm_cost(prompt, response_text, model_id)
+        actual_cost = calculate_llm_cost(prompt, response_text, runtime_config.model_id)
         actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
         print(f"  Batch collocation API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
-        return json.loads(response_text), model_id, processing_timestamp
+        return json.loads(response_text), runtime_config.model_id, processing_timestamp
 
-    def _process_collocation_batches(self, inputs_needing_collocations: List[CollocationInput], cache: CollocationCache, source_language_name: str, target_language_name: str, platform: ChatCompletionPlatform, model_id: str) -> List[CollocationInput]:
+    def _process_collocation_batches(self, inputs_needing_collocations: List[CollocationInput], cache: CollocationCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[CollocationInput]:
         """Process inputs in batches for collocation generation"""
 
         # Capture timestamp at the start of collocation processing
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-        total_batches = (len(inputs_needing_collocations) + self.batch_size - 1) // self.batch_size
+        total_batches = (len(inputs_needing_collocations) + runtime_config.batch_size - 1) // runtime_config.batch_size
         failing_inputs = []
 
-        for i in range(0, len(inputs_needing_collocations), self.batch_size):
-            batch = inputs_needing_collocations[i:i + self.batch_size]
-            batch_num = (i // self.batch_size) + 1
+        for i in range(0, len(inputs_needing_collocations), runtime_config.batch_size):
+            batch = inputs_needing_collocations[i:i + runtime_config.batch_size]
+            batch_num = (i // runtime_config.batch_size) + 1
 
             print(f"\nProcessing collocation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
-                batch_results, model_used, timestamp = self._make_batch_collocation_call(batch, processing_timestamp, source_language_name, target_language_name, platform, model_id)
+                batch_results, model_used, timestamp = self._make_batch_collocation_call(batch, processing_timestamp, source_language_name, target_language_name, runtime_config)
 
                 for input_item in batch:
                     if input_item.uid in batch_results:
