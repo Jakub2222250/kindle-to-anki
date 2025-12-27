@@ -175,8 +175,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
         model = ModelRegistry.get(runtime_config.model_id)
         platform = PlatformRegistry.get(model.platform_id)
 
-        messages = [{"role": "user", "content": prompt}]
-        response_text = platform.call_api(runtime_config.model_id, messages)
+        response_text = platform.call_api(runtime_config.model_id, prompt)
 
         elapsed = time.time() - start_time
         output_chars = len(response_text)
