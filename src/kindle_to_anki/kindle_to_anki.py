@@ -84,22 +84,19 @@ def show_all_options():
 def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
-    
-    
+
     bootstrap_platform_registry()
     bootstrap_model_registry()
     bootstrap_runtime_registry()
-    
+
     show_all_options()
-    
-    exit()
-    
+
     # Setup providers with their runtimes
-    translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task("translation"))
-    candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task("candidate"))
-    wsd_provider = WSDProvider(runtimes=RuntimeRegistry.find_by_task("wsd"))
-    collocation_provider = CollocationProvider(runtimes=RuntimeRegistry.find_by_task("collocation"))
-    lui_provider = LUIProvider(runtimes=RuntimeRegistry.find_by_task("lui"))
+    candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates"))
+    translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("translation"))
+    wsd_provider = WSDProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("wsd"))
+    collocation_provider = CollocationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collocation"))
+    lui_provider = LUIProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("lui"))
 
     # Initialize configuration manager
     config_manager = ConfigManager()
@@ -120,7 +117,7 @@ def export_kindle_vocab():
     
     # Reusable configs
     best_model_normal_batch = RuntimeConfig(
-        model_id="gpt-5-1",
+        model_id="gpt-5.1",
         batch_size=30,
     )
     

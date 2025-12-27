@@ -63,6 +63,7 @@ class LUIProvider:
             lui_inputs,
             source_lang,
             target_lang,
+            runtime_config=runtime_config,
             ignore_cache=ignore_cache,
             use_test_cache=use_test_cache
         )

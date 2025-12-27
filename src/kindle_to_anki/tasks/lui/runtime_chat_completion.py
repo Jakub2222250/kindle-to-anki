@@ -2,6 +2,7 @@ import json
 import time
 from turtle import mode
 from typing import List, Tuple, Dict, Any
+from typing_extensions import runtime
 
 from core.runtimes.runtime_config import RuntimeConfig
 from core.pricing.usage_scope import UsageScope
@@ -28,13 +29,13 @@ class ChatCompletionLUI:
     supports_batching: bool = True
 
 
-    def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
+    def estimate_usage(self, items_count: int, runtime_config: RuntimeConfig) -> UsageBreakdown:
         # Returns estimated tokens per 1000 words (input, output)
         instruction_tokens = 500  # rough estimate for LUI instructions
         input_tokens_per_word = 5  # rough estimate
         output_tokens_per_word = 10  # rough estimate
         
-        batch_size = config.batch_size
+        batch_size = runtime_config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
 
         num_of_batches = (items_count + batch_size - 1) // batch_size
@@ -50,7 +51,7 @@ class ChatCompletionLUI:
         )
         return usage_breakdown
 
-    def identify(self, lui_inputs: List[LUIInput], source_lang: str, target_lang: str, config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
+    def identify(self, lui_inputs: List[LUIInput], source_lang: str, target_lang: str, runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
         """
         Perform Lexical Unit Identification on a list of LUIInput objects and return LUIOutput objects.
         """
@@ -95,15 +96,11 @@ class ChatCompletionLUI:
         if not inputs_needing_lui:
             print(f"{language_name} lexical unit identification (LLM) completed (all from cache).")
             return lui_outputs
-        
-        # Get the model and platform
-        model = ModelRegistry.get(config.model_id)
-        platform = PlatformRegistry.get(model.platform)
 
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        new_outputs, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang, platform, model.id)
+        new_outputs, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang, runtime_config)
         lui_outputs.extend(new_outputs)
 
         while len(failing_inputs) > 0:
@@ -116,30 +113,30 @@ class ChatCompletionLUI:
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                retry_outputs, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang, platform, model.id)
+                retry_outputs, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang, runtime_config)
                 lui_outputs.extend(retry_outputs)
 
         print(f"{language_name} lexical unit identification (LLM) completed.")
         return lui_outputs
 
-    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str = "", platform=None, model_id="") -> Tuple[List[LUIOutput], List[LUIInput]]:
+    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[List[LUIOutput], List[LUIInput]]:
         """Process inputs in batches for lexical unit identification"""
 
         # Capture timestamp at the start of LUI processing
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-        total_batches = (len(lui_inputs) + self.batch_size - 1) // self.batch_size
+        total_batches = (len(lui_inputs) + runtime_config.batch_size - 1) // runtime_config.batch_size
         failing_inputs = []
         lui_outputs = []
 
-        for i in range(0, len(lui_inputs), self.batch_size):
-            batch = lui_inputs[i:i + self.batch_size]
-            batch_num = (i // self.batch_size) + 1
+        for i in range(0, len(lui_inputs), runtime_config.batch_size):
+            batch = lui_inputs[i:i + runtime_config.batch_size]
+            batch_num = (i // runtime_config.batch_size) + 1
 
             print(f"\nProcessing lexical unit identification batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
-                batch_results, model_used, timestamp = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code, platform, model_id)
+                batch_results, model_used, timestamp = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code, runtime_config)
 
                 for lui_input in batch:
                     if lui_input.uid in batch_results:
@@ -178,7 +175,7 @@ class ChatCompletionLUI:
                 
         return lui_outputs, failing_inputs
 
-    def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str = "", platform=None, model_id="") -> Tuple[Dict[str, Any], str, str]:
+    def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for lexical unit identification"""
         items_list = []
         for lui_input in batch_inputs:
@@ -189,21 +186,25 @@ class ChatCompletionLUI:
         prompt = get_llm_lexical_unit_identification_instructions(items_json, language_name, language_code)
 
         input_chars = len(prompt)
-        estimate_cost_value = estimate_llm_cost(prompt, len(batch_inputs), self.model_name)
+        estimate_cost_value = estimate_llm_cost(prompt, len(batch_inputs), runtime_config.model_id)
         estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
         print(f"  Making batch lexical unit identification API call for {len(batch_inputs)} inputs ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
         start_time = time.time()
         
-        response = self.platform.call_api(
-            model=self.model_name,
+        # Get the model and platform
+        model = ModelRegistry.get(runtime_config.model_id)
+        platform = PlatformRegistry.get(model.platform_id)
+
+        response = platform.call_api(
+            model=runtime_config.model_id,
             prompt=prompt
         )
 
         elapsed = time.time() - start_time
         output_text = response
         output_chars = len(output_text)
-        actual_cost = calculate_llm_cost(prompt, output_text, self.model_name)
+        actual_cost = calculate_llm_cost(prompt, output_text, runtime_config.model_id)
         actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
         print(f"  Batch lexical unit identification API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
-        return json.loads(output_text), self.model_name, processing_timestamp
+        return json.loads(output_text), runtime_config.model_id, processing_timestamp

@@ -3,7 +3,7 @@ from .modelspec import ModelSpec
 
 GPT_5_MINI = ModelSpec(
     id="gpt-5-mini",
-    platform="openai",
+    platform_id="openai",
     family="chat_completion",
     quality_tier="medium",
     supports_json=True,
@@ -14,7 +14,7 @@ GPT_5_MINI = ModelSpec(
 
 GPT_5_1 = ModelSpec(
     id="gpt-5.1",
-    platform="openai",
+    platform_id="openai",
     family="chat_completion",
     quality_tier="high",
     supports_json=True,

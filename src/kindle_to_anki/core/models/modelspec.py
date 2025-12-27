@@ -6,7 +6,7 @@ ModelFamily = Literal["chat_completion", "embedding", "translation"]
 @dataclass(frozen=True)
 class ModelSpec:
     id: str                     # e.g. "gpt-5-mini"
-    platform: str               # e.g. "openai"
+    platform_id: str               # e.g. "openai"
     family: ModelFamily         # how it is invoked
     quality_tier: Literal["low", "medium", "high"]
 
