@@ -2,6 +2,7 @@
 from typing import List
 
 from anki.anki_note import AnkiNote
+from core.runtimes.runtime_config import RuntimeConfig
 from tasks.translation.schema import TranslationInput, TranslationOutput
 
 
@@ -24,6 +25,7 @@ class TranslationProvider:
         self,
         notes: List[AnkiNote],
         runtime_choice: str = None,
+        runtime_config: RuntimeConfig = None,
         source_lang: str = "pl",
         target_lang: str = "en",
         ignore_cache: bool = False,
@@ -60,6 +62,7 @@ class TranslationProvider:
             translation_inputs,
             source_lang,
             target_lang,
+            runtime_config,
             ignore_cache=ignore_cache,
             use_test_cache=use_test_cache
         )

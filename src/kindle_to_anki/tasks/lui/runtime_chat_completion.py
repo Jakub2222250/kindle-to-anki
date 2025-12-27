@@ -195,8 +195,7 @@ class ChatCompletionLUI:
         model = ModelRegistry.get(runtime_config.model_id)
         platform = PlatformRegistry.get(model.platform_id)
 
-        messages = [{"role": "user", "content": prompt}]
-        response = platform.call_api(runtime_config.model_id, messages)
+        response = platform.call_api(runtime_config.model_id, prompt)
 
         elapsed = time.time() - start_time
         output_text = response
