@@ -10,3 +10,9 @@ class RuntimeRegistry:
 
     def list(self):
         return self._runtimes.values()
+
+    def find_by_task(self, task: str):
+        return [
+            runtime for runtime in self._runtimes.values()
+            if task in runtime.supported_tasks
+        ]

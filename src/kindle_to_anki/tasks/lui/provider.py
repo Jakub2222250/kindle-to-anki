@@ -2,6 +2,7 @@
 from typing import List
 
 from anki.anki_note import AnkiNote
+from ...core.runtimes.runtime_config import RuntimeConfig
 from tasks.lui.schema import LUIInput, LUIOutput
 
 
@@ -24,6 +25,7 @@ class LUIProvider:
         self,
         notes: List[AnkiNote],
         runtime_choice: str = None,
+        runtime_config: RuntimeConfig = None,
         source_lang: str = "pl",
         target_lang: str = "en",
         ignore_cache: bool = False,

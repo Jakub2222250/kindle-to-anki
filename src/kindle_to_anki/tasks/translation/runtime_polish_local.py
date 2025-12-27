@@ -1,6 +1,11 @@
 import time
 from typing import List
 
+from core.pricing.usage_dimension import UsageDimension
+from core.pricing.usage_scope import UsageScope
+from core.pricing.usage_breakdown import UsageBreakdown
+from core.runtimes.runtime_config import RuntimeConfig
+
 from .schema import TranslationInput, TranslationOutput
 from caching.translation_cache import TranslationCache
 
@@ -8,16 +13,16 @@ from caching.translation_cache import TranslationCache
 class PolishLocalTranslation:
     """
     Runtime for translation using local MarianMT model for Polish to English translation.
-    
-    NOTE: This replaces the old polish_translator_local.py provider which will be deleted soon.
     """
 
-    def __init__(self, batch_size: int = 50):
-        """
-        batch_size: number of texts to process in a single batch (MarianMT can handle larger batches efficiently)
-        """
-        self.batch_size = batch_size
-        self.model_name = "Helsinki-NLP/opus-mt-pl-en"
+    id: str = "polish_local_translation"
+    display_name: str = "Polish Local Translation Runtime"
+    supported_tasks = ["translation"]
+    supported_model_families = []
+    supports_batching: bool = True
+
+    def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
+        return None
 
     def translate(self, translation_inputs: List[TranslationInput], source_lang: str, target_lang: str, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
         """

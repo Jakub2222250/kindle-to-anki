@@ -30,22 +30,29 @@ from pruning.pruning import prune_existing_notes_automatically, prune_existing_n
 from time import sleep
 
 
-def get_all_registries():
-    # Register Platforms
+def get_platform_registry():
     platform_registry = PlatformRegistry()
     platform_registry.register(OpenAIPlatform())
-    
-    model_registry = ModelRegistry()
-    
-    # Register models
-    model_registry.register(models.GPT_5_MINI)
-    model_registry.register(models.GPT_5_1)
+    return platform_registry
 
-    # Register runtimes
+
+def get_model_registry():
+    model_registry = ModelRegistry()
+    model_registry.register(models.GPT_5_1)
+    model_registry.register(models.GPT_5_MINI)
+    return model_registry
+
+
+def get_runtime_registry():
     runtime_registry = RuntimeRegistry()
     runtime_registry.register(ChatCompletionLUI())
-    
-    return platform_registry, model_registry, runtime_registry
+    runtime_registry.register(ChatCompletionTranslation())
+    runtime_registry.register(ChatCompletionWSD())
+    runtime_registry.register(ChatCompletionCollocation())
+    runtime_registry.register(PolishLocalTranslation())
+    runtime_registry.register(KindleCandidateRuntime())
+    return runtime_registry
+
 
 def show_all_options(model_registry, runtime_registry):
 
@@ -57,7 +64,8 @@ def show_all_options(model_registry, runtime_registry):
 
             supports_model_families = runtime.supported_model_families
             if not supports_model_families or len(supports_model_families) == 0:
-                ...
+                usage_estimate = 0.0
+                print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {'n/a':16s}, Cost/1000: ${usage_estimate:.4f}")
             else:
                 models_for_runtime = [
                     m for m in model_registry.list()
@@ -77,47 +85,27 @@ def show_all_options(model_registry, runtime_registry):
                     )
 
                     usage_estimate = token_pricing_policy.estimate_cost(usage_estimate)
-
-                    print(f"Task: {task}, Runtime: {runtime.id}, Model: {model.id}, Cost/1000: ${usage_estimate.usd:.4f}")
+                    print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {model.id:16s}, Cost/1000: ${usage_estimate.usd:.4f}")
 
 
 def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
     
-    platform_registry, model_registry, runtime_registry = get_all_registries()
+    platform_registry = get_platform_registry()
+    model_registry = get_model_registry()
+    runtime_registry = get_runtime_registry()
+    
     show_all_options(model_registry, runtime_registry)
     
     exit()
     
-    # Setup the platform and runtimes
-    platform = OpenAIPlatform()
-    
-    # Setup translation runtimes and provider
-    translation_runtime = ChatCompletionTranslation(platform=platform, model_name="gpt-5", batch_size=30)
-    polish_translator_local = PolishLocalTranslation(batch_size=30)
-    translation_runtimes = {"gpt-5": translation_runtime, "polish_local": polish_translator_local}
-    translation_provider = TranslationProvider(runtimes=translation_runtimes)
-    
-    # Setup candidate collection runtimes and provider
-    kindle_runtime = KindleCandidateRuntime()
-    candidate_runtimes = {"kindle": kindle_runtime}
-    candidate_provider = CollectCandidatesProvider(runtimes=candidate_runtimes)
-    
-    # Setup WSD runtimes and provider
-    wsd_runtime = ChatCompletionWSD(platform=platform, model_name="gpt-5", batch_size=30)
-    wsd_runtimes = {"gpt-5": wsd_runtime}
-    wsd_provider = WSDProvider(runtimes=wsd_runtimes)
-    
-    # Setup collocation runtimes and provider
-    collocation_runtime = ChatCompletionCollocation(platform=platform, model_name="gpt-5", batch_size=30)
-    collocation_runtimes = {"gpt-5": collocation_runtime}
-    collocation_provider = CollocationProvider(runtimes=collocation_runtimes)
-    
-    # Setup LUI runtimes and provider
-    lui_runtime = ChatCompletionLUI(platform=platform, model_name="gpt-5", batch_size=30)
-    lui_runtimes = {"gpt-5": lui_runtime}
-    lui_provider = LUIProvider(runtimes=lui_runtimes)
+    # Setup providers with their runtimes
+    translation_provider = TranslationProvider(runtimes=runtime_registry.find_by_task("translation"))
+    candidate_provider = CollectCandidatesProvider(runtimes=runtime_registry.find_by_task("candidate"))
+    wsd_provider = WSDProvider(runtimes=runtime_registry.find_by_task("wsd"))
+    collocation_provider = CollocationProvider(runtimes=runtime_registry.find_by_task("collocation"))
+    lui_provider = LUIProvider(runtimes=runtime_registry.find_by_task("lui"))
 
     # Initialize configuration manager
     config_manager = ConfigManager()
@@ -135,6 +123,17 @@ def export_kindle_vocab():
 
     # Connect to AnkiConnect
     anki_connect_instance = AnkiConnect()
+    
+    # Reusable configs
+    best_model_normal_batch = RuntimeConfig(
+        model_id="gpt-5-1",
+        batch_size=30,
+    )
+    
+    cheap_model_normal_batch = RuntimeConfig(
+        model_id="gpt-5-mini",
+        batch_size=30,
+    )
 
     for source_lang_code, notes in notes_by_language.items():
 
@@ -169,7 +168,8 @@ def export_kindle_vocab():
         # Enrich notes with lexical unit identification
         lui_provider.identify(
             notes=notes,
-            runtime_choice="gpt-5",
+            runtime_choice="chat_completion_lui",
+            runtime_config=best_model_normal_batch,
             source_lang=source_lang_code,
             target_lang=target_lang_code,
             ignore_cache=False
@@ -183,7 +183,8 @@ def export_kindle_vocab():
         # Provide word sense disambiguation via LLM
         wsd_provider.disambiguate(
             notes=notes,
-            runtime_choice="gpt-5",
+            runtime_choice="chat_completion_wsd",
+            runtime_config=best_model_normal_batch,
             source_lang=source_lang_code,
             target_lang=target_lang_code,
             ignore_cache=False
@@ -204,7 +205,8 @@ def export_kindle_vocab():
         # Provide translations
         translation_provider.translate(
             notes=notes,
-            runtime_choice="gpt-5",
+            runtime_choice="chat_completion_translation",
+            runtime_config=best_model_normal_batch,
             source_lang=source_lang_code,
             target_lang=target_lang_code,
             ignore_cache=False,
@@ -215,7 +217,8 @@ def export_kindle_vocab():
         # Provide collocations
         collocation_provider.generate_collocations(
             notes=notes,
-            runtime_choice="gpt-5",
+            runtime_choice="chat_completion_collocation",
+            runtime_config=cheap_model_normal_batch,
             source_lang=source_lang_code,
             target_lang=target_lang_code,
             ignore_cache=False

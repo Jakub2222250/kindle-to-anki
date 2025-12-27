@@ -5,6 +5,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
+from core.pricing.usage_breakdown import UsageBreakdown
+from core.runtimes.runtime_config import RuntimeConfig
+
 from .schema import CandidateOutput
 from metadata.metdata_manager import MetadataManager
 
@@ -13,6 +16,15 @@ class KindleCandidateRuntime:
     """
     Runtime for candidate collection from Kindle vocab.db files.
     """
+    
+    id: str = "kindle_candidate_collection"
+    display_name: str = "Kindle Candidate Collection Runtime"
+    supported_tasks = ["collect_candidates"]
+    supported_model_families = []
+    supports_batching: bool = True
+
+    def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
+        return None
 
     def __init__(self):
         # Project paths

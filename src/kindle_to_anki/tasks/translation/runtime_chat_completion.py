@@ -2,7 +2,11 @@ import json
 import time
 from typing import List, Tuple, Dict, Any
 
-from platforms.chat_completion_platform import ChatCompletionPlatform
+from core.pricing.usage_dimension import UsageDimension
+from core.pricing.usage_scope import UsageScope
+from core.pricing.usage_breakdown import UsageBreakdown
+from core.runtimes.runtime_config import RuntimeConfig
+
 from tasks.translation.schema import TranslationInput, TranslationOutput
 from language.language_helper import get_language_name_in_english
 from caching.translation_cache import TranslationCache
@@ -14,16 +18,34 @@ class ChatCompletionTranslation:
     Runtime for translation using chat-completion LLMs.
     Supports multiple platforms and models.
     """
+    
+    id: str = "chat_completion_translation"
+    display_name: str = "Chat Completion Translation Runtime"
+    supported_tasks = ["translation"]
+    supported_model_families = ["chat_completion"]
+    supports_batching: bool = True
 
-    def __init__(self, platform: ChatCompletionPlatform, model_name: str, batch_size: int = 30):
-        """
-        platform: an instance of OpenAIPlatform or any platform implementing call_api()
-        model_name: e.g., "gpt-5-mini", "gpt-5.1"
-        batch_size: number of notes to send per API call
-        """
-        self.platform = platform
-        self.model_name = model_name
-        self.batch_size = batch_size
+    def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
+        # Returns estimated tokens per 1000 words (input, output)
+        instruction_tokens = 500  # rough estimate for LUI instructions
+        input_tokens_per_word = 5  # rough estimate
+        output_tokens_per_word = 10  # rough estimate
+        
+        batch_size = config.batch_size
+        assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
+
+        num_of_batches = (items_count + batch_size - 1) // batch_size
+
+        estimated_input_tokens = (num_of_batches * instruction_tokens) + (input_tokens_per_word * items_count)
+        estimated_output_tokens = output_tokens_per_word * items_count
+
+        usage_breakdown = UsageBreakdown(
+            scope=UsageScope(unit="notes", count=items_count),
+            inputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_input_tokens)},
+            outputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_output_tokens)},
+            confidence="medium",
+        )
+        return usage_breakdown
 
     def translate(self, translation_inputs: List[TranslationInput], source_lang: str, target_lang: str, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
         """
