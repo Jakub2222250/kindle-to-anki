@@ -1,6 +1,9 @@
 import string
 from typing import List
 
+from core.runtimes.runtime_config import RuntimeConfig
+from core.models.registry import ModelRegistry
+from platforms.platform_registry import PlatformRegistry
 from .schema import LUIInput, LUIOutput
 from pl_en.ma_polish_hybrid_llm import update_notes_with_llm
 from pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string, normalize_lemma
@@ -17,18 +20,21 @@ class PolishMALLMHybridLUI:
     2. Simple heuristics for clear cases (single candidate, no complex particles)
     3. LLM for complex disambiguation (multiple candidates, reflexive verbs with 'się')
     """
+    
+    id: str = "polish_ma_llm_hybrid_lui"
+    display_name: str = "Polish MA+LLM Hybrid LUI Runtime"
+    supported_tasks = ["lui"]
+    supported_model_families = ["chat_completion"]
+    supports_batching: bool = True
 
-    def __init__(self, cache_suffix='pl-en_hybrid'):
+    def __init__(self):
         """
         Initialize the Polish MA+LLM hybrid runtime.
-        
-        Args:
-            cache_suffix: Suffix for LLM cache files
         """
-        self.cache_suffix = cache_suffix
+        pass
 
     def identify(self, lui_inputs: List[LUIInput], source_lang: str, target_lang: str, 
-                ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
+                config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
         """
         Perform Lexical Unit Identification on Polish words using Morfeusz2 + LLM hybrid approach.
         
@@ -36,6 +42,7 @@ class PolishMALLMHybridLUI:
             lui_inputs: List of LUIInput objects containing word and sentence context
             source_lang: Source language (should be "pl" for Polish)
             target_lang: Target language 
+            config: Runtime configuration containing model settings
             ignore_cache: Whether to ignore LLM cache
             use_test_cache: Whether to use test cache
             
@@ -86,11 +93,30 @@ class PolishMALLMHybridLUI:
 
         # Process complex cases with LLM
         if len(notes_requiring_llm_ma) > 0:
-            cache_suffix = self.cache_suffix
+            # Get model and platform from registries using config
+            # Note: For now assuming OpenAI platform since that's what was used directly before
+            # In the future this could be made more dynamic
+            model = None
+            platform = None
+            if config and config.model_id:
+                try:
+                    model = ModelRegistry.get("openai", config.model_id)
+                    platform = PlatformRegistry.get(model.platform)
+                except KeyError:
+                    print(f"Warning: Model {config.model_id} not found in registry, falling back to defaults")
+            
+            cache_suffix = 'pl-en_hybrid'
             if use_test_cache:
                 cache_suffix += "_test"
             
-            update_notes_with_llm(notes_requiring_llm_ma, cache_suffix=cache_suffix, ignore_cache=ignore_cache)
+            # Pass platform and model to the updated function
+            update_notes_with_llm(
+                notes_requiring_llm_ma, 
+                cache_suffix=cache_suffix, 
+                ignore_cache=ignore_cache,
+                platform=platform,
+                model=model.id if model else "gpt-5"  # fallback to previous default
+            )
 
         # Post-process all notes for reflexive verbs and lemma normalization
         for note in temp_notes:

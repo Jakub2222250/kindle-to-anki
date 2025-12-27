@@ -1,18 +1,15 @@
 import json
 import time
 from typing import List, Dict, Any
-from openai import OpenAI
 
 
 from anki.anki_note import AnkiNote
 from caching.lui_cache import LUICache
-from lexical_unit_identification.providers.pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
-
-
-MA_WSD_LLM = "gpt-5"
+from .ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
 
 
 def disambiguate_lemma_pos(
+    platform,
     model: str,
     items: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
@@ -65,16 +62,11 @@ def disambiguate_lemma_pos(
         "items": items,
     }
 
-    client = OpenAI()
-
     print("\nSending LLM disambiguation request...")
 
-    response = client.chat.completions.create(
+    response = platform.generate_chat_completion(
         model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": json.dumps(user_prompt, ensure_ascii=False)}
-        ],
+        prompt=user_prompt
     )
 
     # Strict JSON parsing — fail fast if the model misbehaves
@@ -85,7 +77,7 @@ def disambiguate_lemma_pos(
     return json.loads(content)
 
 
-def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
+def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote], platform, model: str):
 
     items = []
 
@@ -106,13 +98,13 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote]):
         items.append(item)
 
     # Call the LLM disambiguation function
-    disambiguate_lemma_pos_response = disambiguate_lemma_pos(MA_WSD_LLM, items)
+    disambiguate_lemma_pos_response = disambiguate_lemma_pos(platform, model, items)
 
     # Return the results directly (lemma and candidate_index for each item)
     return disambiguate_lemma_pos_response
 
 
-def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache):
+def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache, platform, model: str):
 
     # Capture timestamp at the start of MA processing
     processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -129,7 +121,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache):
         print(f"\nProcessing batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
         try:
-            disambiguation_results = perform_wsd_on_lemma_and_pos(batch)
+            disambiguation_results = perform_wsd_on_lemma_and_pos(batch, platform, model)
 
             for note in batch:
                 if note.uid in disambiguation_results:
@@ -165,7 +157,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache):
                     }
 
                     # Save to cache
-                    cache.set(note.uid, ma_result, MA_WSD_LLM, processing_timestamp)
+                    cache.set(note.uid, ma_result, model, processing_timestamp)
 
                     # Update note with normal MA fields
                     note.morfeusz_tag = tag
@@ -185,7 +177,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache):
     return failing_notes
 
 
-def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
+def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False, platform=None, model=None):
     """Process morphological analysis for all notes"""
 
     print("\nStarting LLM LUI processing...")
@@ -230,7 +222,7 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
     # Phase 2: Process notes in batches with retry logic
     MAX_RETRIES = 1
     retries = 0
-    failing_notes = process_notes_in_batches(notes_needing_llm, cache)
+    failing_notes = process_notes_in_batches(notes_needing_llm, cache, platform, model)
 
     while len(failing_notes) > 0:
         print(f"{len(failing_notes)} notes failed LLM MA processing.")
@@ -242,6 +234,6 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False):
         if retries < MAX_RETRIES:
             retries += 1
             print(f"Retrying {len(failing_notes)} failed notes (attempt {retries} of {MAX_RETRIES})...")
-            failing_notes = process_notes_in_batches(failing_notes, cache)
+            failing_notes = process_notes_in_batches(failing_notes, cache, platform, model)
 
     print("LLM MA processing completed.")
