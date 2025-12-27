@@ -2,6 +2,14 @@ import json
 import time
 from typing import List, Tuple, Dict, Any
 
+from ...core.pricing.usage_scope import UsageScope
+
+from ...core.pricing.usage_dimension import UsageDimension
+
+from ...core.pricing.usage_breakdown import UsageBreakdown
+
+from ...core.pricing.usage_estimate import UsageEstimate
+
 from ...core.models.modelspec import ModelSpec
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import LUIInput, LUIOutput
@@ -32,16 +40,22 @@ class ChatCompletionLUI:
         self.model_name = model_name
         self.batch_size = batch_size
     
-    def estimate_tokens(self, task, modelspec: ModelSpec, batch_size: int) -> Tuple[int, int]:
+    def estimate_usage(self, task, modelspec: ModelSpec, batch_size: int) -> UsageBreakdown:
         # Returns estimated tokens per 1000 words (input, output)
         instruction_tokens = 500  # rough estimate for LUI instructions
         input_tokens_per_word = 5  # rough estimate
         output_tokens_per_word = 10  # rough estimate
 
-        estimated_input_tokens = (instruction_tokens * 1000 / batch_size) + (input_tokens_per_word * 1000)
-        estimated_output_tokens = output_tokens_per_word * 1000
-
-        return int(estimated_input_tokens), int(estimated_output_tokens)
+        estimated_input_tokens = instruction_tokens + input_tokens_per_word * batch_size
+        estimated_output_tokens = output_tokens_per_word * batch_size
+        
+        usage_breakdown = UsageBreakdown(
+            scope=UsageScope(unit="notes", count=batch_size),
+            inputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_input_tokens)},
+            outputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_output_tokens)},
+            confidence="medium",
+        )
+        return usage_breakdown
 
     def identify(self, lui_inputs: List[LUIInput], source_lang: str, target_lang: str, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
         """

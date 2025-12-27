@@ -1,4 +1,5 @@
-from typing import Tuple
+from ..pricing.usage_breakdown import UsageBreakdown
+from ..pricing.usage_estimate import UsageEstimate
 from .runtime_descriptor import RuntimeDescriptor
 
 
@@ -11,7 +12,7 @@ class Runtime:
     supports_batching: bool
     supports_interactive: bool
 
-    def estimate_tokens(self, task, model, batch_info) -> Tuple[int, int]:
+    def estimate_usage(self, task, model, batch_info) -> UsageBreakdown:
         # Returns estimated tokens per 1000 words (input, output)
         raise NotImplementedError
 
