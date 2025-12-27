@@ -1,6 +1,9 @@
 from anki.anki_connect import AnkiConnect
 from configuration.config_manager import ConfigManager
+from .platforms.platform_registry import PlatformRegistry
+from .core.models.registry import ModelRegistry
 from platforms.openai_platform import OpenAIPlatform
+from .core.models import models
 
 from tasks.collect_candidates.provider import CollectCandidatesProvider
 from tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
@@ -20,6 +23,20 @@ from export.export_anki import write_anki_import_file
 from pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 
 from time import sleep
+
+
+def get_all_registries():
+    # Register Platforms
+    platform_registry = PlatformRegistry()
+    platform_registry.register(OpenAIPlatform())
+    
+    model_registry = ModelRegistry()
+    
+    # Register models
+    model_registry.register(models.GPT_5_MINI)
+    model_registry.register(models.GPT_5_1)
+
+    # Register runtimes
 
 
 def export_kindle_vocab():

@@ -2,6 +2,7 @@ import json
 import time
 from typing import List, Tuple, Dict, Any
 
+from ...core.models.modelspec import ModelSpec
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import LUIInput, LUIOutput
 from language.language_helper import get_language_name_in_english
@@ -14,6 +15,12 @@ class ChatCompletionLUI:
     Runtime for Lexical Unit Identification using chat-completion LLMs.
     Supports multiple platforms and models.
     """
+    id: str = "chat_completion_lui"
+    display_name: str = "Chat Completion LUI Runtime"
+    supported_tasks = ["lui"]
+    supported_model_families = ["chat_completion"]
+    supports_batching: bool = True
+
 
     def __init__(self, platform: ChatCompletionPlatform, model_name: str, batch_size: int = 30):
         """
@@ -24,6 +31,17 @@ class ChatCompletionLUI:
         self.platform = platform
         self.model_name = model_name
         self.batch_size = batch_size
+    
+    def estimate_tokens(self, task, modelspec: ModelSpec, batch_size: int) -> Tuple[int, int]:
+        # Returns estimated tokens per 1000 words (input, output)
+        instruction_tokens = 500  # rough estimate for LUI instructions
+        input_tokens_per_word = 5  # rough estimate
+        output_tokens_per_word = 10  # rough estimate
+
+        estimated_input_tokens = (instruction_tokens * 1000 / batch_size) + (input_tokens_per_word * 1000)
+        estimated_output_tokens = output_tokens_per_word * 1000
+
+        return int(estimated_input_tokens), int(estimated_output_tokens)
 
     def identify(self, lui_inputs: List[LUIInput], source_lang: str, target_lang: str, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
         """
