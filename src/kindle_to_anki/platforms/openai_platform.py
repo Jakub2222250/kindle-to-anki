@@ -5,6 +5,9 @@ from openai import OpenAI
 from .chat_completion_platform import ChatCompletionPlatform
 
 class OpenAIPlatform(ChatCompletionPlatform):
+    id = "openai"
+    name = "OpenAI"
+
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
         if not self.api_key:

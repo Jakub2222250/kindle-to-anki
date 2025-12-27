@@ -11,9 +11,10 @@ class ModelSpec:
     quality_tier: Literal["low", "medium", "high"]
 
     # Cost (USD per 1M tokens)
-    input_cost: Optional[float] = None
-    output_cost: Optional[float] = None
+    input_token_cost_per_1m: Optional[float] = None
+    output_token_cost_per_1m: Optional[float] = None
 
     # Operational characteristics
     typical_latency_ms: Optional[int] = None
     notes: Optional[str] = None
+    supports_json: Optional[bool] = None

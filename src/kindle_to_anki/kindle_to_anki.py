@@ -1,12 +1,14 @@
 from turtle import mode
 from anki.anki_connect import AnkiConnect
 from configuration.config_manager import ConfigManager
-from .tasks.tasks import TASKS
-from .core.runtimes.runtime_registry import RuntimeRegistry
-from .platforms.platform_registry import PlatformRegistry
-from .core.models.registry import ModelRegistry
+from core.pricing.token_pricing_policy import TokenPricingPolicy
+from core.runtimes.runtime_config import RuntimeConfig
+from tasks.tasks import TASKS
+from core.runtimes.runtime_registry import RuntimeRegistry
+from platforms.platform_registry import PlatformRegistry
+from core.models.registry import ModelRegistry
 from platforms.openai_platform import OpenAIPlatform
-from .core.models import models
+from core.models import models
 
 from tasks.collect_candidates.provider import CollectCandidatesProvider
 from tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
@@ -45,11 +47,12 @@ def get_all_registries():
     
     return platform_registry, model_registry, runtime_registry
 
-def show_all_options(platform_registry, model_registry, runtime_registry):
+def show_all_options(model_registry, runtime_registry):
+
     for task in TASKS:
         for runtime in runtime_registry.list():
 
-            if not runtime.supports_task(task):
+            if task not in runtime.supported_tasks:
                 continue
 
             supports_model_families = runtime.supported_model_families
@@ -61,7 +64,21 @@ def show_all_options(platform_registry, model_registry, runtime_registry):
                     if m.family in supports_model_families
                 ]
                 for model in models_for_runtime:
-                    print(f"Task: {task}, Runtime: {runtime.id}, Model: {model.id}")
+                    runtime_config = RuntimeConfig(
+                        model_id=model.id,
+                        batch_size=30,
+                    )
+
+                    usage_estimate = runtime.estimate_usage(1000, runtime_config)
+
+                    token_pricing_policy = TokenPricingPolicy(
+                        input_cost_per_1m=model.input_token_cost_per_1m,
+                        output_cost_per_1m=model.output_token_cost_per_1m,
+                    )
+
+                    usage_estimate = token_pricing_policy.estimate_cost(usage_estimate)
+
+                    print(f"Task: {task}, Runtime: {runtime.id}, Model: {model.id}, Cost/1000: ${usage_estimate.usd:.4f}")
 
 
 def export_kindle_vocab():
@@ -69,7 +86,9 @@ def export_kindle_vocab():
     print("Starting Kindle to Anki export process.")
     
     platform_registry, model_registry, runtime_registry = get_all_registries()
-    show_all_options(platform_registry, model_registry, runtime_registry)
+    show_all_options(model_registry, runtime_registry)
+    
+    exit()
     
     # Setup the platform and runtimes
     platform = OpenAIPlatform()
