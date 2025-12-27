@@ -12,8 +12,6 @@ from tasks.collect_candidates.schema import CandidateOutput
 class KindleCandidateRuntime:
     """
     Runtime for candidate collection from Kindle vocab.db files.
-    
-    NOTE: This replaces the old vocab_kindle.py provider which will be deleted soon.
     """
 
     def __init__(self):
@@ -31,6 +29,8 @@ class KindleCandidateRuntime:
         
         # Ensure we have the vocab database
         db_path = self.INPUTS_DIR / "vocab.db"
+        
+        self._ensure_vocab_db(db_path)
         
         metadata_manager = MetadataManager()
         metadata = metadata_manager.load_metadata()
@@ -78,9 +78,6 @@ class KindleCandidateRuntime:
         """Ensure vocab.db is available, copying from Kindle device if needed"""
         db_path = Path(provided_db_path)
         
-        if db_path.exists():
-            return db_path
-
         # Attempt to copy vocab.db via batch script call
         print("\nAttempting to copy vocab.db from Kindle device...")
 
