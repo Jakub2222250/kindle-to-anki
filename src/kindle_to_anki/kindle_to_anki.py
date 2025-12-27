@@ -1,4 +1,3 @@
-from turtle import mode
 from anki.anki_connect import AnkiConnect
 from configuration.config_manager import ConfigManager
 from core.pricing.token_pricing_policy import TokenPricingPolicy
