@@ -43,8 +43,8 @@ class ConfigManager:
             anki_decks_list = []
             for deck_config in config_data['anki_decks']:
                 deck = AnkiDeck(
-                    source_lang_code=deck_config['source_lang_code'],
-                    target_lang_code=deck_config['target_lang_code'],
+                    source_language_code=deck_config['source_language_code'],
+                    target_language_code=deck_config['target_language_code'],
                     parent_deck_name=deck_config['parent_deck_name'],
                     ready_deck_name=deck_config['ready_deck_name'],
                     staging_deck_name=deck_config['staging_deck_name']
@@ -53,6 +53,6 @@ class ConfigManager:
             
             self._anki_decks_by_source_language = {}
             for deck in anki_decks_list:
-                self._anki_decks_by_source_language[deck.source_lang_code] = deck
+                self._anki_decks_by_source_language[deck.source_language_code] = deck
         
         return self._anki_decks_by_source_language

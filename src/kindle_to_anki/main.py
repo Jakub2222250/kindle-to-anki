@@ -2,6 +2,8 @@ from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.core.pricing.token_pricing_policy import TokenPricingPolicy
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.platforms.deepl_platform import DeepLPlatform
+from kindle_to_anki.platforms.grok_platform import GrokPlatform
 from kindle_to_anki.tasks.tasks import TASKS
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
@@ -31,11 +33,15 @@ from time import sleep
 
 def bootstrap_platform_registry():
     PlatformRegistry.register(OpenAIPlatform())
+    PlatformRegistry.register(GrokPlatform())
+    PlatformRegistry.register(DeepLPlatform())
 
 
 def bootstrap_model_registry():
     ModelRegistry.register(models.GPT_5_1)
     ModelRegistry.register(models.GPT_5_MINI)
+    ModelRegistry.register(models.GROK_3)
+    ModelRegistry.register(models.GROK_3_MINI)
 
 
 def bootstrap_runtime_registry():
@@ -119,28 +125,28 @@ def export_kindle_vocab():
     # Connect to AnkiConnect
     anki_connect_instance = AnkiConnect()
 
-    for source_lang_code, notes in notes_by_language.items():
+    for source_language_code, notes in notes_by_language.items():
         
-        show_all_options(source_lang_code, target_language_code)
+        show_all_options(source_language_code, target_language_code)
         
         # Reusable configs
         best_model_normal_batch = RuntimeConfig(
             model_id="gpt-5.1",
             batch_size=30,
-            source_language_code=source_lang_code,
-            target_language_code=target_lang_code
+            source_language_code=source_language_code,
+            target_language_code=target_language_code
         )
         
         cheap_model_normal_batch = RuntimeConfig(
             model_id="gpt-5-mini",
             batch_size=30,
-            source_language_code=source_lang_code,
-            target_language_code=target_lang_code
+            source_language_code=source_language_code,
+            target_language_code=target_language_code
         )
 
         # Reference to anki deck for metadata
-        anki_deck = anki_decks_by_source_language.get(source_lang_code)
-        target_lang_code = anki_deck.target_lang_code
+        anki_deck = anki_decks_by_source_language.get(source_language_code)
+        target_language_code = anki_deck.target_language_code
         language_pair_code = anki_deck.get_language_pair_code()
 
         # Get existing notes from Anki for this language
@@ -149,19 +155,19 @@ def export_kindle_vocab():
         # Prune existing notes by UID
         notes = prune_existing_notes_by_UID(notes, existing_notes)
         if len(notes) == 0:
-            print(f"No new notes to add to Anki after UID pruning for language: {source_lang_code}")
+            print(f"No new notes to add to Anki after UID pruning for language: {source_language_code}")
             continue
 
         # Prune notes previously identified as redundant
         notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
         if len(notes) == 0:
-            print(f"No new notes to add to Anki after redundancy pruning for language: {source_lang_code}")
+            print(f"No new notes to add to Anki after redundancy pruning for language: {source_language_code}")
             continue
 
         sleep(5)  # Opportunity to read output
 
         if len(notes) > 100:
-            response = input(f"\nYou are about to process {len(notes)} notes for language: {source_lang_code}. Do you want to continue? (y/n): ").strip().lower()
+            response = input(f"\nYou are about to process {len(notes)} notes for language: {source_language_code}. Do you want to continue? (y/n): ").strip().lower()
             if response != 'y' and response != 'yes':
                 print("Process aborted by user.")
                 exit()
@@ -176,7 +182,7 @@ def export_kindle_vocab():
         sleep(5)  # Opportunity to read output
 
         if not notes:
-            print(f"No new notes to process for language: {source_lang_code}")
+            print(f"No new notes to process for language: {source_language_code}")
             continue
 
         # Provide word sense disambiguation via LLM
@@ -196,7 +202,7 @@ def export_kindle_vocab():
         sleep(5)  # Opportunity to read output
 
         if len(notes) == 0:
-            print(f"No new notes to add to Anki after pruning for language: {source_lang_code}")
+            print(f"No new notes to add to Anki after pruning for language: {source_language_code}")
             continue
 
         # Provide translations
@@ -219,7 +225,7 @@ def export_kindle_vocab():
         sleep(5)  # Opportunity to read output
 
         # Save results to Anki import file and via AnkiConnect
-        write_anki_import_file(notes, source_lang_code)
+        write_anki_import_file(notes, source_language_code)
         anki_connect_instance.create_notes_batch(anki_deck, notes)
         sleep(5)  # Opportunity to read output
 

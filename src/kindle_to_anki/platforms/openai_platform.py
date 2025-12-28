@@ -10,9 +10,9 @@ class OpenAIPlatform(ChatCompletionPlatform):
 
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
-        if not self.api_key:
-            raise RuntimeError("OPENAI_API_KEY is not set")
-        self.client = OpenAI(api_key=self.api_key)
+        self.client = None
+        if self.api_key:
+            self.client = OpenAI(api_key=self.api_key)
         self._credentials_valid = None
 
     def call_api(self, model: str, prompt: str, **kwargs) -> str:
@@ -21,6 +21,8 @@ class OpenAIPlatform(ChatCompletionPlatform):
         messages: list of dicts [{"role": "user", "content": "..."}]
         kwargs: optional OpenAI parameters (temperature, max_tokens, etc.)
         """
+        if not self.client:
+            raise RuntimeError("OpenAI client not initialized - API key missing")
         messages = [{"role": "user", "content": prompt}]
         
         response = self.client.chat.completions.create(
@@ -36,6 +38,9 @@ class OpenAIPlatform(ChatCompletionPlatform):
         """
         if self._credentials_valid is not None:
             return self._credentials_valid
+        if not self.client:
+            self._credentials_valid = False
+            return False
         try:
             self.client.models.list()
             self._credentials_valid = True

@@ -184,7 +184,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
             outputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_output_tokens)},
         )
 
-        pricing_policy = TokenPricingPolicy(input_cost_per_1m=model.input_cost_per_1m, output_cost_per_1m=model.output_cost_per_1m)
+        pricing_policy = TokenPricingPolicy(input_cost_per_1m=model.input_token_cost_per_1m, output_cost_per_1m=model.output_token_cost_per_1m)
 
         estimate_cost_value = pricing_policy.estimate_cost(estimated_usage_breakdown).usd
         estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"

@@ -10,5 +10,5 @@ class UsageBreakdown:
     scope: UsageScope
     inputs: dict[str, UsageDimension]
     outputs: dict[str, UsageDimension]
-    confidence: str             # "low", "medium", "high"
+    confidence: str | None = None             # "low", "medium", "high"
     notes: str | None = None

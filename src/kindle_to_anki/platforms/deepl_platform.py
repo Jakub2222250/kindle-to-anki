@@ -9,13 +9,13 @@ class DeepLPlatform:
 
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.environ.get("DEEPL_API_KEY")
-        if not self.api_key:
-            raise RuntimeError("DEEPL_API_KEY is not set")
-        # Use free API if key ends with :fx
-        if self.api_key.endswith(":fx"):
-            self.base_url = "https://api-free.deepl.com/v2"
-        else:
-            self.base_url = "https://api.deepl.com/v2"
+        self.base_url = None
+        if self.api_key:
+            # Use free API if key ends with :fx
+            if self.api_key.endswith(":fx"):
+                self.base_url = "https://api-free.deepl.com/v2"
+            else:
+                self.base_url = "https://api.deepl.com/v2"
         self._credentials_valid = None
 
     def translate(self, texts: list[str], target_lang: str, source_lang: str = None) -> list[str]:
@@ -23,6 +23,8 @@ class DeepLPlatform:
         Translate a list of texts using DeepL API.
         Returns list of translated texts in same order.
         """
+        if not self.api_key:
+            raise RuntimeError("DeepL API key missing")
         headers = {
             "Authorization": f"DeepL-Auth-Key {self.api_key}",
             "Content-Type": "application/json",
@@ -43,6 +45,9 @@ class DeepLPlatform:
         """Verify API key by checking usage."""
         if self._credentials_valid is not None:
             return self._credentials_valid
+        if not self.api_key:
+            self._credentials_valid = False
+            return False
         try:
             headers = {"Authorization": f"DeepL-Auth-Key {self.api_key}"}
             response = requests.get(f"{self.base_url}/usage", headers=headers)
