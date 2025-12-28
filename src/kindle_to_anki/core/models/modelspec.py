@@ -9,6 +9,7 @@ class ModelSpec:
     platform_id: str               # e.g. "openai"
     family: ModelFamily         # how it is invoked
     quality_tier: Literal["low", "medium", "high"]
+    encoding: str             # e.g. "o200k_base", "cl100k_base"
 
     # Cost (USD per 1M tokens)
     input_token_cost_per_1m: Optional[float] = None
@@ -18,3 +19,4 @@ class ModelSpec:
     typical_latency_ms: Optional[int] = None
     notes: Optional[str] = None
     supports_json: Optional[bool] = None
+

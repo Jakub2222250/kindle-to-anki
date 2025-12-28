@@ -1,6 +1,5 @@
 import json
 import time
-from turtle import mode
 from typing import List, Tuple, Dict, Any
 from typing_extensions import runtime
 
@@ -9,6 +8,8 @@ from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_dimension import UsageDimension
 from core.pricing.usage_breakdown import UsageBreakdown
 from core.models.registry import ModelRegistry
+from core.pricing.token_estimator import count_tokens
+from ...core.pricing.token_pricing_policy import TokenPricingPolicy
 from platforms.platform_registry import PlatformRegistry
 
 from .schema import LUIInput, LUIOutput
@@ -177,6 +178,11 @@ class ChatCompletionLUI:
 
     def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for lexical unit identification"""
+        
+        # Get the model and platform
+        model = ModelRegistry.get(runtime_config.model_id)
+        platform = PlatformRegistry.get(model.platform_id)
+        
         items_list = []
         for lui_input in batch_inputs:
             items_list.append(f'{{"uid": "{lui_input.uid}", "word": "{lui_input.word}", "sentence": "{lui_input.sentence}"}}')
@@ -185,22 +191,42 @@ class ChatCompletionLUI:
 
         prompt = get_llm_lexical_unit_identification_instructions(items_json, language_name, language_code)
 
+        # Realtime price estimation (before making the API call)
         input_chars = len(prompt)
-        estimate_cost_value = estimate_llm_cost(prompt, len(batch_inputs), runtime_config.model_id)
+        input_tokens = count_tokens(prompt, model)
+        estimated_output_tokens = len(batch_inputs) * 15  # rough estimate of 15 tokens per output
+
+        estimated_usage_breakdown = UsageBreakdown(
+            scope=UsageScope(unit="notes", count=len(batch_inputs)),
+            inputs={"tokens": UsageDimension(unit="tokens", quantity=input_tokens)},
+            outputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_output_tokens)},
+        )
+
+        pricing_policy = TokenPricingPolicy(input_cost_per_1m=model.input_cost_per_1m, output_cost_per_1m=model.output_cost_per_1m)
+
+        estimate_cost_value = pricing_policy.estimate_cost(estimated_usage_breakdown).usd
         estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
+
         print(f"  Making batch lexical unit identification API call for {len(batch_inputs)} inputs ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
+
         start_time = time.time()
-        
-        # Get the model and platform
-        model = ModelRegistry.get(runtime_config.model_id)
-        platform = PlatformRegistry.get(model.platform_id)
 
         response = platform.call_api(runtime_config.model_id, prompt)
 
         elapsed = time.time() - start_time
         output_text = response
+        
+        # Realtime cost calculation (after receiving the response)
         output_chars = len(output_text)
-        actual_cost = calculate_llm_cost(prompt, output_text, runtime_config.model_id)
+        output_tokens = count_tokens(output_text, model)
+        
+        actual_usage_breakdown = UsageBreakdown(
+            scope=UsageScope(unit="notes", count=len(batch_inputs)),
+            inputs={"tokens": UsageDimension(unit="tokens", quantity=input_tokens)},
+            outputs={"tokens": UsageDimension(unit="tokens", quantity=output_tokens)},
+        )
+
+        actual_cost = pricing_policy.estimate_cost(actual_usage_breakdown).usd
         actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
         print(f"  Batch lexical unit identification API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
