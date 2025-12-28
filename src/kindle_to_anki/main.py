@@ -128,7 +128,7 @@ def export_kindle_vocab():
     for source_language_code, notes in notes_by_language.items():
         
         show_all_options(source_language_code, target_language_code)
-        
+
         # Reusable configs
         best_model_normal_batch = RuntimeConfig(
             model_id="gpt-5.1",

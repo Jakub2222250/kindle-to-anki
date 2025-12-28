@@ -47,7 +47,6 @@ def test_runtime_chat_completion():
 
     # Setup runtime and config
     runtime = ChatCompletionLUI()
-    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
     
     # Setup the provider
     runtimes = {"chat_completion_lui": runtime}
