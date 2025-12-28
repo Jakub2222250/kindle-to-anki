@@ -81,4 +81,6 @@ class CollocationProvider:
                 else:
                     note.collocations = str(collocation_result.collocations)
 
+                note.notes.append(f"\n{self.id}: runtime: {runtime.id}, {runtime_config.model_id}")
+
         return notes
