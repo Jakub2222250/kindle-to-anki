@@ -8,10 +8,10 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from tasks.collocation.runtime_chat_completion import ChatCompletionCollocation
-from tasks.collocation.schema import CollocationInput
-from platforms.openai_platform import OpenAIPlatform
-from anki.anki_note import AnkiNote
+from kindle_to_anki.tasks.collocation.runtime_chat_completion import ChatCompletionCollocation
+from kindle_to_anki.tasks.collocation.schema import CollocationInput
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.anki.anki_note import AnkiNote
 
 
 def test_collocation_runtime_llm():
@@ -48,16 +48,17 @@ def test_collocation_runtime_llm():
     
     print(f"Testing collocation runtime with {len(collocation_inputs)} inputs...")
     
-    # Create platform and runtime
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionCollocation(platform, "gpt-5-mini", batch_size=2)
+    # Create runtime and config
+    runtime = ChatCompletionCollocation()
+    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2)
     
     # Test collocation generation
     try:
         outputs = runtime.generate_collocations(
             collocation_inputs, 
             source_lang="pl", 
-            target_lang="en", 
+            target_lang="en",
+            runtime_config=runtime_config,
             use_test_cache=True
         )
         

@@ -8,10 +8,10 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from tasks.translation.runtime_chat_completion import ChatCompletionTranslation
-from tasks.translation.schema import TranslationInput
-from platforms.openai_platform import OpenAIPlatform
-from anki.anki_note import AnkiNote
+from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatCompletionTranslation
+from kindle_to_anki.tasks.translation.schema import TranslationInput
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.anki.anki_note import AnkiNote
 
 
 def test_translation_runtime_llm():
@@ -31,16 +31,17 @@ def test_translation_runtime_llm():
     
     print(f"Testing translation runtime with {len(translation_inputs)} inputs...")
     
-    # Create platform and runtime
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionTranslation(platform, "gpt-5-mini", batch_size=2)
+    # Create runtime and config
+    runtime = ChatCompletionTranslation()
+    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2)
     
     # Test translation
     try:
         outputs = runtime.translate(
             translation_inputs, 
             source_lang="pl", 
-            target_lang="en", 
+            target_lang="en",
+            runtime_config=runtime_config,
             use_test_cache=True
         )
         

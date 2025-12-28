@@ -8,8 +8,8 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
 
-from pruning.pruning import prune_existing_notes_automatically
-from anki.anki_note import AnkiNote
+from kindle_to_anki.pruning.pruning import prune_existing_notes_automatically
+from kindle_to_anki.anki.anki_note import AnkiNote
 
 
 def test_prune_existing_notes_automatically():

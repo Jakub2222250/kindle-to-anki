@@ -9,11 +9,11 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from anki.anki_note import AnkiNote
-from platforms.openai_platform import OpenAIPlatform
-from tasks.translation.runtime_chat_completion import ChatCompletionTranslation
-from tasks.translation.provider import TranslationProvider
-from tasks.translation.schema import TranslationInput, TranslationOutput
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatCompletionTranslation
+from kindle_to_anki.tasks.translation.provider import TranslationProvider
+from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
 
 
 def test_runtime_chat_completion():
@@ -41,19 +41,20 @@ def test_runtime_chat_completion():
         )
     ]
 
-    # Setup the platform and runtime
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionTranslation(platform=platform, model_name="gpt-5", batch_size=30)
+    # Setup runtime and config
+    runtime = ChatCompletionTranslation()
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
     
     # Setup the provider
-    runtimes = {"gpt-5": runtime}
+    runtimes = {"chat_completion_translation": runtime}
     provider = TranslationProvider(runtimes=runtimes)
     
     # Test translation via provider
     print("Testing translation via TranslationProvider...")
     translated_notes = provider.translate(
         notes=notes,
-        runtime_choice="gpt-5",
+        runtime_choice="chat_completion_translation",
+        runtime_config=runtime_config,
         source_lang="pl",
         target_lang="en",
         ignore_cache=False,
@@ -74,26 +75,25 @@ def test_direct_runtime_usage():
     translation_inputs = [
         TranslationInput(
             uid="test-uid-1",
-            context="To jest przykład zdania do przetłumaczenia.",
-            source_lang="pl",
-            target_lang="en"
+            context="To jest przykład zdania do przetłumaczenia."
         ),
         TranslationInput(
             uid="test-uid-2",
-            context="Nie zapominajcie o czarodzieju Baruffio, który źle wypowiedział spółgłoskę.",
-            source_lang="pl",
-            target_lang="en"
+            context="Nie zapominajcie o czarodzieju Baruffio, który źle wypowiedział spółgłoskę."
         )
     ]
     
-    # Setup runtime
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionTranslation(platform=platform, model_name="gpt-5", batch_size=30)
+    # Setup runtime and config
+    runtime = ChatCompletionTranslation()
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
     
     # Test direct translation
     print("Testing direct runtime usage...")
     translation_outputs = runtime.translate(
         translation_inputs=translation_inputs,
+        source_lang="pl",
+        target_lang="en",
+        runtime_config=runtime_config,
         ignore_cache=False,
         use_test_cache=True
     )

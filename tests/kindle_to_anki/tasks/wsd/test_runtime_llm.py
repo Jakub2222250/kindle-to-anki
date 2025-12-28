@@ -8,10 +8,9 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from tasks.wsd.runtime_chat_completion import ChatCompletionWSD
-from tasks.wsd.schema import WSDInput
-from platforms.openai_platform import OpenAIPlatform
-from anki.anki_note import AnkiNote
+from kindle_to_anki.tasks.wsd.runtime_chat_completion import ChatCompletionWSD
+from kindle_to_anki.tasks.wsd.schema import WSDInput
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 
 def test_wsd_runtime_llm():
@@ -48,16 +47,17 @@ def test_wsd_runtime_llm():
     
     print(f"Testing WSD runtime with {len(wsd_inputs)} inputs...")
     
-    # Create platform and runtime
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionWSD(platform, "gpt-5-mini", batch_size=2)
+    # Create runtime and config
+    runtime = ChatCompletionWSD()
+    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2)
     
     # Test WSD
     try:
         outputs = runtime.disambiguate(
             wsd_inputs, 
             source_lang="pl", 
-            target_lang="en", 
+            target_lang="en",
+            runtime_config=runtime_config,
             use_test_cache=True
         )
         

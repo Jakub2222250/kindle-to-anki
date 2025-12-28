@@ -11,11 +11,11 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from anki.anki_note import AnkiNote
-from platforms.openai_platform import OpenAIPlatform
-from tasks.lui.runtime_chat_completion import ChatCompletionLUI
-from tasks.lui.provider import LUIProvider
-from tasks.lui.schema import LUIInput, LUIOutput
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.tasks.lui.runtime_chat_completion import ChatCompletionLUI
+from kindle_to_anki.tasks.lui.provider import LUIProvider
+from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
 
 
 def test_polish_hybrid_cases():
@@ -79,12 +79,12 @@ def test_polish_hybrid_cases():
         )
         notes.append(note)
 
-    # Setup the platform and runtime
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionLUI(platform=platform, model_name="gpt-5", batch_size=30)
+    # Setup runtime and config
+    runtime = ChatCompletionLUI()
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
     
     # Setup the provider
-    runtimes = {"gpt-5": runtime}
+    runtimes = {"chat_completion_lui": runtime}
     provider = LUIProvider(runtimes=runtimes)
     
     print("\n=== Testing Polish LUI Cases with Provider ===")
@@ -92,7 +92,8 @@ def test_polish_hybrid_cases():
     # Test via provider
     provider.identify(
         notes=notes,
-        runtime_choice="gpt-5", 
+        runtime_choice="chat_completion_lui",
+        runtime_config=runtime_config,
         source_lang="pl",
         target_lang="en",
         ignore_cache=False,
@@ -137,8 +138,8 @@ def test_polish_hybrid_cases():
 def test_direct_runtime_polish():
     """Test the ChatCompletionLUI runtime directly with Polish examples."""
     
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionLUI(platform=platform, model_name="gpt-5", batch_size=30)
+    runtime = ChatCompletionLUI()
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
     
     # Create LUIInput objects for Polish testing
     polish_inputs = [
@@ -164,7 +165,8 @@ def test_direct_runtime_polish():
     outputs = runtime.identify(
         polish_inputs,
         source_lang="pl",
-        target_lang="en", 
+        target_lang="en",
+        runtime_config=runtime_config,
         ignore_cache=False,
         use_test_cache=True
     )

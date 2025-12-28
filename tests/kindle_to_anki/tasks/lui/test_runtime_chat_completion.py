@@ -9,11 +9,11 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
-from anki.anki_note import AnkiNote
-from platforms.openai_platform import OpenAIPlatform
-from tasks.lui.runtime_chat_completion import ChatCompletionLUI
-from tasks.lui.provider import LUIProvider
-from tasks.lui.schema import LUIInput, LUIOutput
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.tasks.lui.runtime_chat_completion import ChatCompletionLUI
+from kindle_to_anki.tasks.lui.provider import LUIProvider
+from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
 
 
 def test_runtime_chat_completion():
@@ -50,12 +50,12 @@ def test_runtime_chat_completion():
         )
     ]
 
-    # Setup the platform and runtime
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionLUI(platform=platform, model_name="gpt-5", batch_size=30)
+    # Setup runtime and config
+    runtime = ChatCompletionLUI()
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
     
     # Setup the provider
-    runtimes = {"gpt-5": runtime}
+    runtimes = {"chat_completion_lui": runtime}
     provider = LUIProvider(runtimes=runtimes)
     
     # Test with different languages
@@ -68,7 +68,8 @@ def test_runtime_chat_completion():
             # Test via provider
             provider.identify(
                 notes=lang_notes,
-                runtime_choice="gpt-5", 
+                runtime_choice="chat_completion_lui",
+                runtime_config=runtime_config,
                 source_lang=lang_code,
                 target_lang="en",
                 ignore_cache=False,
@@ -90,8 +91,8 @@ def test_runtime_direct():
     """Test the ChatCompletionLUI runtime directly."""
     
     # Test direct runtime usage
-    platform = OpenAIPlatform()
-    runtime = ChatCompletionLUI(platform=platform, model_name="gpt-5", batch_size=30)
+    runtime = ChatCompletionLUI()
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
     
     # Create LUIInput objects for testing
     lui_inputs = [
@@ -114,7 +115,8 @@ def test_runtime_direct():
     pl_outputs = runtime.identify(
         pl_inputs,
         source_lang="pl",
-        target_lang="en", 
+        target_lang="en",
+        runtime_config=runtime_config,
         ignore_cache=False,
         use_test_cache=True
     )
@@ -131,6 +133,7 @@ def test_runtime_direct():
         es_inputs,
         source_lang="es",
         target_lang="en",
+        runtime_config=runtime_config,
         ignore_cache=False,
         use_test_cache=True
     )

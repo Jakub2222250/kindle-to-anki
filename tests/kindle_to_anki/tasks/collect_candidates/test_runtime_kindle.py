@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
 from pathlib import Path
-from tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
+from kindle_to_anki.tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
 
 
 def test_collect_candidate_runtime_kindle():
@@ -27,19 +27,12 @@ def test_collect_candidate_runtime_kindle():
     
     print(f"Testing candidate collection runtime with database: {test_db_path}")
     
-    # Create candidate input
-    candidate_input = CandidateInput(
-        db_path=str(test_db_path),
-        last_timestamp=None,  # Full import for test
-        incremental=False
-    )
-    
     # Create runtime
     runtime = KindleCandidateRuntime()
     
     # Test candidate collection
     try:
-        outputs = runtime.collect_candidates(candidate_input)
+        outputs = runtime.collect_candidates()
         
         print(f"Candidate collection completed. Got {len(outputs)} candidates.")
         
