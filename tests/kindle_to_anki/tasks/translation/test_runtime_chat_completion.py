@@ -98,3 +98,6 @@ def test_direct_runtime_usage():
         print(f"Original: {translation_input.context}")
         print(f"Translated: {translation_output.translation}")
         print()
+
+test_runtime_chat_completion()
+test_direct_runtime_usage()
