@@ -7,13 +7,14 @@ from core.pricing.usage_scope import UsageScope
 from core.pricing.usage_breakdown import UsageBreakdown
 from core.runtimes.runtime_config import RuntimeConfig
 from core.models.registry import ModelRegistry
+from core.pricing.token_estimator import count_tokens
+from core.pricing.token_pricing_policy import TokenPricingPolicy
 
 from platforms.platform_registry import PlatformRegistry
 from platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import CollocationInput, CollocationOutput
 from language.language_helper import get_language_name_in_english
 from caching.collocation_cache import CollocationCache
-from llm.llm_helper import estimate_llm_cost, calculate_llm_cost
 
 
 class ChatCompletionCollocation:
@@ -162,21 +163,43 @@ Words to analyze:
 
 Respond with valid JSON. No additional text."""
 
-        input_chars = len(prompt)
-        estimate_cost_value = estimate_llm_cost(prompt, len(batch_inputs), runtime_config.model_id)
-        estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
-        print(f"  Making batch collocation API call for {len(batch_inputs)} inputs ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
-        start_time = time.time()
-        
         # Get the model and platform
         model = ModelRegistry.get(runtime_config.model_id)
         platform = PlatformRegistry.get(model.platform_id)
+
+        # Realtime price estimation (before making the API call)
+        input_chars = len(prompt)
+        input_tokens = count_tokens(prompt, model)
+        estimated_output_tokens = len(batch_inputs) * 15  # rough estimate of 15 tokens per output
+
+        estimated_usage_breakdown = UsageBreakdown(
+            scope=UsageScope(unit="notes", count=len(batch_inputs)),
+            inputs={"tokens": UsageDimension(unit="tokens", quantity=input_tokens)},
+            outputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_output_tokens)},
+        )
+
+        pricing_policy = TokenPricingPolicy(input_cost_per_1m=model.input_cost_per_1m, output_cost_per_1m=model.output_cost_per_1m)
+
+        estimate_cost_value = pricing_policy.estimate_cost(estimated_usage_breakdown).usd
+        estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
+
+        print(f"  Making batch collocation API call for {len(batch_inputs)} inputs ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
+
+        start_time = time.time()
 
         response_text = platform.call_api(runtime_config.model_id, prompt)
 
         elapsed = time.time() - start_time
         output_chars = len(response_text)
-        actual_cost = calculate_llm_cost(prompt, response_text, runtime_config.model_id)
+        output_tokens = count_tokens(response_text, model)
+
+        actual_usage_breakdown = UsageBreakdown(
+            scope=UsageScope(unit="notes", count=len(batch_inputs)),
+            inputs={"tokens": UsageDimension(unit="tokens", quantity=input_tokens)},
+            outputs={"tokens": UsageDimension(unit="tokens", quantity=output_tokens)},
+        )
+
+        actual_cost = pricing_policy.estimate_cost(actual_usage_breakdown).usd
         actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
         print(f"  Batch collocation API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
 
