@@ -5,11 +5,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
-from core.pricing.usage_breakdown import UsageBreakdown
-from core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 from .schema import CandidateOutput
-from metadata.metdata_manager import MetadataManager
+from kindle_to_anki.metadata.metdata_manager import MetadataManager
 
 
 class KindleCandidateRuntime:

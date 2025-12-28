@@ -2,18 +2,18 @@ import json
 import time
 from typing import List, Tuple, Dict, Any
 
-from core.pricing.usage_dimension import UsageDimension
-from core.pricing.usage_scope import UsageScope
-from core.pricing.usage_breakdown import UsageBreakdown
-from core.runtimes.runtime_config import RuntimeConfig
-from core.models.registry import ModelRegistry
-from core.pricing.token_estimator import count_tokens
-from core.pricing.token_pricing_policy import TokenPricingPolicy
+from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
+from kindle_to_anki.core.pricing.usage_scope import UsageScope
+from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.core.models.registry import ModelRegistry
+from kindle_to_anki.core.pricing.token_estimator import count_tokens
+from kindle_to_anki.core.pricing.token_pricing_policy import TokenPricingPolicy
 
-from platforms.platform_registry import PlatformRegistry
-from tasks.translation.schema import TranslationInput, TranslationOutput
-from language.language_helper import get_language_name_in_english
-from caching.translation_cache import TranslationCache
+from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
+from kindle_to_anki.language.language_helper import get_language_name_in_english
+from kindle_to_anki.caching.translation_cache import TranslationCache
 
 
 class ChatCompletionTranslation:

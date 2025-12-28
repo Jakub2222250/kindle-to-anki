@@ -1,9 +1,9 @@
 # tasks/translation/provider.py
 from typing import List
 
-from anki.anki_note import AnkiNote
-from core.runtimes.runtime_config import RuntimeConfig
-from tasks.translation.schema import TranslationInput, TranslationOutput
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
 
 
 class TranslationProvider:

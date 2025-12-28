@@ -3,8 +3,8 @@ import time
 from typing import List, Dict, Any
 
 
-from anki.anki_note import AnkiNote
-from caching.lui_cache import LUICache
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.caching.lui_cache import LUICache
 from .ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
 
 

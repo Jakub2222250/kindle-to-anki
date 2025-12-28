@@ -3,11 +3,6 @@
 Test for the new ChatCompletionLUI runtime system.
 This replaces the old test_lui_llm.py with the new structured approach.
 """
-import sys
-import os
-
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig

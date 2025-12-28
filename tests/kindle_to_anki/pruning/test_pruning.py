@@ -2,11 +2,6 @@
 """
 Integration test for pruning functionality.
 """
-import sys
-import os
-
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
 
 from kindle_to_anki.pruning.pruning import prune_existing_notes_automatically
 from kindle_to_anki.anki.anki_note import AnkiNote

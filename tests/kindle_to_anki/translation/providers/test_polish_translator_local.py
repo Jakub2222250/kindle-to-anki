@@ -2,14 +2,9 @@
 """
 Integration test for Polish local translation.
 """
-import sys
-import os
 
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
-
-from translation.providers.polish_translator_local import translate_polish_context_to_english
-from anki.anki_note import AnkiNote
+from kindle_to_anki.translation.providers.polish_translator_local import translate_polish_context_to_english
+from kindle_to_anki.anki.anki_note import AnkiNote
 
 
 def test_polish_translator_local():

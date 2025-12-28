@@ -1,4 +1,4 @@
 @echo off
 
-python src\kindle_to_anki\kindle_to_anki.py %*
+python -m kindle_to_anki.main %*
 pause

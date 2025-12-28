@@ -3,13 +3,6 @@
 Test runner for all integration tests.
 Run this script to execute all integration tests for the new tasks architecture.
 """
-import sys
-import os
-
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-# Add the project root directory to the Python path so 'tests' module can be found
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 def run_all_tests():
     """Run all integration tests for the new tasks architecture."""

@@ -2,8 +2,8 @@ import json
 import urllib.request
 import urllib.error
 
-from anki.anki_deck import AnkiDeck
-from anki.anki_note import AnkiNote
+from kindle_to_anki.anki.anki_deck import AnkiDeck
+from kindle_to_anki.anki.anki_note import AnkiNote
 
 
 class AnkiConnect:

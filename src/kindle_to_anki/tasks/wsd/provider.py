@@ -1,8 +1,8 @@
 # tasks/wsd/provider.py
 from typing import List
 
-from anki.anki_note import AnkiNote
-from core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from .schema import WSDInput, WSDOutput
 
 

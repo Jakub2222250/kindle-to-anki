@@ -1,4 +1,4 @@
-from tasks.collect_candidates.schema import CandidateOutput
+from kindle_to_anki.tasks.collect_candidates.schema import CandidateOutput
 
 
 class CollectCandidatesTask:

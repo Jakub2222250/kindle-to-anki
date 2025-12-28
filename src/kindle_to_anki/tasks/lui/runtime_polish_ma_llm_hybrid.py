@@ -1,13 +1,13 @@
 import string
 from typing import List
 
-from core.runtimes.runtime_config import RuntimeConfig
-from core.models.registry import ModelRegistry
-from platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.core.models.registry import ModelRegistry
+from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from .schema import LUIInput, LUIOutput
-from pl_en.ma_polish_hybrid_llm import update_notes_with_llm
-from pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string, normalize_lemma
-from anki.anki_note import AnkiNote
+from .pl_en.ma_polish_hybrid_llm import update_notes_with_llm
+from .pl_en.ma_polish_sgjp_helper import morfeusz_tag_to_pos_string, normalize_lemma
+from kindle_to_anki.anki.anki_note import AnkiNote
 
 
 class PolishMALLMHybridLUI:

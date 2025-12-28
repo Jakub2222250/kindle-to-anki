@@ -2,7 +2,7 @@
 from typing import List, Dict, Tuple
 from datetime import datetime
 
-from anki.anki_note import AnkiNote
+from kindle_to_anki.anki.anki_note import AnkiNote
 from .schema import CandidateOutput
 
 

@@ -1,9 +1,9 @@
 # tasks/collocation/provider.py
 from typing import List
 
-from anki.anki_note import AnkiNote
-from core.runtimes.runtime_config import RuntimeConfig
-from tasks.collocation.schema import CollocationInput, CollocationOutput
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
 
 
 class CollocationProvider:

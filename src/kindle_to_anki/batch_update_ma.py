@@ -1,6 +1,6 @@
-from anki.anki_connect import AnkiConnect
-from anki.anki_note import AnkiNote
-from lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
+from kindle_to_anki.anki.anki_connect import AnkiConnect
+from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.lexical_unit_identification.lexical_unit_identification import complete_lexical_unit_identification
 
 
 def get_all_notes(anki_connect_instance: AnkiConnect, lang: str) -> list[dict]:

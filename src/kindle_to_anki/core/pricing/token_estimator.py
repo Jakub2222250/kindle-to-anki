@@ -1,5 +1,6 @@
-from models.modelspec import ModelSpec
 import tiktoken
+
+from kindle_to_anki.core.models.modelspec import ModelSpec
 
 
 try:

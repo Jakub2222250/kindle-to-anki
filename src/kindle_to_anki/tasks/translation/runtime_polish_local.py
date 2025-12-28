@@ -1,13 +1,13 @@
 import time
 from typing import List
 
-from core.pricing.usage_dimension import UsageDimension
-from core.pricing.usage_scope import UsageScope
-from core.pricing.usage_breakdown import UsageBreakdown
-from core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
+from kindle_to_anki.core.pricing.usage_scope import UsageScope
+from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 from .schema import TranslationInput, TranslationOutput
-from caching.translation_cache import TranslationCache
+from kindle_to_anki.caching.translation_cache import TranslationCache
 
 
 class PolishLocalTranslation:

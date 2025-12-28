@@ -1,9 +1,9 @@
 import time
 
-from anki.anki_note import AnkiNote
+from kindle_to_anki.anki.anki_note import AnkiNote
 from thefuzz import fuzz
 
-from caching.pruning_cache import PruningCache
+from kindle_to_anki.caching.pruning_cache import PruningCache
 
 
 def prune_notes_identified_as_redundant(notes: list[AnkiNote], cache_suffix: str):

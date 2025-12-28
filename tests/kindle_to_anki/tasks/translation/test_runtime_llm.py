@@ -2,11 +2,6 @@
 """
 Integration test for LLM-based translation runtime.
 """
-import sys
-import os
-
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
 
 from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatCompletionTranslation
 from kindle_to_anki.tasks.translation.schema import TranslationInput

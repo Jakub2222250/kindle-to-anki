@@ -3,19 +3,19 @@ import time
 from typing import List, Tuple, Dict, Any
 from typing_extensions import runtime
 
-from core.runtimes.runtime_config import RuntimeConfig
-from core.pricing.usage_scope import UsageScope
-from core.pricing.usage_dimension import UsageDimension
-from core.pricing.usage_breakdown import UsageBreakdown
-from core.models.registry import ModelRegistry
-from core.pricing.token_estimator import count_tokens
-from ...core.pricing.token_pricing_policy import TokenPricingPolicy
-from platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.core.pricing.usage_scope import UsageScope
+from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
+from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
+from kindle_to_anki.core.models.registry import ModelRegistry
+from kindle_to_anki.core.pricing.token_estimator import count_tokens
+from kindle_to_anki.core.pricing.token_pricing_policy import TokenPricingPolicy
+from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 
 from .schema import LUIInput, LUIOutput
-from language.language_helper import get_language_name_in_english
-from caching.lui_cache import LUICache
-from llm.llm_helper import estimate_llm_cost, calculate_llm_cost, get_llm_lexical_unit_identification_instructions
+from kindle_to_anki.language.language_helper import get_language_name_in_english
+from kindle_to_anki.caching.lui_cache import LUICache
+from kindle_to_anki.llm.llm_helper import get_llm_lexical_unit_identification_instructions
 
 
 class ChatCompletionLUI:

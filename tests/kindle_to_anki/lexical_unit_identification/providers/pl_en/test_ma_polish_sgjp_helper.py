@@ -2,13 +2,8 @@
 """
 Integration test for Polish SGJP helper functions.
 """
-import sys
-import os
 
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', 'src'))
-
-from lexical_unit_identification.providers.pl_en.ma_polish_sgjp_helper import normalize_adj_to_masc_sg
+from kindle_to_anki.lexical_unit_identification.providers.pl_en.ma_polish_sgjp_helper import normalize_adj_to_masc_sg
 
 
 def test_normalize_adj_to_masc_sg():

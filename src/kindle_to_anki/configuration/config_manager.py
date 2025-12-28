@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from anki.anki_deck import AnkiDeck
+from kindle_to_anki.anki.anki_deck import AnkiDeck
 
 
 class ConfigManager:
