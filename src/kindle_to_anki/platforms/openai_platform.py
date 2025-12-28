@@ -13,6 +13,7 @@ class OpenAIPlatform(ChatCompletionPlatform):
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is not set")
         self.client = OpenAI(api_key=self.api_key)
+        self._credentials_valid = None
 
     def call_api(self, model: str, prompt: str, **kwargs) -> str:
         """
@@ -33,8 +34,11 @@ class OpenAIPlatform(ChatCompletionPlatform):
         """
         Verify that API key is set correctly by making a simple test call.
         """
+        if self._credentials_valid is not None:
+            return self._credentials_valid
         try:
             self.client.models.list()
-            return True
+            self._credentials_valid = True
         except Exception:
-            return False
+            self._credentials_valid = False
+        return self._credentials_valid

@@ -16,6 +16,7 @@ class DeepLPlatform:
             self.base_url = "https://api-free.deepl.com/v2"
         else:
             self.base_url = "https://api.deepl.com/v2"
+        self._credentials_valid = None
 
     def translate(self, texts: list[str], target_lang: str, source_lang: str = None) -> list[str]:
         """
@@ -40,9 +41,12 @@ class DeepLPlatform:
 
     def validate_credentials(self):
         """Verify API key by checking usage."""
+        if self._credentials_valid is not None:
+            return self._credentials_valid
         try:
             headers = {"Authorization": f"DeepL-Auth-Key {self.api_key}"}
             response = requests.get(f"{self.base_url}/usage", headers=headers)
-            return response.status_code == 200
+            self._credentials_valid = response.status_code == 200
         except Exception:
-            return False
+            self._credentials_valid = False
+        return self._credentials_valid

@@ -58,7 +58,8 @@ def show_all_options(source_language_code: str, target_language_code: str):
             supports_model_families = runtime.supported_model_families
             if not supports_model_families or len(supports_model_families) == 0:
                 usage_estimate = 0.0
-                print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {'n/a':16s}, Cost/1000: ${usage_estimate:.4f}")
+                available = "Yes"
+                print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {'n/a':16s}, Cost/1000: ${usage_estimate:.4f}, Available: {available}")
             else:
                 models_for_runtime = [
                     m for m in ModelRegistry.list()
@@ -80,7 +81,9 @@ def show_all_options(source_language_code: str, target_language_code: str):
                     )
 
                     usage_estimate = token_pricing_policy.estimate_cost(usage_estimate)
-                    print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {model.id:16s}, Cost/1000: ${usage_estimate.usd:.4f}")
+                    platform = PlatformRegistry.get(model.platform_id)
+                    available = "Yes" if platform and platform.validate_credentials() else "No"
+                    print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {model.id:16s}, Cost/1000: ${usage_estimate.usd:.4f}, Available: {available}")
 
 
 def export_kindle_vocab():
