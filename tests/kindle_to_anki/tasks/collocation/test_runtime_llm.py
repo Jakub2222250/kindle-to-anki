@@ -45,14 +45,12 @@ def test_collocation_runtime_llm():
     
     # Create runtime and config
     runtime = ChatCompletionCollocation()
-    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2)
+    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2, source_language_code="pl", target_language_code="en")
     
     # Test collocation generation
     try:
         outputs = runtime.generate_collocations(
-            collocation_inputs, 
-            source_lang="pl", 
-            target_lang="en",
+            collocation_inputs,
             runtime_config=runtime_config,
             use_test_cache=True
         )

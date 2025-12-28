@@ -76,7 +76,7 @@ def test_polish_hybrid_cases():
 
     # Setup runtime and config
     runtime = ChatCompletionLUI()
-    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="pl", target_language_code="en")
     
     # Setup the provider
     runtimes = {"chat_completion_lui": runtime}
@@ -89,8 +89,6 @@ def test_polish_hybrid_cases():
         notes=notes,
         runtime_choice="chat_completion_lui",
         runtime_config=runtime_config,
-        source_lang="pl",
-        target_lang="en",
         ignore_cache=False,
         use_test_cache=True
     )
@@ -134,7 +132,7 @@ def test_direct_runtime_polish():
     """Test the ChatCompletionLUI runtime directly with Polish examples."""
     
     runtime = ChatCompletionLUI()
-    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="pl", target_language_code="en")
     
     # Create LUIInput objects for Polish testing
     polish_inputs = [
@@ -159,8 +157,6 @@ def test_direct_runtime_polish():
     
     outputs = runtime.identify(
         polish_inputs,
-        source_lang="pl",
-        target_lang="en",
         runtime_config=runtime_config,
         ignore_cache=False,
         use_test_cache=True

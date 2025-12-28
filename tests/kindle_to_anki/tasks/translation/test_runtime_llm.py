@@ -28,14 +28,12 @@ def test_translation_runtime_llm():
     
     # Create runtime and config
     runtime = ChatCompletionTranslation()
-    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2)
+    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2, source_language_code="pl", target_language_code="en")
     
     # Test translation
     try:
         outputs = runtime.translate(
-            translation_inputs, 
-            source_lang="pl", 
-            target_lang="en",
+            translation_inputs,
             runtime_config=runtime_config,
             use_test_cache=True
         )

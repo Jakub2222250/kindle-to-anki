@@ -60,13 +60,14 @@ def test_runtime_chat_completion():
         if lang_notes:
             print(f"\n=== Testing {lang_code} using Provider ===")
             
+            # Update runtime config for this language
+            runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code=lang_code, target_language_code="en")
+            
             # Test via provider
             provider.identify(
                 notes=lang_notes,
                 runtime_choice="chat_completion_lui",
                 runtime_config=runtime_config,
-                source_lang=lang_code,
-                target_lang="en",
                 ignore_cache=False,
                 use_test_cache=True
             )
@@ -107,11 +108,10 @@ def test_runtime_direct():
     
     # Test Polish
     pl_inputs = [lui_inputs[0]]
+    pl_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="pl", target_language_code="en")
     pl_outputs = runtime.identify(
         pl_inputs,
-        source_lang="pl",
-        target_lang="en",
-        runtime_config=runtime_config,
+        runtime_config=pl_config,
         ignore_cache=False,
         use_test_cache=True
     )
@@ -124,11 +124,10 @@ def test_runtime_direct():
     
     # Test Spanish
     es_inputs = [lui_inputs[1]]
+    es_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="es", target_language_code="en")
     es_outputs = runtime.identify(
         es_inputs,
-        source_lang="es",
-        target_lang="en",
-        runtime_config=runtime_config,
+        runtime_config=es_config,
         ignore_cache=False,
         use_test_cache=True
     )

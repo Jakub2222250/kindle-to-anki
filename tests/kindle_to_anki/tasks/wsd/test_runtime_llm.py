@@ -44,14 +44,12 @@ def test_wsd_runtime_llm():
     
     # Create runtime and config
     runtime = ChatCompletionWSD()
-    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2)
+    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2, source_language_code="pl", target_language_code="en")
     
     # Test WSD
     try:
         outputs = runtime.disambiguate(
-            wsd_inputs, 
-            source_lang="pl", 
-            target_lang="en",
+            wsd_inputs,
             runtime_config=runtime_config,
             use_test_cache=True
         )

@@ -38,7 +38,7 @@ def test_runtime_chat_completion():
 
     # Setup runtime and config
     runtime = ChatCompletionTranslation()
-    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="pl", target_language_code="en")
     
     # Setup the provider
     runtimes = {"chat_completion_translation": runtime}
@@ -50,8 +50,6 @@ def test_runtime_chat_completion():
         notes=notes,
         runtime_choice="chat_completion_translation",
         runtime_config=runtime_config,
-        source_lang="pl",
-        target_lang="en",
         ignore_cache=False,
         use_test_cache=True
     )
@@ -80,14 +78,12 @@ def test_direct_runtime_usage():
     
     # Setup runtime and config
     runtime = ChatCompletionTranslation()
-    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="pl", target_language_code="en")
     
     # Test direct translation
     print("Testing direct runtime usage...")
     translation_outputs = runtime.translate(
         translation_inputs=translation_inputs,
-        source_lang="pl",
-        target_lang="en",
         runtime_config=runtime_config,
         ignore_cache=False,
         use_test_cache=True
