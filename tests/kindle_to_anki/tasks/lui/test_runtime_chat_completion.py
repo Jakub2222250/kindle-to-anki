@@ -4,11 +4,14 @@ Test for the new ChatCompletionLUI runtime system.
 This replaces the old test_lui_llm.py with the new structured approach.
 """
 
+from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.tasks.lui.runtime_chat_completion import ChatCompletionLUI
 from kindle_to_anki.tasks.lui.provider import LUIProvider
 from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
+
+bootstrap_all()
 
 
 def test_runtime_chat_completion():

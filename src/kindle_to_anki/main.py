@@ -1,27 +1,18 @@
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
+from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.pricing.token_pricing_policy import TokenPricingPolicy
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
-from kindle_to_anki.platforms.deepl_platform import DeepLPlatform
-from kindle_to_anki.platforms.grok_platform import GrokPlatform
-from kindle_to_anki.tasks.tasks import TASKS
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
-from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from kindle_to_anki.core.models.registry import ModelRegistry
-from kindle_to_anki.platforms.openai_platform import OpenAIPlatform
-from kindle_to_anki.core.models import models
+from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.tasks.tasks import TASKS
 
 from kindle_to_anki.tasks.collect_candidates.provider import CollectCandidatesProvider
-from kindle_to_anki.tasks.collect_candidates.runtime_kindle import KindleCandidateRuntime
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
-from kindle_to_anki.tasks.translation.runtime_polish_local import PolishLocalTranslation
-from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatCompletionTranslation
 from kindle_to_anki.tasks.wsd.provider import WSDProvider
-from kindle_to_anki.tasks.wsd.runtime_chat_completion import ChatCompletionWSD
 from kindle_to_anki.tasks.collocation.provider import CollocationProvider
-from kindle_to_anki.tasks.collocation.runtime_chat_completion import ChatCompletionCollocation
 from kindle_to_anki.tasks.lui.provider import LUIProvider
-from kindle_to_anki.tasks.lui.runtime_chat_completion import ChatCompletionLUI
 
 from kindle_to_anki.metadata.metdata_manager import MetadataManager
 
@@ -29,28 +20,6 @@ from kindle_to_anki.export.export_anki import write_anki_import_file
 from kindle_to_anki.pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 
 from time import sleep
-
-
-def bootstrap_platform_registry():
-    PlatformRegistry.register(OpenAIPlatform())
-    PlatformRegistry.register(GrokPlatform())
-    PlatformRegistry.register(DeepLPlatform())
-
-
-def bootstrap_model_registry():
-    ModelRegistry.register(models.GPT_5_1)
-    ModelRegistry.register(models.GPT_5_MINI)
-    ModelRegistry.register(models.GROK_3)
-    ModelRegistry.register(models.GROK_3_MINI)
-
-
-def bootstrap_runtime_registry():
-    RuntimeRegistry.register(ChatCompletionLUI())
-    RuntimeRegistry.register(ChatCompletionTranslation())
-    RuntimeRegistry.register(ChatCompletionWSD())
-    RuntimeRegistry.register(ChatCompletionCollocation())
-    RuntimeRegistry.register(PolishLocalTranslation())
-    RuntimeRegistry.register(KindleCandidateRuntime())
 
 
 def show_all_options(source_language_code: str, target_language_code: str):
@@ -96,9 +65,7 @@ def export_kindle_vocab():
 
     print("Starting Kindle to Anki export process.")
 
-    bootstrap_platform_registry()
-    bootstrap_model_registry()
-    bootstrap_runtime_registry()
+    bootstrap_all()
 
     # Setup providers with their runtimes
     candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates"))

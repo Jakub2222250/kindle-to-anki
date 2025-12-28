@@ -4,11 +4,14 @@ Test for the new ChatCompletionTranslation runtime system.
 This replaces the old test_translator_llm.py with the new structured approach.
 """
 
+from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatCompletionTranslation
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
 from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
+
+bootstrap_all()
 
 
 def test_runtime_chat_completion():

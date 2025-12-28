@@ -3,10 +3,13 @@
 Integration test for LLM-based translation runtime.
 """
 
+from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatCompletionTranslation
 from kindle_to_anki.tasks.translation.schema import TranslationInput
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.anki.anki_note import AnkiNote
+
+bootstrap_all()
 
 
 def test_translation_runtime_llm():

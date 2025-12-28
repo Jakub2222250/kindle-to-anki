@@ -6,11 +6,14 @@ Since the Polish hybrid runtime hasn't been implemented yet, this test uses the
 ChatCompletionLUI runtime but includes test cases from the original Polish hybrid tests.
 """
 
+from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.tasks.lui.runtime_chat_completion import ChatCompletionLUI
 from kindle_to_anki.tasks.lui.provider import LUIProvider
 from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
+
+bootstrap_all()
 
 
 def test_polish_hybrid_cases():

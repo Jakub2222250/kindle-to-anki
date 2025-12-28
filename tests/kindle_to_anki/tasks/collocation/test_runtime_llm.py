@@ -3,10 +3,13 @@
 Integration test for collocation generation via LLM runtime.
 """
 
+from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.tasks.collocation.runtime_chat_completion import ChatCompletionCollocation
 from kindle_to_anki.tasks.collocation.schema import CollocationInput
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.anki.anki_note import AnkiNote
+
+bootstrap_all()
 
 
 def test_collocation_runtime_llm():

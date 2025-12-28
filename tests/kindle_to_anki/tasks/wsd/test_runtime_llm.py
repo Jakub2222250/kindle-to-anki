@@ -3,9 +3,12 @@
 Integration test for Word Sense Disambiguation via LLM runtime.
 """
 
+from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.tasks.wsd.runtime_chat_completion import ChatCompletionWSD
 from kindle_to_anki.tasks.wsd.schema import WSDInput
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+
+bootstrap_all()
 
 
 def test_wsd_runtime_llm():
