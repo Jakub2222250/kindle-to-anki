@@ -52,10 +52,13 @@ class ChatCompletionLUI:
         )
         return usage_breakdown
 
-    def identify(self, lui_inputs: List[LUIInput], source_lang: str, target_lang: str, runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
+    def identify(self, lui_inputs: List[LUIInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
         """
         Perform Lexical Unit Identification on a list of LUIInput objects and return LUIOutput objects.
         """
+        source_lang = runtime_config.source_language_code
+        target_lang = runtime_config.target_language_code
+        
         print(f"\nStarting lexical unit identification (LLM) for {source_lang}...")
 
         language_pair_code = f"{source_lang}-{target_lang}"

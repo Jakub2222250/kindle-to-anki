@@ -47,7 +47,7 @@ def bootstrap_runtime_registry():
     RuntimeRegistry.register(KindleCandidateRuntime())
 
 
-def show_all_options():
+def show_all_options(source_language_code: str, target_language_code: str):
 
     for task in TASKS:
         for runtime in RuntimeRegistry.list():
@@ -68,6 +68,8 @@ def show_all_options():
                     runtime_config = RuntimeConfig(
                         model_id=model.id,
                         batch_size=30,
+                        source_language_code=source_language_code,
+                        target_language_code=target_language_code
                     )
 
                     usage_estimate = runtime.estimate_usage(1000, runtime_config)
@@ -89,8 +91,6 @@ def export_kindle_vocab():
     bootstrap_model_registry()
     bootstrap_runtime_registry()
 
-    show_all_options()
-
     # Setup providers with their runtimes
     candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates"))
     translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("translation"))
@@ -100,6 +100,7 @@ def export_kindle_vocab():
 
     # Initialize configuration manager
     config_manager = ConfigManager()
+    target_language_code = "en"
     
     # Get available anki decks by language pair
     anki_decks_by_source_language = config_manager.get_anki_decks_by_source_language()
@@ -114,19 +115,25 @@ def export_kindle_vocab():
 
     # Connect to AnkiConnect
     anki_connect_instance = AnkiConnect()
-    
-    # Reusable configs
-    best_model_normal_batch = RuntimeConfig(
-        model_id="gpt-5.1",
-        batch_size=30,
-    )
-    
-    cheap_model_normal_batch = RuntimeConfig(
-        model_id="gpt-5-mini",
-        batch_size=30,
-    )
 
     for source_lang_code, notes in notes_by_language.items():
+        
+        show_all_options(source_lang_code, target_language_code)
+        
+        # Reusable configs
+        best_model_normal_batch = RuntimeConfig(
+            model_id="gpt-5.1",
+            batch_size=30,
+            source_language_code=source_lang_code,
+            target_language_code=target_lang_code
+        )
+        
+        cheap_model_normal_batch = RuntimeConfig(
+            model_id="gpt-5-mini",
+            batch_size=30,
+            source_language_code=source_lang_code,
+            target_language_code=target_lang_code
+        )
 
         # Reference to anki deck for metadata
         anki_deck = anki_decks_by_source_language.get(source_lang_code)
@@ -161,8 +168,6 @@ def export_kindle_vocab():
             notes=notes,
             runtime_choice="chat_completion_lui",
             runtime_config=best_model_normal_batch,
-            source_lang=source_lang_code,
-            target_lang=target_lang_code,
             ignore_cache=False
         )
         sleep(5)  # Opportunity to read output
@@ -176,8 +181,6 @@ def export_kindle_vocab():
             notes=notes,
             runtime_choice="chat_completion_wsd",
             runtime_config=best_model_normal_batch,
-            source_lang=source_lang_code,
-            target_lang=target_lang_code,
             ignore_cache=False
         )
         sleep(5)  # Opportunity to read output
@@ -198,8 +201,6 @@ def export_kindle_vocab():
             notes=notes,
             runtime_choice="chat_completion_translation",
             runtime_config=best_model_normal_batch,
-            source_lang=source_lang_code,
-            target_lang=target_lang_code,
             ignore_cache=False,
             use_test_cache=False
         )
@@ -210,8 +211,6 @@ def export_kindle_vocab():
             notes=notes,
             runtime_choice="chat_completion_collocation",
             runtime_config=cheap_model_normal_batch,
-            source_lang=source_lang_code,
-            target_lang=target_lang_code,
             ignore_cache=False
         )
         sleep(5)  # Opportunity to read output

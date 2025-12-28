@@ -51,12 +51,15 @@ class ChatCompletionWSD:
         )
         return usage_breakdown
 
-    def disambiguate(self, wsd_inputs: List[WSDInput], source_lang: str, target_lang: str, runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[WSDOutput]:
+    def disambiguate(self, wsd_inputs: List[WSDInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[WSDOutput]:
         """
         Perform Word Sense Disambiguation on a list of WSDInput objects and return WSDOutput objects.
         """
         if not wsd_inputs:
             return []
+        
+        source_lang = runtime_config.source_language_code
+        target_lang = runtime_config.target_language_code
 
         print("\nStarting Word Sense Disambiguation via LLM process...")
 

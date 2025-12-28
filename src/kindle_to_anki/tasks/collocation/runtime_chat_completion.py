@@ -50,12 +50,15 @@ class ChatCompletionCollocation:
         )
         return usage_breakdown
 
-    def generate_collocations(self, collocation_inputs: List[CollocationInput], source_lang: str, target_lang: str, runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[CollocationOutput]:
+    def generate_collocations(self, collocation_inputs: List[CollocationInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[CollocationOutput]:
         """
         Generate collocations for a list of CollocationInput objects and return CollocationOutput objects.
         """
         if not collocation_inputs:
             return []
+        
+        source_lang = runtime_config.source_language_code
+        target_lang = runtime_config.target_language_code
 
         print("\nStarting collocation generation (LLM)...")
 

@@ -24,7 +24,7 @@ class PolishLocalTranslation:
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         return None
 
-    def translate(self, translation_inputs: List[TranslationInput], source_lang: str, target_lang: str, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
+    def translate(self, translation_inputs: List[TranslationInput], ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
         """
         Translate a list of TranslationInput objects and return TranslationOutput objects.
         

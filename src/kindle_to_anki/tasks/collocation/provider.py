@@ -26,8 +26,6 @@ class CollocationProvider:
         notes: List[AnkiNote],
         runtime_choice: str = None,
         runtime_config: RuntimeConfig = None,
-        source_lang: str = "pl",
-        target_lang: str = "en",
         ignore_cache: bool = False,
         use_test_cache: bool = False
     ) -> List[AnkiNote]:
@@ -63,8 +61,6 @@ class CollocationProvider:
         # Generate collocations using the runtime
         collocation_outputs: List[CollocationOutput] = runtime.generate_collocations(
             collocation_inputs,
-            source_lang,
-            target_lang,
             runtime_config,
             ignore_cache=ignore_cache,
             use_test_cache=use_test_cache

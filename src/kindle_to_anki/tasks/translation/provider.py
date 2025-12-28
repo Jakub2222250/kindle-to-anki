@@ -26,8 +26,6 @@ class TranslationProvider:
         notes: List[AnkiNote],
         runtime_choice: str = None,
         runtime_config: RuntimeConfig = None,
-        source_lang: str = "pl",
-        target_lang: str = "en",
         ignore_cache: bool = False,
         use_test_cache: bool = False
     ) -> List[AnkiNote]:
@@ -60,8 +58,6 @@ class TranslationProvider:
         # Translate using the runtime
         translation_outputs: List[TranslationOutput] = runtime.translate(
             translation_inputs,
-            source_lang,
-            target_lang,
             runtime_config,
             ignore_cache=ignore_cache,
             use_test_cache=use_test_cache

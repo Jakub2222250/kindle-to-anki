@@ -50,12 +50,15 @@ class ChatCompletionTranslation:
         )
         return usage_breakdown
 
-    def translate(self, translation_inputs: List[TranslationInput], source_lang: str, target_lang: str, runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
+    def translate(self, translation_inputs: List[TranslationInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
         """
         Translate a list of TranslationInput objects and return TranslationOutput objects.
         """
         if not translation_inputs:
             return []
+        
+        source_lang = runtime_config.source_language_code
+        target_lang = runtime_config.target_language_code
 
         print("\nStarting context translation (LLM)...")
 
