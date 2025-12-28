@@ -24,3 +24,27 @@ GPT_5_1 = ModelSpec(
     output_token_cost_per_1m=10.00,
     typical_latency_ms=900,
 )
+
+GROK_3 = ModelSpec(
+    id="grok-3",
+    platform_id="grok",
+    family="chat_completion",
+    quality_tier="high",
+    encoding="cl100k_base",
+    supports_json=True,
+    input_token_cost_per_1m=3.00,
+    output_token_cost_per_1m=15.00,
+    typical_latency_ms=800,
+)
+
+GROK_3_MINI = ModelSpec(
+    id="grok-3-mini",
+    platform_id="grok",
+    family="chat_completion",
+    quality_tier="medium",
+    encoding="cl100k_base",
+    supports_json=True,
+    input_token_cost_per_1m=0.30,
+    output_token_cost_per_1m=0.50,
+    typical_latency_ms=500,
+)
