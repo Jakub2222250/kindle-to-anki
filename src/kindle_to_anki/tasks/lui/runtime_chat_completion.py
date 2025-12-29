@@ -214,6 +214,8 @@ class ChatCompletionLUI:
         cost_reporter = RealtimeCostReporter(model)
         estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))
 
+        items_json_tokens = count_tokens(items_json, model)
+        print(f"    (Prompt contains {input_chars} chars / {input_tokens} tokens; items JSON part contains {items_json_tokens} tokens)")
         print(f"  Making batch lexical unit identification API call for {len(batch_inputs)} inputs (in: {input_chars} chars / {input_tokens} tokens, out: ~{estimated_output_tokens} tokens, estimated cost: {estimated_cost_str})...")
 
         start_time = time.time()
