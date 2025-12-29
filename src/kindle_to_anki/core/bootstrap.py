@@ -26,7 +26,7 @@ def bootstrap_platform_registry():
 def bootstrap_model_registry():
     ModelRegistry.register(models.GPT_5_1)
     ModelRegistry.register(models.GPT_5_MINI)
-    ModelRegistry.register(models.GROK_3)
+    ModelRegistry.register(models.GROK_4)
     ModelRegistry.register(models.GROK_3_MINI)
 
 

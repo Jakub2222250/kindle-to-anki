@@ -30,14 +30,24 @@ class ChatCompletionLUI:
     supports_batching: bool = True
 
 
+    def _estimate_output_tokens_per_item(self, runtime_config: RuntimeConfig) -> int:
+        if runtime_config.source_language_code == "pl":
+            return 70
+        return 70
+
+    def _estimate_input_tokens_per_item(self, runtime_config: RuntimeConfig) -> int:
+        if runtime_config.source_language_code == "pl":
+            return 30
+        return 30
+
     def estimate_usage(self, items_count: int, runtime_config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(runtime_config.model_id)
         language_name = get_language_name_in_english(runtime_config.source_language_code)
         static_prompt = get_llm_lexical_unit_identification_instructions("placeholder", language_name, runtime_config.source_language_code)
         instruction_tokens = count_tokens(static_prompt, model)
         
-        input_tokens_per_word = 5
-        output_tokens_per_word = 10
+        input_tokens_per_word = self._estimate_input_tokens_per_item(runtime_config)
+        output_tokens_per_word = self._estimate_output_tokens_per_item(runtime_config)
         
         batch_size = runtime_config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
@@ -199,7 +209,7 @@ class ChatCompletionLUI:
 
         input_chars = len(prompt)
         input_tokens = count_tokens(prompt, model)
-        estimated_output_tokens = len(batch_inputs) * 15
+        estimated_output_tokens = len(batch_inputs) * self._estimate_output_tokens_per_item(runtime_config)
 
         cost_reporter = RealtimeCostReporter(model)
         estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))

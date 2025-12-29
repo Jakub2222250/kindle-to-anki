@@ -25,8 +25,8 @@ GPT_5_1 = ModelSpec(
     typical_latency_ms=900,
 )
 
-GROK_3 = ModelSpec(
-    id="grok-3",
+GROK_4 = ModelSpec(
+    id="grok-4",
     platform_id="grok",
     family="chat_completion",
     quality_tier="high",

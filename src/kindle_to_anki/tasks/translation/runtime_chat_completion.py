@@ -28,6 +28,12 @@ class ChatCompletionTranslation:
     supported_model_families = ["chat_completion"]
     supports_batching: bool = True
 
+    def _estimate_output_tokens_per_item(self, config: RuntimeConfig) -> int:
+        return 30
+
+    def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
+        return 20
+
     def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
         return f"""Translate the following {source_language_name} sentences to {target_language_name}.
 
@@ -45,16 +51,16 @@ Respond with valid JSON. No additional text."""
         static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
         
-        input_tokens_per_word = 5
-        output_tokens_per_word = 10
+        input_tokens_per_item = self._estimate_input_tokens_per_item(config)
+        output_tokens_per_item = self._estimate_output_tokens_per_item(config)
         
         batch_size = config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
 
         num_of_batches = (items_count + batch_size - 1) // batch_size
 
-        estimated_input_tokens = (num_of_batches * instruction_tokens) + (input_tokens_per_word * items_count)
-        estimated_output_tokens = output_tokens_per_word * items_count
+        estimated_input_tokens = (num_of_batches * instruction_tokens) + (input_tokens_per_item * items_count)
+        estimated_output_tokens = output_tokens_per_item * items_count
 
         usage_breakdown = UsageBreakdown(
             scope=UsageScope(unit="notes", count=items_count),
@@ -178,7 +184,7 @@ Output JSON as an object where keys are the UIDs and values are objects with:
 
         input_chars = len(prompt)
         input_tokens = count_tokens(prompt, model)
-        estimated_output_tokens = len(batch_inputs) * 15
+        estimated_output_tokens = len(batch_inputs) * self._estimate_output_tokens_per_item(runtime_config)
 
         cost_reporter = RealtimeCostReporter(model)
         estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))
