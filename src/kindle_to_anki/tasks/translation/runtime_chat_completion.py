@@ -243,5 +243,5 @@ Output JSON as an object where keys are the UIDs and values are objects with:
             except Exception as e:
                 print(f"  BATCH FAILED - {str(e)}")
                 failing_inputs.extend(batch)
-                
+
         return failing_inputs

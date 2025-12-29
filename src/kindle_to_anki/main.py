@@ -62,6 +62,8 @@ def show_all_options(source_language_code: str, target_language_code: str):
 
 
 def export_kindle_vocab():
+    
+    SLEEP_TIME = 0
 
     print("Starting Kindle to Anki export process.")
 
@@ -116,7 +118,7 @@ def export_kindle_vocab():
             print(f"No new notes to add to Anki after redundancy pruning for language: {source_language_code}")
             continue
 
-        sleep(5)  # Opportunity to read output
+        sleep(SLEEP_TIME)  # Opportunity to read output
 
         if len(notes) > 100:
             response = input(f"\nYou are about to process {len(notes)} notes for language: {source_language_code}. Do you want to continue? (y/n): ").strip().lower()
@@ -137,7 +139,7 @@ def export_kindle_vocab():
             ),
             ignore_cache=False
         )
-        sleep(5)  # Opportunity to read output
+        sleep(SLEEP_TIME)  # Opportunity to read output
 
         if not notes:
             print(f"No new notes to process for language: {source_language_code}")
@@ -156,14 +158,14 @@ def export_kindle_vocab():
             ),
             ignore_cache=False
         )
-        sleep(5)  # Opportunity to read output
+        sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Prune existing notes automatically based on definition similarity
         notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=language_pair_code)
 
         # Prune duplicates new notes leaving the best one
         notes = prune_new_notes_against_eachother(notes)
-        sleep(5)  # Opportunity to read output
+        sleep(SLEEP_TIME)  # Opportunity to read output
 
         if len(notes) == 0:
             print(f"No new notes to add to Anki after pruning for language: {source_language_code}")
@@ -183,7 +185,7 @@ def export_kindle_vocab():
             ignore_cache=False,
             use_test_cache=False
         )
-        sleep(5)  # Opportunity to read output
+        sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Provide collocations
         collocation_setting = config_manager.get_task_setting("collocation")
@@ -198,12 +200,12 @@ def export_kindle_vocab():
             ),
             ignore_cache=False
         )
-        sleep(5)  # Opportunity to read output
+        sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Save results to Anki import file and via AnkiConnect
         write_anki_import_file(notes, source_language_code)
         anki_connect_instance.create_notes_batch(anki_deck, notes)
-        sleep(5)  # Opportunity to read output
+        sleep(SLEEP_TIME)  # Opportunity to read output
 
     # Save timestamp for future incremental imports
     if latest_candidate_timestamp:

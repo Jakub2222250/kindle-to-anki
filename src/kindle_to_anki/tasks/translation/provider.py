@@ -33,7 +33,7 @@ class TranslationProvider:
         Translate a list of AnkiNote objects using the selected runtime.
         If runtime_choice is None, pick a default runtime.
         """
-        if runtime_choice and runtime_choice in self.runtimes:
+        if runtime_choice:
             runtime = self.runtimes[runtime_choice]
         else:
             # Pick default runtime (first in dict)
