@@ -9,7 +9,7 @@ from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
 from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
 from kindle_to_anki.core.models.registry import ModelRegistry
 from kindle_to_anki.core.pricing.token_estimator import count_tokens
-from kindle_to_anki.core.pricing.token_pricing_policy import TokenPricingPolicy
+from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 
 from .schema import LUIInput, LUIOutput
@@ -197,23 +197,14 @@ class ChatCompletionLUI:
 
         prompt = get_llm_lexical_unit_identification_instructions(items_json, language_name, language_code)
 
-        # Realtime price estimation (before making the API call)
         input_chars = len(prompt)
         input_tokens = count_tokens(prompt, model)
-        estimated_output_tokens = len(batch_inputs) * 15  # rough estimate of 15 tokens per output
+        estimated_output_tokens = len(batch_inputs) * 15
 
-        estimated_usage_breakdown = UsageBreakdown(
-            scope=UsageScope(unit="notes", count=len(batch_inputs)),
-            inputs={"tokens": UsageDimension(unit="tokens", quantity=input_tokens)},
-            outputs={"tokens": UsageDimension(unit="tokens", quantity=estimated_output_tokens)},
-        )
+        cost_reporter = RealtimeCostReporter(model)
+        estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))
 
-        pricing_policy = TokenPricingPolicy(input_cost_per_1m=model.input_token_cost_per_1m, output_cost_per_1m=model.output_token_cost_per_1m)
-
-        estimate_cost_value = pricing_policy.estimate_cost(estimated_usage_breakdown).usd
-        estimated_cost_str = f"${estimate_cost_value:.6f}" if estimate_cost_value is not None else "unknown cost"
-
-        print(f"  Making batch lexical unit identification API call for {len(batch_inputs)} inputs ({input_chars} input chars, estimated cost: {estimated_cost_str})...")
+        print(f"  Making batch lexical unit identification API call for {len(batch_inputs)} inputs (in: {input_chars} chars / {input_tokens} tokens, out: ~{estimated_output_tokens} tokens, estimated cost: {estimated_cost_str})...")
 
         start_time = time.time()
 
@@ -222,18 +213,10 @@ class ChatCompletionLUI:
         elapsed = time.time() - start_time
         output_text = response
         
-        # Realtime cost calculation (after receiving the response)
         output_chars = len(output_text)
         output_tokens = count_tokens(output_text, model)
         
-        actual_usage_breakdown = UsageBreakdown(
-            scope=UsageScope(unit="notes", count=len(batch_inputs)),
-            inputs={"tokens": UsageDimension(unit="tokens", quantity=input_tokens)},
-            outputs={"tokens": UsageDimension(unit="tokens", quantity=output_tokens)},
-        )
-
-        actual_cost = pricing_policy.estimate_cost(actual_usage_breakdown).usd
-        actual_cost_str = f"${actual_cost:.6f}" if actual_cost is not None else "unknown"
-        print(f"  Batch lexical unit identification API call completed in {elapsed:.2f}s ({output_chars} output chars, actual cost: {actual_cost_str})")
+        actual_cost_str = cost_reporter.actual_cost(input_tokens, output_tokens, len(batch_inputs))
+        print(f"  Batch lexical unit identification API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
 
         return json.loads(output_text), runtime_config.model_id, processing_timestamp
