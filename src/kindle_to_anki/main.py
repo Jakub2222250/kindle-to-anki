@@ -96,21 +96,6 @@ def export_kindle_vocab():
         
         show_all_options(source_language_code, target_language_code)
 
-        # Reusable configs
-        best_model_normal_batch = RuntimeConfig(
-            model_id="gpt-5.1",
-            batch_size=30,
-            source_language_code=source_language_code,
-            target_language_code=target_language_code
-        )
-        
-        cheap_model_normal_batch = RuntimeConfig(
-            model_id="gpt-5-mini",
-            batch_size=30,
-            source_language_code=source_language_code,
-            target_language_code=target_language_code
-        )
-
         # Reference to anki deck for metadata
         anki_deck = anki_decks_by_source_language.get(source_language_code)
         target_language_code = anki_deck.target_language_code
@@ -140,10 +125,16 @@ def export_kindle_vocab():
                 exit()
 
         # Enrich notes with lexical unit identification
+        lui_setting = config_manager.get_task_setting("lui")
         lui_provider.identify(
             notes=notes,
-            runtime_choice="chat_completion_lui",
-            runtime_config=best_model_normal_batch,
+            runtime_choice=lui_setting["runtime"],
+            runtime_config=RuntimeConfig(
+                model_id=lui_setting["model_id"],
+                batch_size=lui_setting["batch_size"],
+                source_language_code=source_language_code,
+                target_language_code=target_language_code
+            ),
             ignore_cache=False
         )
         sleep(5)  # Opportunity to read output
@@ -153,10 +144,16 @@ def export_kindle_vocab():
             continue
 
         # Provide word sense disambiguation via LLM
+        wsd_setting = config_manager.get_task_setting("wsd")
         wsd_provider.disambiguate(
             notes=notes,
-            runtime_choice="chat_completion_wsd",
-            runtime_config=best_model_normal_batch,
+            runtime_choice=wsd_setting["runtime"],
+            runtime_config=RuntimeConfig(
+                model_id=wsd_setting["model_id"],
+                batch_size=wsd_setting["batch_size"],
+                source_language_code=source_language_code,
+                target_language_code=target_language_code
+            ),
             ignore_cache=False
         )
         sleep(5)  # Opportunity to read output
@@ -173,20 +170,32 @@ def export_kindle_vocab():
             continue
 
         # Provide translations
+        translation_setting = config_manager.get_task_setting("translation")
         translation_provider.translate(
             notes=notes,
-            runtime_choice="chat_completion_translation",
-            runtime_config=best_model_normal_batch,
+            runtime_choice=translation_setting["runtime"],
+            runtime_config=RuntimeConfig(
+                model_id=translation_setting["model_id"],
+                batch_size=translation_setting["batch_size"],
+                source_language_code=source_language_code,
+                target_language_code=target_language_code
+            ),
             ignore_cache=False,
             use_test_cache=False
         )
         sleep(5)  # Opportunity to read output
 
         # Provide collocations
+        collocation_setting = config_manager.get_task_setting("collocation")
         collocation_provider.generate_collocations(
             notes=notes,
-            runtime_choice="chat_completion_collocation",
-            runtime_config=cheap_model_normal_batch,
+            runtime_choice=collocation_setting["runtime"],
+            runtime_config=RuntimeConfig(
+                model_id=collocation_setting["model_id"],
+                batch_size=collocation_setting["batch_size"],
+                source_language_code=source_language_code,
+                target_language_code=target_language_code
+            ),
             ignore_cache=False
         )
         sleep(5)  # Opportunity to read output

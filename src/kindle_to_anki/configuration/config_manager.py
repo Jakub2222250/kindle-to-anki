@@ -4,28 +4,23 @@ from kindle_to_anki.anki.anki_deck import AnkiDeck
 
 
 class ConfigManager:
-    """Manages configuration loading and deck setup for the application."""
     
     def __init__(self):
-        """Initialize ConfigManager and resolve configuration file path."""
         self._config_path = self._resolve_config_path()
         self._config_data = None
         self._anki_decks_by_source_language = None
     
     def _resolve_config_path(self):
-        """Resolve the path to the anki_decks.json configuration file."""
         current_dir = Path(__file__).resolve().parent
         project_root = current_dir.parent.parent.parent
-        config_path = project_root / "data" / "config" / "anki_decks.json"
+        config_path = project_root / "data" / "config" / "config.json"
         return config_path
     
     @property
     def config_path(self):
-        """Get the resolved configuration file path."""
         return self._config_path
     
     def load_config_data(self):
-        """Load anki deck configuration from JSON file."""
         if self._config_data is None:
             if not self._config_path.exists():
                 raise FileNotFoundError(f"Configuration file not found: {self._config_path}")
@@ -36,7 +31,6 @@ class ConfigManager:
         return self._config_data
     
     def get_anki_decks_by_source_language(self):
-        """Get anki decks organized by source language code."""
         if self._anki_decks_by_source_language is None:
             config_data = self.load_config_data()
             
@@ -56,3 +50,7 @@ class ConfigManager:
                 self._anki_decks_by_source_language[deck.source_language_code] = deck
         
         return self._anki_decks_by_source_language
+
+    def get_task_setting(self, task_name: str) -> dict:
+        config_data = self.load_config_data()
+        return config_data.get('task_settings', {}).get(task_name, {})
