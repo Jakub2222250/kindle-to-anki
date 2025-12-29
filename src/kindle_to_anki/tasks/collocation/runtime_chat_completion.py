@@ -29,10 +29,10 @@ class ChatCompletionCollocation:
     supports_batching: bool = True
 
     def _estimate_output_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 40
+        return 60
 
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 40
+        return 115
 
     def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
         return f"""Find collocations for the following {source_language_name} words and sentences.

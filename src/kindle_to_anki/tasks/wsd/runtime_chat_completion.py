@@ -30,10 +30,10 @@ class ChatCompletionWSD:
     supports_batching: bool = True
 
     def _estimate_output_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 50
+        return 85
 
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 40
+        return 115
 
     def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
         return f"""Process the following {source_language_name} words and sentences. For each item, provide analysis in the specified format.

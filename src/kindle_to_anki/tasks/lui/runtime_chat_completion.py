@@ -37,8 +37,8 @@ class ChatCompletionLUI:
 
     def _estimate_input_tokens_per_item(self, runtime_config: RuntimeConfig) -> int:
         if runtime_config.source_language_code == "pl":
-            return 30
-        return 30
+            return 100
+        return 100
 
     def estimate_usage(self, items_count: int, runtime_config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(runtime_config.model_id)

@@ -29,10 +29,10 @@ class ChatCompletionTranslation:
     supports_batching: bool = True
 
     def _estimate_output_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 30
+        return 70
 
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 20
+        return 90
 
     def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
         return f"""Translate the following {source_language_name} sentences to {target_language_name}.
