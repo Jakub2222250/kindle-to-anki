@@ -29,11 +29,25 @@ class ChatCompletionWSD:
     supported_model_families = ["chat_completion"]
     supports_batching: bool = True
 
+    def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
+        return f"""Process the following {source_language_name} words and sentences. For each item, provide analysis in the specified format.
+
+Items to process:
+{items_json}
+
+For each item, {self._get_wsd_llm_instructions(source_language_name, target_language_name)}
+
+Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
+
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
-        # Returns estimated tokens per 1000 words (input, output)
-        instruction_tokens = 500  # rough estimate for LUI instructions
-        input_tokens_per_word = 5  # rough estimate
-        output_tokens_per_word = 10  # rough estimate
+        model = ModelRegistry.get(config.model_id)
+        source_language_name = get_language_name_in_english(config.source_language_code)
+        target_language_name = get_language_name_in_english(config.target_language_code)
+        static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name)
+        instruction_tokens = count_tokens(static_prompt, model)
+        
+        input_tokens_per_word = 5
+        output_tokens_per_word = 10
         
         batch_size = config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
@@ -160,14 +174,7 @@ class ChatCompletionWSD:
 
         items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-        prompt = f"""Process the following {source_language_name} words and sentences. For each item, provide analysis in the specified format.
-
-Items to process:
-{items_json}
-
-For each item, {self._get_wsd_llm_instructions(source_language_name, target_language_name)}
-
-Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
+        prompt = self._build_prompt(items_json, source_language_name, target_language_name)
 
         # Get the model and platform
         model = ModelRegistry.get(runtime_config.model_id)

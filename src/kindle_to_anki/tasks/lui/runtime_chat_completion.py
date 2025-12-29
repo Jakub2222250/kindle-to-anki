@@ -31,10 +31,13 @@ class ChatCompletionLUI:
 
 
     def estimate_usage(self, items_count: int, runtime_config: RuntimeConfig) -> UsageBreakdown:
-        # Returns estimated tokens per 1000 words (input, output)
-        instruction_tokens = 500  # rough estimate for LUI instructions
-        input_tokens_per_word = 5  # rough estimate
-        output_tokens_per_word = 10  # rough estimate
+        model = ModelRegistry.get(runtime_config.model_id)
+        language_name = get_language_name_in_english(runtime_config.source_language_code)
+        static_prompt = get_llm_lexical_unit_identification_instructions("placeholder", language_name, runtime_config.source_language_code)
+        instruction_tokens = count_tokens(static_prompt, model)
+        
+        input_tokens_per_word = 5
+        output_tokens_per_word = 10
         
         batch_size = runtime_config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
