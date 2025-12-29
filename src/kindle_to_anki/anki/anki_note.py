@@ -1,3 +1,4 @@
+import json
 import unicodedata
 
 
@@ -32,6 +33,7 @@ class AnkiNote:
         self.status = "raw"
         self.cloze_deletion_score = -1
         self.cloze_enabled = None
+        self.generation_metadata = {}
 
         # Generate book abbreviation
         self.book_abbrev = self.generate_book_abbrev(self.kindle_book_name)
@@ -134,6 +136,14 @@ class AnkiNote:
         """Get cloze enabled field formatted for output"""
         return "" if not self.cloze_enabled else str(self.cloze_enabled)
 
+    def get_generation_metadata_output(self):
+        """Get generation_metadata as JSON string for output"""
+        return json.dumps(self.generation_metadata) if self.generation_metadata else ""
+
+    def add_generation_metadata(self, task_id, runtime_id, model_id):
+        """Add generation metadata for a task"""
+        self.generation_metadata[task_id] = {"runtime": runtime_id, "model": model_id}
+
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
         return (f"{self.uid}\t"
@@ -153,4 +163,5 @@ class AnkiNote:
                 f"{self.status}\t"
                 f"{self.get_cloze_enabled_output()}\t"
                 f"{self.unit_type}\t"
+                f"{self.get_generation_metadata_output()}\t"
                 f"{self.tags}\n")

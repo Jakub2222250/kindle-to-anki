@@ -82,6 +82,6 @@ class WSDProvider:
                     "cloze_deletion_score": wsd_result.cloze_deletion_score
                 }
                 note.apply_wsd_results(wsd_data)
-                note.notes = note.notes + (f"\n{self.id}: runtime: {runtime.id}, {runtime_config.model_id}")
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
 
         return notes

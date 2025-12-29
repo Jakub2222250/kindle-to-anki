@@ -72,6 +72,6 @@ class TranslationProvider:
         for note in notes:
             if note.uid in translation_map:
                 note.context_translation = translation_map[note.uid]
-                note.notes = note.notes + (f"\n{self.id}: runtime: {runtime.id}, {runtime_config.model_id}")
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
 
         return notes

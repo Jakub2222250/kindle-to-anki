@@ -81,6 +81,6 @@ class CollocationProvider:
                 else:
                     note.collocations = str(collocation_result.collocations)
 
-                note.notes = note.notes + (f"\n{self.id}: runtime: {runtime.id}, {runtime_config.model_id}")
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
 
         return notes

@@ -78,6 +78,6 @@ class LUIProvider:
                 note.aspect = lui_result.aspect
                 note.original_form = lui_result.original_form
                 note.unit_type = lui_result.unit_type
-                note.notes = note.notes + (f"\n{self.id}: runtime: {runtime.id}, {runtime_config.model_id}")
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
 
         return notes
