@@ -2,6 +2,11 @@
 
 Converts Kindle Vocabulary Builder lookups into Anki flashcards with AI-generated definitions, translations, and context.
 
+## Prerequisites
+
+- [Python](https://www.python.org/downloads/)
+- [Anki Desktop](https://apps.ankiweb.net/)
+
 ## Installation
 
 ### 1. Install Python Dependencies
