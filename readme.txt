@@ -5,6 +5,11 @@ Set OPENAI_API_KEY = <> environment variable
 Add Anki Add-On: AnkiConnect  (2055492159)
 Add Anki Add-On: Advanced Browser (874215009)
 
+# Setup Note Type
+With Anki running, run:
+py src/kindle_to_anki/anki/setup_note_type.py
+This creates the required "My Foreign Language Reading Words Note Type" note type.
+
 # Optionally clean out Vocab Builder time to time
 Remove Internal Storage/vocabulary/vocab.db
 Remove Internal Storage/vocabulary/vocab.db-* auxiliary files
