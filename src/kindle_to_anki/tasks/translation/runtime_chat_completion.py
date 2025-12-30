@@ -29,7 +29,7 @@ class ChatCompletionTranslation:
     supports_batching: bool = True
 
     def _estimate_output_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 70
+        return 90
 
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
         return 90

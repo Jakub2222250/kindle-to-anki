@@ -50,7 +50,7 @@ With Anki open, go to Tools → Add-ons → Get Add-ons and install:
 ### 4. Create Note Type
 With Anki running:
 ```
-py src/kindle_to_anki/anki/setup_note_type.py
+py -m kindle_to_anki.anki.setup_note_type
 ```
 
 ### 5. Configuration
@@ -72,7 +72,7 @@ Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `dat
 
 ### Import Cards
 ```
-kindle_to_anki.bat
+py -m kindle_to_anki.main
 ```
 
 ### Manually validate Cards (Optional)

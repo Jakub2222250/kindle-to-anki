@@ -151,6 +151,11 @@ class AnkiConnect:
             return result  # Returns list of note IDs (or null for failed notes)
 
         except Exception as e:
+            error_str = str(e)
+            if "model was not found" in error_str:
+                print(f"\nError: Note type '{self.note_type}' not found in Anki.")
+                print("Run 'py -m kindle_to_anki.anki.setup_note_type' to create it.")
+                exit(1)
             raise Exception(f"Failed to create notes batch: {e}")
 
     def get_uid_to_note_id_map(self):
