@@ -1,0 +1,33 @@
+{
+  "anki_decks": [
+    {
+      "source_language_code": "es",
+      "target_language_code": "en",
+      "parent_deck_name": "Spanish Vocab Discovery",
+      "ready_deck_name": "Spanish Vocab Discovery::Ready",
+      "staging_deck_name": "Spanish Vocab Discovery::Import"
+    }
+  ],
+  "task_settings": {
+    "lui": {
+      "runtime": "chat_completion_lui",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
+    "wsd": {
+      "runtime": "chat_completion_wsd",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
+    "translation": {
+      "runtime": "chat_completion_translation",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
+    "collocation": {
+      "runtime": "chat_completion_collocation",
+      "model_id": "gpt-5-mini",
+      "batch_size": 30
+    }
+  }
+}

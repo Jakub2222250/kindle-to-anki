@@ -3,3 +3,4 @@
 .metadata/
 .cache/
 data/
+!data/config/config.sample.json
