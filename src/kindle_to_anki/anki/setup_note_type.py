@@ -1,25 +1,11 @@
 """Setup the required Anki note type via AnkiConnect"""
-import json
-import urllib.request
 from pathlib import Path
-
-
-def invoke(action, params=None):
-    request_json = {"action": action, "version": 6}
-    if params:
-        request_json["params"] = params
-    request_data = json.dumps(request_json).encode('utf-8')
-    request = urllib.request.Request("http://localhost:8765", request_data)
-    response = urllib.request.urlopen(request)
-    response_data = json.loads(response.read().decode('utf-8'))
-    if response_data.get('error'):
-        raise Exception(f"AnkiConnect error: {response_data['error']}")
-    return response_data.get('result')
+from kindle_to_anki.anki.anki_connect import AnkiConnect
 
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
-NOTE_TYPE_NAME = "My Foreign Language Reading Words Note Type"
+NOTE_TYPE_NAME = "Reading Vocab"
 
 FIELDS = [
     "UID",
@@ -65,25 +51,17 @@ def get_card_templates():
 
 
 def setup_note_type():
-    print("Checking AnkiConnect connection...")
     try:
-        invoke("version")
-    except Exception as e:
-        print(f"Cannot connect to AnkiConnect. Make sure Anki is running.\nError: {e}")
+        anki = AnkiConnect()
+    except SystemExit:
         return False
 
-    existing = invoke("modelNames")
-    if NOTE_TYPE_NAME in existing:
+    if NOTE_TYPE_NAME in anki.get_model_names():
         print(f"Note type '{NOTE_TYPE_NAME}' already exists.")
         return True
 
     print(f"Creating note type '{NOTE_TYPE_NAME}'...")
-    invoke("createModel", {
-        "modelName": NOTE_TYPE_NAME,
-        "inOrderFields": FIELDS,
-        "css": load_template("style.css"),
-        "cardTemplates": get_card_templates()
-    })
+    anki.create_model(NOTE_TYPE_NAME, FIELDS, load_template("style.css"), get_card_templates())
     print("Note type created successfully!")
     return True
 

@@ -53,6 +53,19 @@ class AnkiConnect:
         except Exception:
             return False
 
+    def get_model_names(self):
+        """Get list of existing note type names"""
+        return self._invoke("modelNames")
+
+    def create_model(self, model_name, fields, css, card_templates):
+        """Create a new note type/model"""
+        return self._invoke("createModel", {
+            "modelName": model_name,
+            "inOrderFields": fields,
+            "css": css,
+            "cardTemplates": card_templates
+        })
+
     def get_notes(self, anki_deck: AnkiDeck):
         """Get all notes from the specified deck with Expression, Context_Sentence, and Definition fields"""
 
