@@ -11,8 +11,8 @@ class AnkiConnect:
 
     def __init__(self):
         self.anki_url = "http://localhost:8765"
-        self.note_type = "My Foreign Language Reading Words Note Type"
-        
+        self.note_type = "Reading Vocab"
+
         # Confirm AnkiConnect is reachable
         print("\nChecking AnkiConnect reachability...")
         if not self.is_reachable():
