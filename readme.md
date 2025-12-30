@@ -2,6 +2,14 @@
 
 Converts Kindle Vocabulary Builder lookups into Anki flashcards with AI-generated definitions, translations, and context.
 
+<img width="625" height="642" alt="Production" src="https://github.com/user-attachments/assets/6ff2376b-a124-43da-a87c-ab57c231f352" />
+<img width="625" height="642" alt="Recognition_Back" src="https://github.com/user-attachments/assets/ebc793bd-d93b-47aa-9f50-714f0f6eb861" />
+<img width="625" height="642" alt="Recognition" src="https://github.com/user-attachments/assets/718a02be-e92c-47b7-927d-dcfed04eee35" />
+<img width="625" height="642" alt="Cloze_Back" src="https://github.com/user-attachments/assets/1709a8fe-e143-462a-a0b2-67642ac5b7c8" />
+<img width="625" height="642" alt="Cloze" src="https://github.com/user-attachments/assets/6f6074e7-3732-4bf6-9cd2-3a141f68fd28" />
+<img width="625" height="642" alt="Production_Back" src="https://github.com/user-attachments/assets/cb161da5-7982-4324-97cd-7b994416f52e" />
+
+
 ## Why Anki?
 
 Anki's spaced repetition algorithm is one of the most effective tools for long-term vocabulary retention. While Kindle's built-in Vocabulary Builder is convenient, it has limitations:
