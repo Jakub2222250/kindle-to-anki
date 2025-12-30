@@ -15,7 +15,7 @@ from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from .schema import LUIInput, LUIOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.lui_cache import LUICache
-from kindle_to_anki.llm.llm_helper import get_llm_lexical_unit_identification_instructions
+from kindle_to_anki.tasks.lui.lui_prompts import get_llm_lexical_unit_identification_instructions
 
 
 class ChatCompletionLUI:
