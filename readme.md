@@ -19,6 +19,12 @@ API costs are generally inexpensive: on the order of $1–2 per 1000 words colle
 
 The provider/runtime architecture allows each step to be implemented differently—for example, using a local LLM if desired. Even the Kindle Vocabulary Builder card collection can be replaced with a different source if implemented.
 
+Additional features:
+- **AnkiConnect integration**: Sends generated cards directly to Anki—no manual import needed.
+- **Smart duplicate detection**: Prunes duplicates automatically, but keeps repeated words if they appear in different contexts with different meanings.
+- **Incremental imports**: Tracks timestamps of previous imports to avoid reprocessing.
+- **API result caching**: Caches LLM responses to avoid repeated calls in case of failures or restarts.
+
 ## Prerequisites
 
 - [Python](https://www.python.org/downloads/)
@@ -75,6 +81,8 @@ You may want to manually review auto-generated notes before committing to learni
 - `Language::Import` — where new cards land
 - `Language::Quarantine` — less relevant cards you want to learn later
 - `Language::Ready` — vetted cards for study
+
+In `config.json`, set `parent_deck_name` to your parent deck (e.g., `Polish Vocab Discovery`) and `staging_deck_name` to the import subdeck (e.g., `Polish Vocab Discovery::Import`).
 
 Install the **Advanced Browser** add-on (874215009) to sort by creation date and other useful fields.
 
