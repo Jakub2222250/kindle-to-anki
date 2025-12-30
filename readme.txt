@@ -1,69 +1,76 @@
-# Installation Guide
-py -m pip install openai
-py -m pip install thefuzz
-Set OPENAI_API_KEY = <> environment variable
-Add Anki Add-On: AnkiConnect  (2055492159)
-Add Anki Add-On: Advanced Browser (874215009)
+# Kindle to Anki
 
-# Setup Note Type
-With Anki running, run:
+Converts Kindle Vocabulary Builder lookups into Anki flashcards with AI-generated definitions, translations, and context.
+
+## Installation
+
+### 1. Install Python Dependencies
+```
+py -m pip install -e .
+```
+
+### 2. Set Up OpenAI API Key
+Get your API key from https://platform.openai.com/api-keys then set environment variable:
+```
+set OPENAI_API_KEY=your-key-here
+```
+
+### 3. Install Anki Add-ons
+With Anki open, go to Tools → Add-ons → Get Add-ons and install:
+- AnkiConnect: 2055492159
+- Advanced Browser: 874215009
+
+### 4. Create Note Type
+With Anki running:
+```
 py src/kindle_to_anki/anki/setup_note_type.py
-This creates the required "My Foreign Language Reading Words Note Type" note type.
+```
 
-# Optionally clean out Vocab Builder time to time
-Remove Internal Storage/vocabulary/vocab.db
-Remove Internal Storage/vocabulary/vocab.db-* auxiliary files
-Disconnect, restart kindle, look up a word (pretty quickly after to avoid some cache recovering original)
+### 5. Configuration
+Copy the sample config and edit as needed:
+```
+copy data\config\config.sample.json data\config\config.json
+```
+Edit `data/config/config.json` to configure your language pairs, deck names, and task settings.
 
-# TODO
-Publish autopep8 formatting ruleset
+## Getting Vocabulary Data
 
-# Importing Cards
+**Option A: Automatic (Windows 10)**
+Connect your Kindle via USB. The script will automatically find `vocab.db`.
+
+**Option B: Manual**
+Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `data/inputs/`.
+
+## Usage
+
+### Import Cards
+```
 kindle_to_anki.bat
+```
 
-# Reviewing cards manually
-# It's important to manually decide which generated cards are worth studying now
-# Put the relevant cards into ::Ready, and suspend and put into ::Quarantine the more obscure ones
+### Review Cards
+1. Open card browser, sort by creation date
+2. Select recent cards, tag as "batch"
+3. Filter `tag:batch`, review each:
+   - Useful → leave as-is
+   - Not worth studying → Ctrl+J to suspend
+4. Filter `tag:batch is:suspended` → move to `::Quarantine`
+5. Filter `tag:batch -is:suspended` → move to `::Ready`
+6. Remove "batch" tag
 
-1. Card browser notes view
-2. Sort by creation date, select top ~50, add a tag called "batch"
-3. Add filter tag:batch
-4. For each note (using arrow keys):
-   - If note is useful, common, relevant, something you want to be able to start saying, do nothing
-   - If note is not worth studying now, crtl+J to suspend all cards in the note
-5. Add "is:suspended" to filter and move those cards to ::Quarantine deck
-6. Now change filter to "-is:suspended" and move those cards to ::Ready deck
-7. Change filter to only "tag:batch" and action remove tags... "batch"
+## Maintenance
 
+### Clear Vocabulary Builder (Optional)
+To reset Kindle's vocab.db:
+1. Delete `Internal Storage/vocabulary/vocab.db` and auxiliary files
+2. Disconnect and restart Kindle
+3. Look up a word quickly before cache recovers
 
-Fields to write out in order (ordering based on manual categorizing ease in Anki UI)
-1: UID
-2: Expression
-3: Definition
-4: Context_Sentence
-5: Context_Translation
-6: Part_Of_Speech
-7: Aspect
-8: Original_Form
-9: Context_Sentence_Cloze
-10: Collocations
-11: Original_Language_Hint
-12: Notes
-13: Source_Book
-14: Location
-15: Status
-16: Cloze_Enabled
-17: Unit_Type
-18: Generation_Metadata
-Tags
-
-
-# Running integration tests
-
-# Run individual integration tests for new tasks architecture:
+## Running Tests
+```
 py tests/kindle_to_anki/tasks/collect_candidates/test_runtime_kindle.py
 py tests/kindle_to_anki/tasks/translation/test_runtime_chat_completion.py
-py tests/kindle_to_anki/tasks/translation/test_runtime_llm.py
 py tests/kindle_to_anki/tasks/wsd/test_runtime_llm.py
 py tests/kindle_to_anki/tasks/collocation/test_runtime_llm.py
 py tests/kindle_to_anki/pruning/test_pruning.py
+```
