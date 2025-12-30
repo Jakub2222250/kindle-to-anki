@@ -62,7 +62,7 @@ Edit `data/config/config.json` to configure your language pairs, deck names, and
 
 ## Getting Vocabulary Data
 
-**Option A: Automatic (Windows 10)**
+**Option A: Automatic (Windows)**
 Connect your Kindle via USB. The script will automatically find `vocab.db`.
 
 **Option B: Manual**
@@ -75,9 +75,9 @@ Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `dat
 kindle_to_anki.bat
 ```
 
-### Review Cards (Optional)
+### Manually validate Cards (Optional)
 
-You may want to manually review auto-generated notes before committing to learning them, or prioritize more relevant cards first. If so, set up a parent deck with subdecks:
+You may want to manually validate auto-generated notes before committing to learning them, or prioritize more relevant cards first. If so, set up a parent deck with subdecks:
 - `Language::Import` — where new cards land
 - `Language::Quarantine` — less relevant cards you want to learn later
 - `Language::Ready` — vetted cards for study
