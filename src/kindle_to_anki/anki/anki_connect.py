@@ -4,6 +4,7 @@ import urllib.error
 
 from kindle_to_anki.anki.anki_deck import AnkiDeck
 from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 
 
 class AnkiConnect:
@@ -11,7 +12,7 @@ class AnkiConnect:
 
     def __init__(self):
         self.anki_url = "http://localhost:8765"
-        self.note_type = "Reading Vocab"
+        self.note_type = NOTE_TYPE_NAME
 
         # Confirm AnkiConnect is reachable
         print("\nChecking AnkiConnect reachability...")

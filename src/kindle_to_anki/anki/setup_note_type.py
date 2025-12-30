@@ -1,11 +1,10 @@
 """Setup the required Anki note type via AnkiConnect"""
 from pathlib import Path
 from kindle_to_anki.anki.anki_connect import AnkiConnect
+from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
-
-NOTE_TYPE_NAME = "Reading Vocab"
 
 FIELDS = [
     "UID",
