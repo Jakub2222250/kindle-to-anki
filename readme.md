@@ -2,6 +2,23 @@
 
 Converts Kindle Vocabulary Builder lookups into Anki flashcards with AI-generated definitions, translations, and context.
 
+## Why Anki?
+
+Anki's spaced repetition algorithm is one of the most effective tools for long-term vocabulary retention. While Kindle's built-in Vocabulary Builder is convenient, it has limitations:
+
+- **Context-specific definitions**: Kindle shows generic dictionary entries. This tool performs word sense disambiguation to display only the meaning relevant to your reading context.
+- **Optimal lexical units**: Rather than looking up single words, the tool identifies the smallest unit worth learning—whether that's an idiom, phrasal verb, or collocation.
+- **Cloze deletions**: Cards use cloze format to test active recall of the word in its original sentence context.
+- **Collocations**: Cards include common word pairings to help you use new vocabulary naturally.
+
+## How It Works
+
+Each major step of language analysis—lexical unit identification, word sense disambiguation, translation, and collocations—leverages LLM APIs such as OpenAI GPT. This project has no affiliation with OpenAI or any other provider and is free to use; you provide your own API keys.
+
+API costs are generally inexpensive: on the order of $1–2 per 1000 words collected in my experience.
+
+The provider/runtime architecture allows each step to be implemented differently—for example, using a local LLM if desired. Even the Kindle Vocabulary Builder card collection can be replaced with a different source if implemented.
+
 ## Prerequisites
 
 - [Python](https://www.python.org/downloads/)
@@ -23,7 +40,6 @@ set OPENAI_API_KEY=your-key-here
 ### 3. Install Anki Add-ons
 With Anki open, go to Tools → Add-ons → Get Add-ons and install:
 - AnkiConnect: 2055492159
-- Advanced Browser: 874215009
 
 ### 4. Create Note Type
 With Anki running:
@@ -53,7 +69,16 @@ Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `dat
 kindle_to_anki.bat
 ```
 
-### Review Cards
+### Review Cards (Optional)
+
+You may want to manually review auto-generated notes before committing to learning them, or prioritize more relevant cards first. If so, set up a parent deck with subdecks:
+- `Language::Import` — where new cards land
+- `Language::Quarantine` — less relevant cards you want to learn later
+- `Language::Ready` — vetted cards for study
+
+Install the **Advanced Browser** add-on (874215009) to sort by creation date and other useful fields.
+
+**Review workflow:**
 1. Open card browser, sort by creation date
 2. Select recent cards, tag as "batch"
 3. Filter `tag:batch`, review each:
