@@ -1,6 +1,6 @@
 """
 One-off script to update Usage_Level field for new Anki cards using WSD task.
-Reads cards with filter "is:new", runs WSD without cache, updates only Usage_Level.
+Reads cards, runs WSD without cache, updates only Usage_Level.
 """
 
 from kindle_to_anki.anki.anki_connect import AnkiConnect
@@ -46,8 +46,8 @@ def main():
     
     anki = AnkiConnect()
     
-    # Find new cards in the parent deck
-    query = f'"deck:{pl_deck.parent_deck_name}" "note:{NOTE_TYPE_NAME}" is:new'
+    # Find cards in the parent deck
+    query = f'"deck:{pl_deck.parent_deck_name}" "note:{NOTE_TYPE_NAME}"'
     print(f"Searching with query: {query}")
     
     note_ids = anki._invoke("findNotes", {"query": query})
@@ -108,20 +108,29 @@ def main():
         # Run WSD with ignore_cache=True
         wsd_outputs = wsd_runtime.disambiguate(batch_inputs, runtime_config, ignore_cache=True)
         
-        # Update cards with new usage_level
+        # Build batch update actions
+        actions = []
         for wsd_input, wsd_output in zip(batch_inputs, wsd_outputs):
             if wsd_output.usage_level is not None:
                 note_id = note_id_map[wsd_input.uid]
-                try:
-                    anki._invoke("updateNoteFields", {
+                actions.append({
+                    "action": "updateNoteFields",
+                    "params": {
                         "note": {
                             "id": note_id,
                             "fields": {"Usage_Level": str(wsd_output.usage_level)}
                         }
-                    })
-                    print(f"  Updated {wsd_input.uid}: Usage_Level={wsd_output.usage_level}")
-                except Exception as e:
-                    print(f"  Failed {wsd_input.uid}: {e}")
+                    }
+                })
+                print(f"  Queued {wsd_input.uid}: Usage_Level={wsd_output.usage_level}")
+        
+        # Update all cards in one API call
+        if actions:
+            try:
+                anki._invoke("multi", {"actions": actions})
+                print(f"  Updated {len(actions)} cards")
+            except Exception as e:
+                print(f"  Batch update failed: {e}")
         
         # Exit after first batch for inspection (remove this line to process all)
         print("\nExiting after first batch for inspection. Remove exit() to process all.")
