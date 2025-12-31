@@ -69,14 +69,8 @@ set OPENAI_API_KEY=your-key-here
 With Anki open, go to Tools → Add-ons → Get Add-ons and install:
 - AnkiConnect: 2055492159
 
-### 4. Create Note Type
-With Anki running:
-```
-py -m kindle_to_anki.anki.setup_note_type
-```
-
-### 5. Configuration
-Run the setup wizard to configure your decks and task settings:
+### 4. Configuration
+Run the setup wizard to configure your decks and task settings (will also create the note type if missing):
 ```
 py -m kindle_to_anki.configuration.setup_wizard
 ```

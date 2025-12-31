@@ -38,6 +38,10 @@ class AnkiConnectHelper:
         result = self._invoke("deckNames")
         return result if result else []
     
+    def get_model_names(self) -> list[str]:
+        result = self._invoke("modelNames")
+        return result if result else []
+    
     def create_deck(self, deck_name: str) -> bool:
         result = self._invoke("createDeck", {"deck": deck_name})
         return result is not None
@@ -247,10 +251,32 @@ def configure_tasks(config: dict):
         configure_task(config, task, source, target)
 
 
+def check_and_create_note_type():
+    """Check if note type exists in Anki and offer to create if missing."""
+    from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
+    from kindle_to_anki.anki.setup_note_type import setup_note_type
+    
+    helper = AnkiConnectHelper()
+    if not helper.is_reachable():
+        print("AnkiConnect not reachable. Skipping note type check.")
+        return
+    
+    existing_models = helper.get_model_names()
+    if NOTE_TYPE_NAME in existing_models:
+        print(f"\u2713 Note type '{NOTE_TYPE_NAME}' exists")
+    else:
+        print(f"\u2717 Note type '{NOTE_TYPE_NAME}' missing")
+        if prompt_yes_no(f"Create note type '{NOTE_TYPE_NAME}' in Anki?"):
+            setup_note_type()
+
+
 def run_setup_wizard():
     print("=== Kindle to Anki Configuration Setup ===\n")
     
     bootstrap_all()
+    
+    # Check note type at startup
+    check_and_create_note_type()
     
     existing_config = load_config()
     
