@@ -1,6 +1,6 @@
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
-from kindle_to_anki.configuration.options_display import show_all_options
+from kindle_to_anki.configuration.options_display import show_selected_options
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
@@ -53,8 +53,6 @@ def export_kindle_vocab():
     anki_connect_instance = AnkiConnect()
 
     for source_language_code, notes in notes_by_language.items():
-        
-        show_all_options(source_language_code, target_language_code)
 
         # Reference to anki deck for metadata
         anki_deck = anki_decks_by_source_language.get(source_language_code)
@@ -75,6 +73,15 @@ def export_kindle_vocab():
         if len(notes) == 0:
             print(f"No new notes to add to Anki after redundancy pruning for language: {source_language_code}")
             continue
+
+        # Show selected configuration with cost estimates
+        task_settings = {
+            "lui": config_manager.get_task_setting("lui"),
+            "wsd": config_manager.get_task_setting("wsd"),
+            "translation": config_manager.get_task_setting("translation"),
+            "collocation": config_manager.get_task_setting("collocation")
+        }
+        show_selected_options(task_settings, source_language_code, target_language_code, len(notes))
 
         sleep(SLEEP_TIME)  # Opportunity to read output
 

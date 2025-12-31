@@ -71,3 +71,39 @@ def show_task_options(task: str, source_language_code: str, target_language_code
         available = "Yes" if opt["available"] else "No"
         print(f"  [{i}] Runtime: {opt['runtime']}, Model: {model_str}, Cost/1000: ${opt['cost_per_1000']:.4f}, Available: {available}")
     return options
+
+
+def show_selected_options(task_settings: dict, source_language_code: str, target_language_code: str, note_count: int):
+    """Display the user's selected task settings with estimated costs for the given note count."""
+    print(f"\nSelected configuration for {note_count} notes ({source_language_code} -> {target_language_code}):")
+    total_cost = 0.0
+    for task, setting in task_settings.items():
+        runtime_id = setting.get("runtime")
+        model_id = setting.get("model_id")
+        runtime = RuntimeRegistry.get(runtime_id)
+        if not runtime:
+            print(f"  {task:15s}: Runtime '{runtime_id}' not found")
+            continue
+        
+        if model_id:
+            model = ModelRegistry.get(model_id)
+            if model:
+                runtime_config = RuntimeConfig(
+                    model_id=model_id,
+                    batch_size=setting.get("batch_size", 30),
+                    source_language_code=source_language_code,
+                    target_language_code=target_language_code
+                )
+                usage = runtime.estimate_usage(note_count, runtime_config)
+                pricing = TokenPricingPolicy(
+                    input_cost_per_1m=model.input_token_cost_per_1m,
+                    output_cost_per_1m=model.output_token_cost_per_1m,
+                )
+                cost = pricing.estimate_cost(usage).usd
+                total_cost += cost
+                print(f"  {task:15s}: {runtime_id:30s} | {model_id:16s} | Est: ${cost:.4f}")
+            else:
+                print(f"  {task:15s}: {runtime_id:30s} | {model_id:16s} | Est: n/a")
+        else:
+            print(f"  {task:15s}: {runtime_id:30s} | {'n/a':16s} | Est: $0.0000")
+    print(f"  {'TOTAL':15s}: {' ':30s}   {' ':16s}   Est: ${total_cost:.4f}")
