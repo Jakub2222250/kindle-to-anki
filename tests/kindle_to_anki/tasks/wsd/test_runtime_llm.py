@@ -10,28 +10,50 @@ from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 bootstrap_all()
 
-
-def test_wsd_runtime_llm():
-    """Integration test of Word Sense Disambiguation via LLM runtime - focus on plural forms with singular lemmas."""
-    
-    test_cases = [
+# Test cases per language pair: (source_lang, target_lang) -> list of test cases
+TEST_CASES = {
+    ("pl", "en"): [
         {
-            'uid': 'test_1',
-            'word': 'dzieci',  # plural
-            'lemma': 'dziecko',       # singular
-            'sentence': 'Dzieci bawią się na placu zabaw.',
+            'uid': 'pl_en_1',  # General example
+            'word': 'snop',
+            'lemma': 'snop',
+            'sentence': 'Z końca różdżki wytrysnął snop iskier, który ugodził w klamkę.',
             'pos': 'noun'
         },
         {
-            'uid': 'test_2',
-            'word': 'koty',    # plural
-            'lemma': 'kot',           # singular
+            'uid': 'pl_en_2',  # Plural vs singular example
+            'word': 'koty',
+            'lemma': 'kot',
             'sentence': 'Koty lubią spać w słońcu.',
             'pos': 'noun'
         }
-    ]
+    ],
+    ("en", "pl"): [
+        {
+            'uid': 'en_pl_1',
+            'word': 'parlance',  # plural
+            'lemma': 'parlance',    # singular
+            'sentence': 'Using the parlance, each object is an instance of a class, in which “class” is synonymous with “type.”',
+            'pos': 'noun'
+        },
+        {
+            'uid': 'en_pl_2',
+            'word': 'guarantee',      # plural
+            'lemma': 'guarantee',      # singular
+            'sentence': 'Because an object of type “circle” is also an object of type “shape,” a circle is guaranteed to accept shape messages.',
+            'pos': 'verb'
+        }
+    ],
+}
+
+
+def run_wsd_test(source_lang: str, target_lang: str):
+    """Run WSD test for a specific language pair."""
+    test_cases = TEST_CASES.get((source_lang, target_lang), [])
+    if not test_cases:
+        print(f"No test cases for {source_lang} -> {target_lang}")
+        return
     
-    # Create WSD inputs
     wsd_inputs = [
         WSDInput(
             uid=case['uid'],
@@ -43,40 +65,39 @@ def test_wsd_runtime_llm():
         for case in test_cases
     ]
     
-    print(f"Testing WSD runtime with {len(wsd_inputs)} inputs...")
+    print(f"\nTesting WSD runtime ({source_lang} -> {target_lang}) with {len(wsd_inputs)} inputs...")
     
-    # Create runtime and config
     runtime = ChatCompletionWSD()
-    runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2, source_language_code="pl", target_language_code="en")
+    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=2, source_language_code=source_lang, target_language_code=target_lang)
     
-    # Test WSD
-    try:
-        outputs = runtime.disambiguate(
-            wsd_inputs,
-            runtime_config=runtime_config,
-            use_test_cache=True
-        )
+    outputs = runtime.disambiguate(
+        wsd_inputs,
+        runtime_config=runtime_config,
+        use_test_cache=True,
+        ignore_cache=True
+    )
+    
+    print(f"WSD completed. Got {len(outputs)} outputs.")
+    
+    for i, (output_item, test_case) in enumerate(zip(outputs, test_cases)):
+        print(f"\nTest case {i+1}: {test_case['word']} (lemma: {test_case['lemma']})")
+        print(f"Sentence: {test_case['sentence']}")
+        print(f"Definition: {output_item.definition}")
+        print(f"Original definition: {output_item.original_language_definition}")
+        print(f"Cloze score: {output_item.cloze_deletion_score}")
         
-        print(f"WSD completed. Got {len(outputs)} outputs.")
-        
-        for i, (input_item, output_item, test_case) in enumerate(zip(wsd_inputs, outputs, test_cases)):
-            print(f"\nTest case {i+1}: {test_case['word']} (lemma: {test_case['lemma']})")
-            print(f"Sentence: {test_case['sentence']}")
-            print(f"Definition: {output_item.definition}")
-            print(f"Original definition: {output_item.original_language_definition}")
-            print(f"Cloze score: {output_item.cloze_deletion_score}")
-            
-            # Basic validation
-            assert output_item.definition, f"Empty definition for test case {i+1}"
-            assert output_item.original_language_definition, f"Empty original definition for test case {i+1}"
-            assert isinstance(output_item.cloze_deletion_score, int), f"Invalid cloze score type for test case {i+1}"
-            assert 0 <= output_item.cloze_deletion_score <= 10, f"Invalid cloze score range for test case {i+1}"
-            
-        print("\n✓ WSD runtime test completed successfully")
-        
-    except Exception as e:
-        print(f"✗ WSD runtime test failed: {e}")
-        raise
+        assert output_item.definition, f"Empty definition for test case {i+1}"
+        assert output_item.original_language_definition, f"Empty original definition for test case {i+1}"
+        assert isinstance(output_item.cloze_deletion_score, int), f"Invalid cloze score type for test case {i+1}"
+        assert 0 <= output_item.cloze_deletion_score <= 10, f"Invalid cloze score range for test case {i+1}"
+    
+    print(f"\n✓ WSD runtime test ({source_lang} -> {target_lang}) completed successfully")
+
+
+def test_wsd_runtime_llm():
+    """Integration test of Word Sense Disambiguation via LLM runtime - focus on plural forms with singular lemmas."""
+    for (source_lang, target_lang) in TEST_CASES.keys():
+        run_wsd_test(source_lang, target_lang)
 
 
 if __name__ == "__main__":
