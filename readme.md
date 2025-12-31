@@ -76,11 +76,14 @@ py -m kindle_to_anki.anki.setup_note_type
 ```
 
 ### 5. Configuration
-Copy the sample config and edit as needed:
+Run the setup wizard to configure your decks and task settings:
+```
+py -m kindle_to_anki.configuration.setup_wizard
+```
+Alternatively, copy the sample config and edit manually:
 ```
 copy data\config\config.sample.json data\config\config.json
 ```
-Edit `data/config/config.json` to configure your language pairs, deck names, and task settings.
 
 ## Getting Vocabulary Data
 
