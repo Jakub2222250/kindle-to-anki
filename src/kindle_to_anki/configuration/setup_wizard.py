@@ -1,8 +1,46 @@
 import json
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.configuration.options_display import show_task_options, get_options_for_task
+
+
+class AnkiConnectHelper:
+    """Lightweight AnkiConnect helper for deck operations."""
+    
+    def __init__(self):
+        self.anki_url = "http://localhost:8765"
+    
+    def _invoke(self, action, params=None):
+        request_json = {"action": action, "version": 6}
+        if params:
+            request_json["params"] = params
+        try:
+            request_data = json.dumps(request_json).encode('utf-8')
+            request = urllib.request.Request(self.anki_url, request_data)
+            response = urllib.request.urlopen(request)
+            response_data = json.loads(response.read().decode('utf-8'))
+            if response_data.get('error'):
+                raise Exception(f"AnkiConnect error: {response_data['error']}")
+            return response_data.get('result')
+        except urllib.error.URLError:
+            return None
+    
+    def is_reachable(self) -> bool:
+        try:
+            return self._invoke("version") is not None
+        except Exception:
+            return False
+    
+    def get_deck_names(self) -> list[str]:
+        result = self._invoke("deckNames")
+        return result if result else []
+    
+    def create_deck(self, deck_name: str) -> bool:
+        result = self._invoke("createDeck", {"deck": deck_name})
+        return result is not None
 
 
 DEFAULT_CONFIG = {
@@ -62,6 +100,25 @@ def prompt_choice(prompt: str, options: list, default: int = 1) -> int:
         print(f"Please enter a number between 1 and {len(options)}")
 
 
+def offer_create_decks_in_anki(parent: str, staging: str):
+    """Offer to create decks in Anki if missing."""
+    helper = AnkiConnectHelper()
+    if not helper.is_reachable():
+        print("AnkiConnect not reachable. Skipping deck creation check.")
+        return
+    
+    existing_decks = helper.get_deck_names()
+    for deck_name in [parent, staging]:
+        if deck_name in existing_decks:
+            print(f"  \u2713 '{deck_name}' exists in Anki")
+        else:
+            if prompt_yes_no(f"Create '{deck_name}' in Anki?"):
+                if helper.create_deck(deck_name):
+                    print(f"  Created '{deck_name}'")
+                else:
+                    print(f"  Failed to create '{deck_name}'")
+
+
 def add_deck(config: dict):
     print("\n--- Add New Deck ---")
     source = input("Source language code (e.g., es, de, fr): ").strip().lower()
@@ -77,6 +134,7 @@ def add_deck(config: dict):
     }
     config["anki_decks"].append(deck)
     print(f"Added deck: {source} -> {target}")
+    offer_create_decks_in_anki(parent, staging)
 
 
 def remove_deck(config: dict):
@@ -116,6 +174,7 @@ def edit_deck(config: dict):
         deck["staging_deck_name"] = new_staging
     
     print("Deck updated.")
+    offer_create_decks_in_anki(deck["parent_deck_name"], deck["staging_deck_name"])
 
 
 def manage_decks(config: dict):
