@@ -64,7 +64,3 @@ def setup_note_type():
     anki.create_model(NOTE_TYPE_NAME, FIELDS, load_template("style.css"), get_card_templates())
     print("Note type created successfully!")
     return True
-
-
-if __name__ == "__main__":
-    setup_note_type()

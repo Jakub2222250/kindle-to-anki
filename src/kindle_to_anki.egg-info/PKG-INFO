@@ -1,3 +1,11 @@
 Metadata-Version: 2.4
 Name: kindle_to_anki
 Version: 0.1.0
+License-File: LICENSE
+Requires-Dist: openai
+Requires-Dist: pycountry
+Requires-Dist: requests
+Requires-Dist: thefuzz
+Requires-Dist: tiktoken
+Dynamic: license-file
+Dynamic: requires-dist

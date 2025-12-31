@@ -1,13 +1,10 @@
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
+from kindle_to_anki.configuration.options_display import show_selected_options
 from kindle_to_anki.core.bootstrap import bootstrap_all
-from kindle_to_anki.core.pricing.token_pricing_policy import TokenPricingPolicy
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
-from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
-from kindle_to_anki.core.models.registry import ModelRegistry
-from kindle_to_anki.platforms.platform_registry import PlatformRegistry
-from kindle_to_anki.tasks.tasks import TASKS
 
+from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.tasks.collect_candidates.provider import CollectCandidatesProvider
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
 from kindle_to_anki.tasks.wsd.provider import WSDProvider
@@ -20,45 +17,6 @@ from kindle_to_anki.export.export_anki import write_anki_import_file
 from kindle_to_anki.pruning.pruning import prune_existing_notes_automatically, prune_existing_notes_by_UID, prune_new_notes_against_eachother, prune_notes_identified_as_redundant
 
 from time import sleep
-
-
-def show_all_options(source_language_code: str, target_language_code: str):
-
-    for task in TASKS:
-        for runtime in RuntimeRegistry.list():
-
-            if task not in runtime.supported_tasks:
-                continue
-
-            supports_model_families = runtime.supported_model_families
-            if not supports_model_families or len(supports_model_families) == 0:
-                usage_estimate = 0.0
-                available = "Yes"
-                print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {'n/a':16s}, Cost/1000: ${usage_estimate:.4f}, Available: {available}")
-            else:
-                models_for_runtime = [
-                    m for m in ModelRegistry.list()
-                    if m.family in supports_model_families
-                ]
-                for model in models_for_runtime:
-                    runtime_config = RuntimeConfig(
-                        model_id=model.id,
-                        batch_size=30,
-                        source_language_code=source_language_code,
-                        target_language_code=target_language_code
-                    )
-
-                    usage_estimate = runtime.estimate_usage(1000, runtime_config)
-
-                    token_pricing_policy = TokenPricingPolicy(
-                        input_cost_per_1m=model.input_token_cost_per_1m,
-                        output_cost_per_1m=model.output_token_cost_per_1m,
-                    )
-
-                    usage_estimate = token_pricing_policy.estimate_cost(usage_estimate)
-                    platform = PlatformRegistry.get(model.platform_id)
-                    available = "Yes" if platform and platform.validate_credentials() else "No"
-                    print(f"Task: {task:20s}, Runtime: {runtime.id:30s}, Model: {model.id:16s}, Cost/1000: ${usage_estimate.usd:.4f}, Available: {available}")
 
 
 def export_kindle_vocab():
@@ -95,8 +53,6 @@ def export_kindle_vocab():
     anki_connect_instance = AnkiConnect()
 
     for source_language_code, notes in notes_by_language.items():
-        
-        show_all_options(source_language_code, target_language_code)
 
         # Reference to anki deck for metadata
         anki_deck = anki_decks_by_source_language.get(source_language_code)
@@ -117,6 +73,15 @@ def export_kindle_vocab():
         if len(notes) == 0:
             print(f"No new notes to add to Anki after redundancy pruning for language: {source_language_code}")
             continue
+
+        # Show selected configuration with cost estimates
+        task_settings = {
+            "lui": config_manager.get_task_setting("lui"),
+            "wsd": config_manager.get_task_setting("wsd"),
+            "translation": config_manager.get_task_setting("translation"),
+            "collocation": config_manager.get_task_setting("collocation")
+        }
+        show_selected_options(task_settings, source_language_code, target_language_code, len(notes))
 
         sleep(SLEEP_TIME)  # Opportunity to read output
 
