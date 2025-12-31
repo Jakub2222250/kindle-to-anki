@@ -34,13 +34,13 @@ class ChatCompletionCollocation:
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
         return 115
 
-    def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
+    def _build_prompt(self, items_json: str, source_language_name: str) -> str:
         return f"""Find collocations for the following {source_language_name} words and sentences.
 
 Words to analyze:
 {items_json}
 
-{self._get_llm_collocation_instructions(source_language_name, target_language_name)}
+{self._get_llm_collocation_instructions(source_language_name)}
 
 Respond with valid JSON. No additional text."""
 
@@ -48,7 +48,7 @@ Respond with valid JSON. No additional text."""
         model = ModelRegistry.get(config.model_id)
         source_language_name = get_language_name_in_english(config.source_language_code)
         target_language_name = get_language_name_in_english(config.target_language_code)
-        static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name)
+        static_prompt = self._build_prompt("placeholder", source_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
         
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
@@ -84,10 +84,9 @@ Respond with valid JSON. No additional text."""
 
         # Get language names from the inputs
         source_language_name = get_language_name_in_english(source_lang)
-        target_language_name = get_language_name_in_english(target_lang)
 
         # Setup cache
-        language_pair_code = f"{source_lang}-{target_lang}"
+        language_pair_code = f"{source_lang}-{runtime_config.target_language_code}"
         cache_suffix = language_pair_code + "_llm"
         if use_test_cache:
             cache_suffix += "_test"
@@ -127,7 +126,7 @@ Respond with valid JSON. No additional text."""
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        failing_inputs = self._process_collocation_batches(inputs_needing_collocations, cache, source_language_name, target_language_name, runtime_config)
+        failing_inputs = self._process_collocation_batches(inputs_needing_collocations, cache, source_language_name, runtime_config)
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM collocation analysis.")
@@ -139,7 +138,7 @@ Respond with valid JSON. No additional text."""
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                failing_inputs = self._process_collocation_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config)
+                failing_inputs = self._process_collocation_batches(failing_inputs, cache, source_language_name, runtime_config)
 
         # Fill in the collocation results
         collocation_outputs = []
@@ -163,13 +162,13 @@ Respond with valid JSON. No additional text."""
         print(f"{source_language_name} collocation generation (LLM) completed.")
         return collocation_outputs
 
-    def _get_llm_collocation_instructions(self, source_language_name: str, target_language_name: str) -> str:
+    def _get_llm_collocation_instructions(self, source_language_name: str) -> str:
         return f"""For each {source_language_name} word and sentence provided, find common {source_language_name} collocations or phrases that include the inflected input word.
 
 Output JSON as an object where keys are the UIDs and values are objects with:
 - "collocations": A JSON list of 0-3 short collocations in {source_language_name} that commonly use the input word form"""
 
-    def _make_batch_collocation_call(self, batch_inputs: List[CollocationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
+    def _make_batch_collocation_call(self, batch_inputs: List[CollocationInput], processing_timestamp: str, source_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for collocation generation"""
         items_list = []
         for input_item in batch_inputs:
@@ -177,7 +176,7 @@ Output JSON as an object where keys are the UIDs and values are objects with:
 
         items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-        prompt = self._build_prompt(items_json, source_language_name, target_language_name)
+        prompt = self._build_prompt(items_json, source_language_name)
 
         # Get the model and platform
         model = ModelRegistry.get(runtime_config.model_id)
@@ -207,7 +206,7 @@ Output JSON as an object where keys are the UIDs and values are objects with:
 
         return json.loads(response_text), runtime_config.model_id, processing_timestamp
 
-    def _process_collocation_batches(self, inputs_needing_collocations: List[CollocationInput], cache: CollocationCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[CollocationInput]:
+    def _process_collocation_batches(self, inputs_needing_collocations: List[CollocationInput], cache: CollocationCache, source_language_name: str, runtime_config: RuntimeConfig) -> List[CollocationInput]:
         """Process inputs in batches for collocation generation"""
 
         # Capture timestamp at the start of collocation processing
@@ -223,7 +222,7 @@ Output JSON as an object where keys are the UIDs and values are objects with:
             print(f"\nProcessing collocation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
-                batch_results, model_used, timestamp = self._make_batch_collocation_call(batch, processing_timestamp, source_language_name, target_language_name, runtime_config)
+                batch_results, model_used, timestamp = self._make_batch_collocation_call(batch, processing_timestamp, source_language_name, runtime_config)
 
                 for input_item in batch:
                     if input_item.uid in batch_results:
