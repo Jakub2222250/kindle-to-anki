@@ -34,6 +34,7 @@ class AnkiNote:
         self.cloze_deletion_score = -1
         self.cloze_enabled = None
         self.generation_metadata = {}
+        self.usage_level = None
 
         # Generate book abbreviation
         self.book_abbrev = self.generate_book_abbrev(self.kindle_book_name)
@@ -63,6 +64,9 @@ class AnkiNote:
             # Enable cloze if score is 7 or higher
             self.cloze_deletion_score = score
             self.cloze_enabled = score if score >= 7 else None
+
+        if wsd_data.get('usage_level') is not None:
+            self.usage_level = wsd_data['usage_level']
 
     def generate_book_abbrev(self, book_name):
         """Generate book abbreviation for use as tag"""
@@ -164,4 +168,5 @@ class AnkiNote:
                 f"{self.get_cloze_enabled_output()}\t"
                 f"{self.unit_type}\t"
                 f"{self.get_generation_metadata_output()}\t"
+                f"{self.usage_level if self.usage_level is not None else ''}\t"
                 f"{self.tags}\n")

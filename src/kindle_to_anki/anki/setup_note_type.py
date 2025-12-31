@@ -25,6 +25,7 @@ FIELDS = [
     "Cloze_Enabled",
     "Unit_Type",
     "Generation_Metadata",
+    "Usage_Level",
 ]
 
 CARD_TEMPLATES = [

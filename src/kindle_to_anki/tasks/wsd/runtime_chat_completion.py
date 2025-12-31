@@ -109,7 +109,8 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
                     wsd_output = WSDOutput(
                         definition=cached_result.get('definition', ''),
                         original_language_definition=cached_result.get('original_language_definition', ''),
-                        cloze_deletion_score=cached_result.get('cloze_deletion_score', 0)
+                        cloze_deletion_score=cached_result.get('cloze_deletion_score', 0),
+                        usage_level=cached_result.get('usage_level')
                     )
                     outputs.append(wsd_output)
                 else:
@@ -154,12 +155,13 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
                     wsd_output = WSDOutput(
                         definition=cached_result.get('definition', ''),
                         original_language_definition=cached_result.get('original_language_definition', ''),
-                        cloze_deletion_score=cached_result.get('cloze_deletion_score', 0)
+                        cloze_deletion_score=cached_result.get('cloze_deletion_score', 0),
+                        usage_level=cached_result.get('usage_level')
                     )
                     wsd_outputs.append(wsd_output)
                 else:
                     # This shouldn't happen if everything worked correctly
-                    wsd_outputs.append(WSDOutput(definition="", original_language_definition="", cloze_deletion_score=0))
+                    wsd_outputs.append(WSDOutput(definition="", original_language_definition="", cloze_deletion_score=0, usage_level=None))
             else:
                 wsd_outputs.append(output)
 
@@ -170,7 +172,8 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
         return f"""output JSON with:
 1. definition: {target_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
 2. original_language_definition: {source_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
-3. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable"""
+3. cloze_deletion_score: Provide a score from 0 to 10 indicating how suitable the input sentence is for cloze deletion in Anki based on it and the input word where 0 means not suitable at all, 10 means very suitable
+4. usage_level: Estimate the word sense's usage level for modern general usage (1=rare/specialized, 2=uncommon/domain-specific, 3=common in educated speech/writing, 4=very common in everyday usage, 5=core vocabulary used frequently by native speakers). Base on frequency in modern general usage, whether it's a core or niche sense, and suitability for language learners."""
 
     def _make_batch_wsd_call(self, batch_inputs: List[WSDInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for WSD"""
