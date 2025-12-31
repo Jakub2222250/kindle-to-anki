@@ -8,6 +8,7 @@
     background-color: white;
     max-width: 600px;
     margin-inline: auto;
+    padding: 8px;
 }
 
 #prompt, #answer {
