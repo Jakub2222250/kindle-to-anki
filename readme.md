@@ -1,6 +1,19 @@
 # Kindle to Anki
 
-Converts Kindle Vocabulary Builder lookups into Anki flashcards with AI-generated definitions, translations, and context.
+Transform your Kindle vocabulary lookups into high-quality Anki flashcards—automatically.
+
+## Why This Tool?
+
+When you look up a word on your Kindle, it gets saved to the Vocabulary Builder. This tool takes those lookups and creates flashcards that are optimized for long-term retention:
+
+- **Context-aware definitions**: Generic dictionary entries don't help when a word has multiple meanings. This tool performs word sense disambiguation to show only the definition relevant to your reading context.
+- **Optimal lexical units**: Identifies what's actually worth learning—whether that's a single word, an idiom, a phrasal verb, or a collocation.
+- **Cloze deletions**: Test active recall by filling in the blank in the original sentence where you encountered the word.
+- **Collocations**: Learn common word pairings to use new vocabulary naturally.
+- **Direct Anki sync**: Cards are sent directly to Anki via AnkiConnect—no manual import files needed.
+- **Smart duplicate handling**: Automatically detects duplicates, but keeps repeated words when they appear in different contexts with different meanings.
+- **Incremental imports**: Only processes new vocabulary entries since your last import.
+- **Resilient processing**: Caches API responses to avoid repeated calls if something fails mid-run.
 
 ## Card Types
 
@@ -24,33 +37,19 @@ The note type generates three card types for comprehensive vocabulary learning:
 |:-----:|:----:|
 | <img width="300" alt="Cloze" src="https://github.com/user-attachments/assets/6f6074e7-3732-4bf6-9cd2-3a141f68fd28" /> | <img width="300" alt="Cloze Back" src="https://github.com/user-attachments/assets/1709a8fe-e143-462a-a0b2-67642ac5b7c8" /> |
 
-## Why Anki?
-
-Anki's spaced repetition algorithm is one of the most effective tools for long-term vocabulary retention. While Kindle's built-in Vocabulary Builder is convenient, it has limitations:
-
-- **Context-specific definitions**: Kindle shows generic dictionary entries. This tool performs word sense disambiguation to display only the meaning relevant to your reading context.
-- **Optimal lexical units**: Rather than looking up single words, the tool identifies the smallest unit worth learning—whether that's an idiom, phrasal verb, or collocation.
-- **Cloze deletions**: Cards use cloze format to test active recall of the word in its original sentence context.
-- **Collocations**: Cards include common word pairings to help you use new vocabulary naturally.
-
 ## How It Works
 
-Each major step of language analysis—lexical unit identification, word sense disambiguation, translation, and collocations—leverages LLM APIs such as OpenAI GPT. This project has no affiliation with OpenAI or any other provider and is free to use; you provide your own API keys.
+Each processing step—lexical unit identification, word sense disambiguation, translation, and collocations—uses LLM APIs such as OpenAI GPT. This project has no affiliation with OpenAI or any other provider; you provide your own API keys.
 
-API costs are generally inexpensive: on the order of $1–2 per 1000 words collected in my experience.
+API costs are modest: roughly $1–2 per 1000 words in my experience.
 
-The provider/runtime architecture allows each step to be implemented differently—for example, using a local LLM if desired. Even the Kindle Vocabulary Builder card collection can be replaced with a different source if implemented.
-
-Additional features:
-- **AnkiConnect integration**: Sends generated cards directly to Anki—no manual import needed.
-- **Smart duplicate detection**: Prunes duplicates automatically, but keeps repeated words if they appear in different contexts with different meanings.
-- **Incremental imports**: Tracks timestamps of previous imports to avoid reprocessing.
-- **API result caching**: Caches LLM responses to avoid repeated calls in case of failures or restarts.
+The modular architecture allows each step to use a different provider—including local LLMs if desired. The vocabulary source can also be swapped out if you want to use something other than Kindle.
 
 ## Prerequisites
 
 - [Python](https://www.python.org/downloads/)
 - [Anki Desktop](https://apps.ankiweb.net/)
+- [OpenAI API account](https://platform.openai.com/) — $5 in API credits covers approximately 1500–2000 flashcards
 
 ## Installation
 
