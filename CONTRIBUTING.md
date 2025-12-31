@@ -24,6 +24,8 @@ The project uses a task/runtime pattern:
 - **Runtimes** implement how (OpenAI, DeepL, local LLM, etc.)
 - **Platforms** (`platforms/`) wrap API clients
 
+This modular architecture allows each processing step to use a different provider—including local LLMs if desired. The vocabulary source can also be swapped out if you want to use something other than Kindle.
+
 Each task has a cache to avoid redundant API calls during development.
 
 ## Pull Requests

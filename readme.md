@@ -2,14 +2,17 @@
 
 Transform your Kindle vocabulary lookups into high-quality Anki flashcards—automatically.
 
+Built for foreign language learners reading books in their target language. When you look up unfamiliar words on your Kindle, this tool turns them into flashcards with context-aware definitions and translations to your native language. I (the author) use it for studying Polish with English translations, but it works with any language pair.
+
 ## Why This Tool?
 
-When you look up a word on your Kindle, it gets saved to the Vocabulary Builder. This tool takes those lookups and creates flashcards that are optimized for long-term retention:
+This tool takes your Kindle Vocabulary Builder lookups and creates flashcards optimized for long-term retention:
 
 - **Context-aware definitions**: Generic dictionary entries don't help when a word has multiple meanings. This tool performs word sense disambiguation to show only the definition relevant to your reading context.
 - **Optimal lexical units**: Identifies what's actually worth learning—whether that's a single word, an idiom, a phrasal verb, or a collocation.
 - **Cloze deletions**: Test active recall by filling in the blank in the original sentence where you encountered the word.
 - **Collocations**: Learn common word pairings to use new vocabulary naturally.
+- **Usage level ranking**: Each word is tagged with its frequency/importance level, letting you prioritize the most useful vocabulary first.
 - **Direct Anki sync**: Cards are sent directly to Anki via AnkiConnect—no manual import files needed.
 - **Smart duplicate handling**: Automatically detects duplicates, but keeps repeated words when they appear in different contexts with different meanings.
 - **Incremental imports**: Only processes new vocabulary entries since your last import.
@@ -37,19 +40,17 @@ The note type generates three card types for comprehensive vocabulary learning:
 |:-----:|:----:|
 | <img width="300" alt="Cloze" src="https://github.com/user-attachments/assets/6f6074e7-3732-4bf6-9cd2-3a141f68fd28" /> | <img width="300" alt="Cloze Back" src="https://github.com/user-attachments/assets/1709a8fe-e143-462a-a0b2-67642ac5b7c8" /> |
 
-## How It Works
+## API Costs
 
-Each processing step—lexical unit identification, word sense disambiguation, translation, and collocations—uses LLM APIs such as OpenAI GPT. This project has no affiliation with OpenAI or any other provider; you provide your own API keys.
+This tool uses LLM APIs (OpenAI GPT by default) to process vocabulary. You provide your own API keys—this project has no affiliation with any provider.
 
-API costs are modest: roughly $1–2 per 1000 words in my experience.
-
-The modular architecture allows each step to use a different provider—including local LLMs if desired. The vocabulary source can also be swapped out if you want to use something other than Kindle.
+Typical cost: roughly $2–3 per 1000 words processed. A $5 API credits purchase is enough to get started.
 
 ## Prerequisites
 
 - [Python](https://www.python.org/downloads/)
 - [Anki Desktop](https://apps.ankiweb.net/)
-- [OpenAI API account](https://platform.openai.com/) — $5 in API credits covers approximately 1500–2000 flashcards
+- [OpenAI API account](https://platform.openai.com/) — $5 API credits purchase
 
 ## Installation
 
