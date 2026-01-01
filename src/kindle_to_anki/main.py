@@ -8,6 +8,7 @@ from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.tasks.collect_candidates.provider import CollectCandidatesProvider
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
 from kindle_to_anki.tasks.wsd.provider import WSDProvider
+from kindle_to_anki.tasks.source_language_hint.provider import SourceLanguageHintProvider
 from kindle_to_anki.tasks.cloze_scoring.provider import ClozeScoringProvider
 from kindle_to_anki.tasks.usage_level.provider import UsageLevelProvider
 from kindle_to_anki.tasks.collocation.provider import CollocationProvider
@@ -33,6 +34,7 @@ def export_kindle_vocab():
     candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates"))
     translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("translation"))
     wsd_provider = WSDProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("wsd"))
+    source_language_hint_provider = SourceLanguageHintProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("source_language_hint"))
     cloze_scoring_provider = ClozeScoringProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("cloze_scoring"))
     usage_level_provider = UsageLevelProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("usage_level"))
     collocation_provider = CollocationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collocation"))
@@ -82,6 +84,7 @@ def export_kindle_vocab():
         task_settings = {
             "lui": config_manager.get_task_setting("lui"),
             "wsd": config_manager.get_task_setting("wsd"),
+            "source_language_hint": config_manager.get_task_setting("source_language_hint"),
             "cloze_scoring": config_manager.get_task_setting("cloze_scoring"),
             "usage_level": config_manager.get_task_setting("usage_level"),
             "translation": config_manager.get_task_setting("translation"),
@@ -131,34 +134,56 @@ def export_kindle_vocab():
         )
         sleep(SLEEP_TIME)  # Opportunity to read output
 
+        # Generate source language hints
+        source_language_hint_setting = config_manager.get_task_setting("source_language_hint")
+        if source_language_hint_setting.get("enabled", True):
+            source_language_hint_provider.generate(
+                notes=notes,
+                runtime_choice=source_language_hint_setting["runtime"],
+                runtime_config=RuntimeConfig(
+                    model_id=source_language_hint_setting["model_id"],
+                    batch_size=source_language_hint_setting["batch_size"],
+                    source_language_code=source_language_code,
+                    target_language_code=target_language_code
+                ),
+                ignore_cache=False
+            )
+        sleep(SLEEP_TIME)  # Opportunity to read output
+
         # Score cloze deletion suitability
         cloze_setting = config_manager.get_task_setting("cloze_scoring")
-        cloze_scoring_provider.score(
-            notes=notes,
-            runtime_choice=cloze_setting["runtime"],
-            runtime_config=RuntimeConfig(
-                model_id=cloze_setting["model_id"],
-                batch_size=cloze_setting["batch_size"],
-                source_language_code=source_language_code,
-                target_language_code=target_language_code
-            ),
-            ignore_cache=False
-        )
+        if cloze_setting.get("enabled", True):
+            cloze_scoring_provider.score(
+                notes=notes,
+                runtime_choice=cloze_setting["runtime"],
+                runtime_config=RuntimeConfig(
+                    model_id=cloze_setting["model_id"],
+                    batch_size=cloze_setting["batch_size"],
+                    source_language_code=source_language_code,
+                    target_language_code=target_language_code
+                ),
+                ignore_cache=False
+            )
+        else:
+            # When skipped, enable cloze by default
+            for note in notes:
+                note.cloze_enabled = "?"
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Estimate usage level
         usage_level_setting = config_manager.get_task_setting("usage_level")
-        usage_level_provider.estimate(
-            notes=notes,
-            runtime_choice=usage_level_setting["runtime"],
-            runtime_config=RuntimeConfig(
-                model_id=usage_level_setting["model_id"],
-                batch_size=usage_level_setting["batch_size"],
-                source_language_code=source_language_code,
-                target_language_code=target_language_code
-            ),
-            ignore_cache=False
-        )
+        if usage_level_setting.get("enabled", True):
+            usage_level_provider.estimate(
+                notes=notes,
+                runtime_choice=usage_level_setting["runtime"],
+                runtime_config=RuntimeConfig(
+                    model_id=usage_level_setting["model_id"],
+                    batch_size=usage_level_setting["batch_size"],
+                    source_language_code=source_language_code,
+                    target_language_code=target_language_code
+                ),
+                ignore_cache=False
+            )
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Prune existing notes automatically based on definition similarity
@@ -190,17 +215,18 @@ def export_kindle_vocab():
 
         # Provide collocations
         collocation_setting = config_manager.get_task_setting("collocation")
-        collocation_provider.generate_collocations(
-            notes=notes,
-            runtime_choice=collocation_setting["runtime"],
-            runtime_config=RuntimeConfig(
-                model_id=collocation_setting["model_id"],
-                batch_size=collocation_setting["batch_size"],
-                source_language_code=source_language_code,
-                target_language_code=target_language_code
-            ),
-            ignore_cache=False
-        )
+        if collocation_setting.get("enabled", True):
+            collocation_provider.generate_collocations(
+                notes=notes,
+                runtime_choice=collocation_setting["runtime"],
+                runtime_config=RuntimeConfig(
+                    model_id=collocation_setting["model_id"],
+                    batch_size=collocation_setting["batch_size"],
+                    source_language_code=source_language_code,
+                    target_language_code=target_language_code
+                ),
+                ignore_cache=False
+            )
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Save results to Anki import file and via AnkiConnect

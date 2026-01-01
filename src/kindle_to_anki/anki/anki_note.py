@@ -49,15 +49,19 @@ class AnkiNote:
         self.set_tags(language)
 
     def apply_wsd_results(self, wsd_data):
-        """Apply WSD data to the note (excluding translation and collocations which are handled separately)"""
+        """Apply WSD data to the note"""
         if not wsd_data:
             return []
 
         if wsd_data.get('definition'):
             self.definition = wsd_data['definition']
 
-        if wsd_data.get('source_language_hint'):
-            self.original_language_hint = wsd_data['source_language_hint']
+    def apply_source_language_hint_results(self, data):
+        """Apply source language hint results to the note"""
+        if not data:
+            return
+        if data.get('source_language_hint'):
+            self.original_language_hint = data['source_language_hint']
 
     def apply_cloze_scoring_results(self, data):
         """Apply cloze scoring results to the note"""

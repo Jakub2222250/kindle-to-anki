@@ -75,10 +75,8 @@ class WSDProvider:
         for note in notes:
             if note.uid in wsd_map:
                 wsd_result = wsd_map[note.uid]
-                # Create a dict that matches the expected format for apply_wsd_results
                 wsd_data = {
-                    "definition": wsd_result.definition,
-                    "source_language_hint": wsd_result.source_language_hint
+                    "definition": wsd_result.definition
                 }
                 note.apply_wsd_results(wsd_data)
                 note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)

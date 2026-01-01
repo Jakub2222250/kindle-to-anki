@@ -83,10 +83,8 @@ def run_wsd_test(source_lang: str, target_lang: str):
         print(f"\nTest case {i+1}: {test_case['word']} (lemma: {test_case['lemma']})")
         print(f"Sentence: {test_case['sentence']}")
         print(f"Definition: {output_item.definition}")
-        print(f"Source language hint: {output_item.source_language_hint}")
         
         assert output_item.definition, f"Empty definition for test case {i+1}"
-        assert output_item.source_language_hint, f"Empty source language hint for test case {i+1}"
     
     print(f"\n✓ WSD runtime test ({source_lang} -> {target_lang}) completed successfully")
 

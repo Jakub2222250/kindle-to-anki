@@ -30,7 +30,7 @@ class ChatCompletionWSD:
     supports_batching: bool = True
 
     def _estimate_output_tokens_per_item(self, config: RuntimeConfig) -> int:
-        return 50
+        return 25
 
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
         return 125
@@ -107,8 +107,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
                 if cached_result:
                     cached_count += 1
                     wsd_output = WSDOutput(
-                        definition=cached_result.get('definition', ''),
-                        source_language_hint=cached_result.get('source_language_hint', '')
+                        definition=cached_result.get('definition', '')
                     )
                     outputs.append(wsd_output)
                 else:
@@ -151,13 +150,12 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
                 cached_result = cache.get(wsd_input.uid)
                 if cached_result:
                     wsd_output = WSDOutput(
-                        definition=cached_result.get('definition', ''),
-                        source_language_hint=cached_result.get('source_language_hint', '')
+                        definition=cached_result.get('definition', '')
                     )
                     wsd_outputs.append(wsd_output)
                 else:
                     # This shouldn't happen if everything worked correctly
-                    wsd_outputs.append(WSDOutput(definition="", source_language_hint=""))
+                    wsd_outputs.append(WSDOutput(definition=""))
             else:
                 wsd_outputs.append(output)
 
@@ -166,8 +164,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
 
     def _get_wsd_llm_instructions(self, source_language_name: str, target_language_name: str) -> str:
         return f"""output JSON with:
-1. definition: {target_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
-2. source_language_hint: {source_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form. The lemma word should be hidden."""
+1. definition: {target_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form."""
 
     def _make_batch_wsd_call(self, batch_inputs: List[WSDInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for WSD"""

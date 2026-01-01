@@ -52,12 +52,16 @@ DEFAULT_CONFIG = {
     "task_settings": {
         "lui": {"runtime": "chat_completion_lui", "model_id": "gpt-5.1", "batch_size": 30},
         "wsd": {"runtime": "chat_completion_wsd", "model_id": "gpt-5.1", "batch_size": 30},
+        "source_language_hint": {"enabled": True, "runtime": "chat_completion_source_language_hint", "model_id": "gpt-5.1", "batch_size": 30},
+        "cloze_scoring": {"enabled": True, "runtime": "chat_completion_cloze_scoring", "model_id": "gpt-5.1", "batch_size": 30},
+        "usage_level": {"enabled": True, "runtime": "chat_completion_usage_level", "model_id": "gpt-5.1", "batch_size": 30},
         "translation": {"runtime": "chat_completion_translation", "model_id": "gpt-5.1", "batch_size": 30},
-        "collocation": {"runtime": "chat_completion_collocation", "model_id": "gpt-5-mini", "batch_size": 30}
+        "collocation": {"enabled": True, "runtime": "chat_completion_collocation", "model_id": "gpt-5-mini", "batch_size": 30}
     }
 }
 
-CONFIGURABLE_TASKS = ["lui", "wsd", "translation", "collocation"]
+CONFIGURABLE_TASKS = ["lui", "wsd", "source_language_hint", "cloze_scoring", "usage_level", "translation", "collocation"]
+OPTIONAL_TASKS = ["source_language_hint", "cloze_scoring", "usage_level", "collocation"]
 
 
 def get_config_path() -> Path:
@@ -208,9 +212,26 @@ def manage_decks(config: dict):
 
 def configure_task(config: dict, task: str, source_language_code: str, target_language_code: str):
     current = config["task_settings"].get(task, DEFAULT_CONFIG["task_settings"].get(task, {}))
-    print(f"\nCurrent {task} setting: runtime={current.get('runtime')}, model={current.get('model_id')}")
     
-    if not prompt_yes_no(f"Change {task} settings?", default=False):
+    # Handle optional tasks
+    if task in OPTIONAL_TASKS:
+        is_enabled = current.get("enabled", True)
+        status = "enabled" if is_enabled else "disabled"
+        print(f"\nCurrent {task} setting: {status}, runtime={current.get('runtime')}, model={current.get('model_id')}")
+        
+        if prompt_yes_no(f"Enable {task}?", default=is_enabled):
+            current["enabled"] = True
+        else:
+            current["enabled"] = False
+            config["task_settings"][task] = current
+            print(f"{task} disabled.")
+            return
+    else:
+        print(f"\nCurrent {task} setting: runtime={current.get('runtime')}, model={current.get('model_id')}")
+    
+    if not prompt_yes_no(f"Change {task} runtime/model settings?", default=False):
+        if task in OPTIONAL_TASKS:
+            config["task_settings"][task] = current
         return
     
     options = show_task_options(task, source_language_code, target_language_code)
@@ -228,11 +249,15 @@ def configure_task(config: dict, task: str, source_language_code: str, target_la
     choice = prompt_choice("Select option", options, default=default_idx)
     selected = options[choice - 1]
     
-    config["task_settings"][task] = {
+    new_setting = {
         "runtime": selected["runtime"],
         "model_id": selected["model_id"],
         "batch_size": 30
     }
+    if task in OPTIONAL_TASKS:
+        new_setting["enabled"] = current.get("enabled", True)
+    
+    config["task_settings"][task] = new_setting
     print(f"Updated {task}: runtime={selected['runtime']}, model={selected['model_id']}")
 
 
@@ -247,6 +272,7 @@ def configure_tasks(config: dict):
     target = decks[0]["target_language_code"]
     
     print(f"\n--- Task Configuration (showing costs for {source}->{target}) ---")
+    print("Note: Optional tasks can be disabled to reduce API costs.\n")
     for task in CONFIGURABLE_TASKS:
         configure_task(config, task, source, target)
 
