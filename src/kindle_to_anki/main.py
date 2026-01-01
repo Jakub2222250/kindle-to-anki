@@ -134,6 +134,17 @@ def export_kindle_vocab():
         )
         sleep(SLEEP_TIME)  # Opportunity to read output
 
+        # Prune existing notes automatically based on definition similarity
+        notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=language_pair_code)
+
+        # Prune duplicates new notes leaving the best one
+        notes = prune_new_notes_against_eachother(notes)
+        sleep(SLEEP_TIME)  # Opportunity to read output
+
+        if len(notes) == 0:
+            print(f"No new notes to add to Anki after pruning for language: {source_language_code}")
+            continue
+
         # Generate source language hints
         source_language_hint_setting = config_manager.get_task_setting("source_language_hint")
         if source_language_hint_setting.get("enabled", True):
@@ -185,17 +196,6 @@ def export_kindle_vocab():
                 ignore_cache=False
             )
         sleep(SLEEP_TIME)  # Opportunity to read output
-
-        # Prune existing notes automatically based on definition similarity
-        notes = prune_existing_notes_automatically(notes, existing_notes, cache_suffix=language_pair_code)
-
-        # Prune duplicates new notes leaving the best one
-        notes = prune_new_notes_against_eachother(notes)
-        sleep(SLEEP_TIME)  # Opportunity to read output
-
-        if len(notes) == 0:
-            print(f"No new notes to add to Anki after pruning for language: {source_language_code}")
-            continue
 
         # Provide translations
         translation_setting = config_manager.get_task_setting("translation")
