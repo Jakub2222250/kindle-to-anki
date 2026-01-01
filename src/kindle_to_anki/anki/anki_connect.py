@@ -133,7 +133,8 @@ class AnkiConnect:
                     "Status": anki_note.status,
                     "Cloze_Enabled": anki_note.get_cloze_enabled_output(),
                     "Unit_Type": anki_note.unit_type,
-                    "Generation_Metadata": anki_note.get_generation_metadata_output()
+                    "Generation_Metadata": anki_note.get_generation_metadata_output(),
+                    "Usage_Level": anki_note.usage_level
                 }
 
                 note_data = {
