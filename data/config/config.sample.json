@@ -23,7 +23,26 @@
       "model_id": "gpt-5.1",
       "batch_size": 30
     },
+    "source_language_hint": {
+      "enabled": true,
+      "runtime": "chat_completion_source_language_hint",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
+    "cloze_scoring": {
+      "enabled": true,
+      "runtime": "chat_completion_cloze_scoring",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
+    "usage_level": {
+      "enabled": true,
+      "runtime": "chat_completion_usage_level",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
     "collocation": {
+      "enabled": true,
       "runtime": "chat_completion_collocation",
       "model_id": "gpt-5-mini",
       "batch_size": 30

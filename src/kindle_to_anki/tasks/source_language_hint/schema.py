@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class WSDInput:
+class SourceLanguageHintInput:
     uid: str
     word: str
     lemma: str
@@ -11,5 +11,5 @@ class WSDInput:
 
 
 @dataclass(frozen=True)
-class WSDOutput:
-    definition: str
+class SourceLanguageHintOutput:
+    source_language_hint: str

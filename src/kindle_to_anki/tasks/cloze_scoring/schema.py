@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class WSDInput:
+class ClozeScoringInput:
     uid: str
     word: str
     lemma: str
@@ -11,5 +11,5 @@ class WSDInput:
 
 
 @dataclass(frozen=True)
-class WSDOutput:
-    definition: str
+class ClozeScoringOutput:
+    cloze_deletion_score: int
