@@ -103,7 +103,7 @@ def run_wsd_comparison(source_lang: str, target_lang: str):
             wsd_inputs,
             runtime_config=runtime_config,
             use_test_cache=True,
-            ignore_cache=False
+            ignore_cache=True
         )
         results_by_model[model_id] = outputs
     
@@ -112,12 +112,16 @@ def run_wsd_comparison(source_lang: str, target_lang: str):
     print(f"WSD COMPARISON ({source_lang} -> {target_lang})")
     print(f"{'='*80}")
     
+    baselines = BASELINE_OUTPUTS.get((source_lang, target_lang), {})
+    
     for i, test_case in enumerate(test_cases):
         print(f"\n[{test_case['word']} -> {test_case['lemma']}] {test_case['sentence']}")
         print("-" * 60)
         for model_id in MODELS:
             definition = results_by_model[model_id][i].definition
-            print(f"  {model_id:15} | {definition}")
+            baseline = baselines.get(test_case['uid'], {}).get(model_id, "N/A")
+            print(f"  {model_id:15} | NEW: {definition}")
+            print(f"  {' ':15} | OLD: {baseline}")
         
         # Verify all models produced output
         for model_id in MODELS:
