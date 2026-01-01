@@ -9,7 +9,7 @@ from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
-from kindle_to_anki.tasks.wsd.schema import WSDInput
+from kindle_to_anki.tasks.usage_level.schema import UsageLevelInput
 
 
 def main():
@@ -24,11 +24,11 @@ def main():
         print("No Polish deck configured")
         return
     
-    # Get WSD task settings
-    wsd_settings = config_manager.get_task_setting("wsd")
-    runtime_id = wsd_settings.get("runtime", "chat_completion_wsd")
-    model_id = wsd_settings.get("model_id", "gpt-5.1")
-    batch_size = wsd_settings.get("batch_size", 30)
+    # Get usage_level task settings
+    ul_settings = config_manager.get_task_setting("usage_level")
+    runtime_id = ul_settings.get("runtime", "chat_completion_usage_level")
+    model_id = ul_settings.get("model_id", "gpt-5.1")
+    batch_size = ul_settings.get("batch_size", 30)
     
     runtime_config = RuntimeConfig(
         model_id=model_id,
@@ -37,11 +37,11 @@ def main():
         target_language_code=pl_deck.target_language_code
     )
     
-    # Get WSD runtime
-    wsd_runtimes = RuntimeRegistry.find_by_task_as_dict("wsd")
-    wsd_runtime = wsd_runtimes.get(runtime_id)
-    if not wsd_runtime:
-        print(f"WSD runtime '{runtime_id}' not found")
+    # Get usage_level runtime
+    ul_runtimes = RuntimeRegistry.find_by_task_as_dict("usage_level")
+    ul_runtime = ul_runtimes.get(runtime_id)
+    if not ul_runtime:
+        print(f"usage_level runtime '{runtime_id}' not found")
         return
     
     anki = AnkiConnect()
@@ -60,8 +60,8 @@ def main():
     # Get note info
     notes_info = anki._invoke("notesInfo", {"notes": note_ids})
     
-    # Build WSD inputs from card data (skip those with existing Usage_Level)
-    wsd_inputs = []
+    # Build usage_level inputs from card data (skip those with existing Usage_Level)
+    ul_inputs = []
     note_id_map = {}  # uid -> note_id
     skipped = 0
     
@@ -73,56 +73,58 @@ def main():
         context = fields.get('Context_Sentence', {}).get('value', '').strip()
         pos = fields.get('Part_Of_Speech', {}).get('value', '').strip() or 'unknown'
         existing_usage_level = fields.get('Usage_Level', {}).get('value', '').strip()
+        definition = fields.get('Definition', {}).get('value', '').strip()
         
         if existing_usage_level:
             skipped += 1
             continue
         
-        if uid and expression and context:
-            wsd_input = WSDInput(
+        if uid and expression and context and definition:
+            ul_input = UsageLevelInput(
                 uid=uid,
                 word=original_form or expression,
                 lemma=expression,
                 pos=pos,
-                sentence=context
+                sentence=context,
+                definition=definition
             )
-            wsd_inputs.append(wsd_input)
+            ul_inputs.append(ul_input)
             note_id_map[uid] = note.get('noteId')
     
     print(f"Skipped {skipped} cards with existing Usage_Level")
     
-    if not wsd_inputs:
-        print("No valid inputs for WSD")
+    if not ul_inputs:
+        print("No valid inputs for usage_level")
         return
     
-    print(f"Processing {len(wsd_inputs)} cards in batches of {batch_size}")
+    print(f"Processing {len(ul_inputs)} cards in batches of {batch_size}")
     
     # Process in batches
-    for batch_idx in range(0, len(wsd_inputs), batch_size):
-        batch_inputs = wsd_inputs[batch_idx:batch_idx + batch_size]
+    for batch_idx in range(0, len(ul_inputs), batch_size):
+        batch_inputs = ul_inputs[batch_idx:batch_idx + batch_size]
         batch_num = (batch_idx // batch_size) + 1
-        total_batches = (len(wsd_inputs) + batch_size - 1) // batch_size
+        total_batches = (len(ul_inputs) + batch_size - 1) // batch_size
         
-        print(f"\nBatch {batch_num}/{total_batches}: Running WSD on {len(batch_inputs)} cards (ignore_cache=True)")
+        print(f"\nBatch {batch_num}/{total_batches}: Running usage_level on {len(batch_inputs)} cards (ignore_cache=True)")
         
-        # Run WSD with ignore_cache=True
-        wsd_outputs = wsd_runtime.disambiguate(batch_inputs, runtime_config, ignore_cache=True)
+        # Run usage_level with ignore_cache=True
+        ul_outputs = ul_runtime.estimate(batch_inputs, runtime_config, ignore_cache=True)
         
         # Build batch update actions
         actions = []
-        for wsd_input, wsd_output in zip(batch_inputs, wsd_outputs):
-            if wsd_output.usage_level is not None:
-                note_id = note_id_map[wsd_input.uid]
+        for ul_input, ul_output in zip(batch_inputs, ul_outputs):
+            if ul_output.usage_level is not None:
+                note_id = note_id_map[ul_input.uid]
                 actions.append({
                     "action": "updateNoteFields",
                     "params": {
                         "note": {
                             "id": note_id,
-                            "fields": {"Usage_Level": str(wsd_output.usage_level)}
+                            "fields": {"Usage_Level": str(ul_output.usage_level)}
                         }
                     }
                 })
-                print(f"  Queued {wsd_input.uid}: Usage_Level={wsd_output.usage_level}")
+                print(f"  Queued {ul_input.uid}: Usage_Level={ul_output.usage_level}")
         
         # Update all cards in one API call
         if actions:
