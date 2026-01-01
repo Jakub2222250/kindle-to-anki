@@ -68,12 +68,14 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
             return []
         
         source_lang = runtime_config.source_language_code
+        target_lang = runtime_config.target_language_code
 
         print("\nStarting Cloze Scoring via LLM...")
 
         source_language_name = get_language_name_in_english(source_lang)
 
-        cache_suffix = source_lang + "_llm"
+        language_pair_code = f"{source_lang}-{target_lang}"
+        cache_suffix = language_pair_code + "_llm"
         if use_test_cache:
             cache_suffix += "_test"
 

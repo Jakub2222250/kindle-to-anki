@@ -11,15 +11,15 @@ from kindle_to_anki.core.pricing.token_estimator import count_tokens
 from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
-from .schema import SourceLanguageHintInput, SourceLanguageHintOutput
+from .schema import HintInput, HintOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
-from kindle_to_anki.caching.source_language_hint_cache import SourceLanguageHintCache
+from kindle_to_anki.caching.hint_cache import HintCache
 
 
-class ChatCompletionSourceLanguageHint:
-    id: str = "chat_completion_source_language_hint"
-    display_name: str = "Chat Completion Source Language Hint Runtime"
-    supported_tasks = ["source_language_hint"]
+class ChatCompletionHint:
+    id: str = "chat_completion_hint"
+    display_name: str = "Chat Completion Hint Runtime"
+    supported_tasks = ["hint"]
     supported_model_families = ["chat_completion"]
     supports_batching: bool = True
 
@@ -37,7 +37,7 @@ Items to process:
 
 For each item, provide a {source_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form. The lemma word should be hidden in the hint.
 
-Respond with valid JSON as an object where keys are the UIDs and values are objects with source_language_hint. No additional text."""
+Respond with valid JSON as an object where keys are the UIDs and values are objects with hint. No additional text."""
 
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
@@ -63,21 +63,23 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
             confidence="medium",
         )
 
-    def generate(self, hint_inputs: List[SourceLanguageHintInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[SourceLanguageHintOutput]:
+    def generate(self, hint_inputs: List[HintInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[HintOutput]:
         if not hint_inputs:
             return []
         
         source_lang = runtime_config.source_language_code
+        target_lang = runtime_config.target_language_code
 
-        print("\nStarting Source Language Hint generation via LLM...")
+        print("\nStarting Hint generation via LLM...")
 
         source_language_name = get_language_name_in_english(source_lang)
 
-        cache_suffix = source_lang + "_llm"
+        language_pair_code = f"{source_lang}-{target_lang}"
+        cache_suffix = language_pair_code + "_llm"
         if use_test_cache:
             cache_suffix += "_test"
 
-        cache = SourceLanguageHintCache(cache_suffix=cache_suffix)
+        cache = HintCache(cache_suffix=cache_suffix)
 
         inputs_needing_generation = []
         outputs = []
@@ -88,7 +90,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
                 cached_result = cache.get(hint_input.uid)
                 if cached_result:
                     cached_count += 1
-                    outputs.append(SourceLanguageHintOutput(source_language_hint=cached_result.get('source_language_hint', '')))
+                    outputs.append(HintOutput(hint=cached_result.get('hint', '')))
                 else:
                     inputs_needing_generation.append(hint_input)
                     outputs.append(None)
@@ -98,7 +100,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
             outputs = [None] * len(hint_inputs)
 
         if not inputs_needing_generation:
-            print(f"Source Language Hint generation completed (all from cache).")
+            print(f"Hint generation completed (all from cache).")
             return [output for output in outputs if output is not None]
 
         MAX_RETRIES = 1
@@ -107,7 +109,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
 
         while len(failing_inputs) > 0:
             if retries >= MAX_RETRIES:
-                raise RuntimeError("Source language hint generation failed after retries")
+                raise RuntimeError("Hint generation failed after retries")
             retries += 1
             failing_inputs = self._process_batches(failing_inputs, cache, source_language_name, runtime_config)
 
@@ -117,16 +119,16 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
                 hint_input = hint_inputs[i]
                 cached_result = cache.get(hint_input.uid)
                 if cached_result:
-                    hint_outputs.append(SourceLanguageHintOutput(source_language_hint=cached_result.get('source_language_hint', '')))
+                    hint_outputs.append(HintOutput(hint=cached_result.get('hint', '')))
                 else:
-                    hint_outputs.append(SourceLanguageHintOutput(source_language_hint=''))
+                    hint_outputs.append(HintOutput(hint=''))
             else:
                 hint_outputs.append(output)
 
-        print(f"Source Language Hint generation completed.")
+        print(f"Hint generation completed.")
         return hint_outputs
 
-    def _make_batch_call(self, batch_inputs: List[SourceLanguageHintInput], processing_timestamp: str, source_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
+    def _make_batch_call(self, batch_inputs: List[HintInput], processing_timestamp: str, source_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         items_list = []
         for input_item in batch_inputs:
             items_list.append(f'{{"uid": "{input_item.uid}", "word": "{input_item.word}", "lemma": "{input_item.lemma}", "pos": "{input_item.pos}", "sentence": "{input_item.sentence}"}}')
@@ -143,7 +145,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
         cost_reporter = RealtimeCostReporter(model)
         estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))
 
-        print(f"  Making batch source language hint API call for {len(batch_inputs)} inputs (est. cost: {estimated_cost_str})...")
+        print(f"  Making batch hint API call for {len(batch_inputs)} inputs (est. cost: {estimated_cost_str})...")
 
         start_time = time.time()
         response_text = platform.call_api(runtime_config.model_id, prompt)
@@ -155,7 +157,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
 
         return json.loads(response_text), runtime_config.model_id, processing_timestamp
 
-    def _process_batches(self, inputs_needing_generation: List[SourceLanguageHintInput], cache: SourceLanguageHintCache, source_language_name: str, runtime_config: RuntimeConfig) -> List[SourceLanguageHintInput]:
+    def _process_batches(self, inputs_needing_generation: List[HintInput], cache: HintCache, source_language_name: str, runtime_config: RuntimeConfig) -> List[HintInput]:
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         total_batches = (len(inputs_needing_generation) + runtime_config.batch_size - 1) // runtime_config.batch_size
         failing_inputs = []
@@ -163,7 +165,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
         for i in range(0, len(inputs_needing_generation), runtime_config.batch_size):
             batch = inputs_needing_generation[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
-            print(f"\nProcessing source language hint batch {batch_num}/{total_batches} ({len(batch)} inputs)")
+            print(f"\nProcessing hint batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             try:
                 batch_results, model_used, timestamp = self._make_batch_call(batch, processing_timestamp, source_language_name, runtime_config)

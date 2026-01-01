@@ -1,1 +1,0 @@
-# Source Language Hint Tests

@@ -12,7 +12,7 @@ from kindle_to_anki.tasks.translation.runtime_chat_completion import ChatComplet
 from kindle_to_anki.tasks.translation.runtime_deepl import DeepLTranslation
 from kindle_to_anki.tasks.translation.runtime_polish_local import PolishLocalTranslation
 from kindle_to_anki.tasks.wsd.runtime_chat_completion import ChatCompletionWSD
-from kindle_to_anki.tasks.source_language_hint.runtime_chat_completion import ChatCompletionSourceLanguageHint
+from kindle_to_anki.tasks.hint.runtime_chat_completion import ChatCompletionHint
 from kindle_to_anki.tasks.cloze_scoring.runtime_chat_completion import ChatCompletionClozeScoring
 from kindle_to_anki.tasks.usage_level.runtime_chat_completion import ChatCompletionUsageLevel
 from kindle_to_anki.tasks.collocation.runtime_chat_completion import ChatCompletionCollocation
@@ -39,7 +39,7 @@ def bootstrap_runtime_registry():
     RuntimeRegistry.register(ChatCompletionTranslation())
     RuntimeRegistry.register(DeepLTranslation())
     RuntimeRegistry.register(ChatCompletionWSD())
-    RuntimeRegistry.register(ChatCompletionSourceLanguageHint())
+    RuntimeRegistry.register(ChatCompletionHint())
     RuntimeRegistry.register(ChatCompletionClozeScoring())
     RuntimeRegistry.register(ChatCompletionUsageLevel())
     RuntimeRegistry.register(ChatCompletionCollocation())

@@ -23,9 +23,9 @@
       "model_id": "gpt-5.1",
       "batch_size": 30
     },
-    "source_language_hint": {
+    "hint": {
       "enabled": true,
-      "runtime": "chat_completion_source_language_hint",
+      "runtime": "chat_completion_hint",
       "model_id": "gpt-5.1",
       "batch_size": 30
     },

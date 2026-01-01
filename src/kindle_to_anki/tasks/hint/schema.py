@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class SourceLanguageHintInput:
+class HintInput:
     uid: str
     word: str
     lemma: str
@@ -11,5 +11,5 @@ class SourceLanguageHintInput:
 
 
 @dataclass(frozen=True)
-class SourceLanguageHintOutput:
-    source_language_hint: str
+class HintOutput:
+    hint: str

@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "task_settings": {
         "lui": {"runtime": "chat_completion_lui", "model_id": "gpt-5.1", "batch_size": 30},
         "wsd": {"runtime": "chat_completion_wsd", "model_id": "gpt-5.1", "batch_size": 30},
-        "source_language_hint": {"enabled": True, "runtime": "chat_completion_source_language_hint", "model_id": "gpt-5.1", "batch_size": 30},
+        "hint": {"enabled": True, "runtime": "chat_completion_hint", "model_id": "gpt-5.1", "batch_size": 30},
         "cloze_scoring": {"enabled": True, "runtime": "chat_completion_cloze_scoring", "model_id": "gpt-5.1", "batch_size": 30},
         "usage_level": {"enabled": True, "runtime": "chat_completion_usage_level", "model_id": "gpt-5.1", "batch_size": 30},
         "translation": {"runtime": "chat_completion_translation", "model_id": "gpt-5.1", "batch_size": 30},
@@ -60,8 +60,8 @@ DEFAULT_CONFIG = {
     }
 }
 
-CONFIGURABLE_TASKS = ["lui", "wsd", "source_language_hint", "cloze_scoring", "usage_level", "translation", "collocation"]
-OPTIONAL_TASKS = ["source_language_hint", "cloze_scoring", "usage_level", "collocation"]
+CONFIGURABLE_TASKS = ["lui", "wsd", "hint", "cloze_scoring", "usage_level", "translation", "collocation"]
+OPTIONAL_TASKS = ["hint", "cloze_scoring", "usage_level", "collocation"]
 
 
 def get_config_path() -> Path:

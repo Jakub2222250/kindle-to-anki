@@ -2,14 +2,14 @@ from pathlib import Path
 import json
 
 
-class SourceLanguageHintCache:
+class HintCache:
     def __init__(self, cache_dir=None, cache_suffix='default'):
         if cache_dir is None:
             project_root = Path(__file__).parent.parent.parent.parent
             cache_dir = project_root / ".cache"
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_file = self.cache_dir / f"source_language_hint_cache_{cache_suffix}.json"
+        self.cache_file = self.cache_dir / f"hint_cache_{cache_suffix}.json"
         self.cache = self.load_cache()
 
     def load_cache(self):

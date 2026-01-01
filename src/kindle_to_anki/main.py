@@ -8,7 +8,7 @@ from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.tasks.collect_candidates.provider import CollectCandidatesProvider
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
 from kindle_to_anki.tasks.wsd.provider import WSDProvider
-from kindle_to_anki.tasks.source_language_hint.provider import SourceLanguageHintProvider
+from kindle_to_anki.tasks.hint.provider import HintProvider
 from kindle_to_anki.tasks.cloze_scoring.provider import ClozeScoringProvider
 from kindle_to_anki.tasks.usage_level.provider import UsageLevelProvider
 from kindle_to_anki.tasks.collocation.provider import CollocationProvider
@@ -34,7 +34,7 @@ def export_kindle_vocab():
     candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates"))
     translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("translation"))
     wsd_provider = WSDProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("wsd"))
-    source_language_hint_provider = SourceLanguageHintProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("source_language_hint"))
+    hint_provider = HintProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("hint"))
     cloze_scoring_provider = ClozeScoringProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("cloze_scoring"))
     usage_level_provider = UsageLevelProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("usage_level"))
     collocation_provider = CollocationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collocation"))
@@ -84,7 +84,7 @@ def export_kindle_vocab():
         task_settings = {
             "lui": config_manager.get_task_setting("lui"),
             "wsd": config_manager.get_task_setting("wsd"),
-            "source_language_hint": config_manager.get_task_setting("source_language_hint"),
+            "hint": config_manager.get_task_setting("hint"),
             "cloze_scoring": config_manager.get_task_setting("cloze_scoring"),
             "usage_level": config_manager.get_task_setting("usage_level"),
             "translation": config_manager.get_task_setting("translation"),
@@ -145,15 +145,15 @@ def export_kindle_vocab():
             print(f"No new notes to add to Anki after pruning for language: {source_language_code}")
             continue
 
-        # Generate source language hints
-        source_language_hint_setting = config_manager.get_task_setting("source_language_hint")
-        if source_language_hint_setting.get("enabled", True):
-            source_language_hint_provider.generate(
+        # Generate hints
+        hint_setting = config_manager.get_task_setting("hint")
+        if hint_setting.get("enabled", True):
+            hint_provider.generate(
                 notes=notes,
-                runtime_choice=source_language_hint_setting["runtime"],
+                runtime_choice=hint_setting["runtime"],
                 runtime_config=RuntimeConfig(
-                    model_id=source_language_hint_setting["model_id"],
-                    batch_size=source_language_hint_setting["batch_size"],
+                    model_id=hint_setting["model_id"],
+                    batch_size=hint_setting["batch_size"],
                     source_language_code=source_language_code,
                     target_language_code=target_language_code
                 ),

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Integration test for Source Language Hint via LLM runtime.
+Integration test for Hint via LLM runtime.
 Compares outputs across different models.
 """
 
 from kindle_to_anki.core.bootstrap import bootstrap_all
-from kindle_to_anki.tasks.source_language_hint.runtime_chat_completion import ChatCompletionSourceLanguageHint
-from kindle_to_anki.tasks.source_language_hint.schema import SourceLanguageHintInput
+from kindle_to_anki.tasks.hint.runtime_chat_completion import ChatCompletionHint
+from kindle_to_anki.tasks.hint.schema import HintInput
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 bootstrap_all()
@@ -33,15 +33,15 @@ TEST_CASES = {
 }
 
 
-def run_source_language_hint_comparison(source_lang: str):
-    """Run source language hint comparison across models."""
+def run_hint_comparison(source_lang: str):
+    """Run hint comparison across models."""
     test_cases = TEST_CASES.get(source_lang, [])
     if not test_cases:
         print(f"No test cases for {source_lang}")
         return
     
     hint_inputs = [
-        SourceLanguageHintInput(
+        HintInput(
             uid=case['uid'],
             word=case['word'],
             lemma=case['lemma'],
@@ -51,7 +51,7 @@ def run_source_language_hint_comparison(source_lang: str):
         for case in test_cases
     ]
     
-    runtime = ChatCompletionSourceLanguageHint()
+    runtime = ChatCompletionHint()
     results_by_model = {}
     
     for model_id in MODELS:
@@ -68,28 +68,28 @@ def run_source_language_hint_comparison(source_lang: str):
     
     # Print comparison
     print(f"\n{'='*80}")
-    print(f"SOURCE LANGUAGE HINT COMPARISON ({source_lang})")
+    print(f"HINT COMPARISON ({source_lang})")
     print(f"{'='*80}")
     
     for i, test_case in enumerate(test_cases):
         print(f"\n[{test_case['word']}] {test_case['sentence']}")
         print("-" * 60)
         for model_id in MODELS:
-            hint = results_by_model[model_id][i].source_language_hint
+            hint = results_by_model[model_id][i].hint
             print(f"  {model_id:15} | {hint}")
         
         # Verify all models produced output
         for model_id in MODELS:
-            assert results_by_model[model_id][i].source_language_hint, f"Empty hint from {model_id} for {test_case['word']}"
+            assert results_by_model[model_id][i].hint, f"Empty hint from {model_id} for {test_case['word']}"
     
-    print(f"\n✓ Source Language Hint comparison ({source_lang}) completed")
+    print(f"\n✓ Hint comparison ({source_lang}) completed")
 
 
-def test_source_language_hint_runtime_llm():
-    """Integration test comparing Source Language Hint across models."""
+def test_hint_runtime_llm():
+    """Integration test comparing Hint across models."""
     for source_lang in TEST_CASES.keys():
-        run_source_language_hint_comparison(source_lang)
+        run_hint_comparison(source_lang)
 
 
 if __name__ == "__main__":
-    test_source_language_hint_runtime_llm()
+    test_hint_runtime_llm()

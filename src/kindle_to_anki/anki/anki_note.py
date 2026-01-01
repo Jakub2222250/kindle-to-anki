@@ -56,12 +56,12 @@ class AnkiNote:
         if wsd_data.get('definition'):
             self.definition = wsd_data['definition']
 
-    def apply_source_language_hint_results(self, data):
-        """Apply source language hint results to the note"""
+    def apply_hint_results(self, data):
+        """Apply hint results to the note"""
         if not data:
             return
-        if data.get('source_language_hint'):
-            self.original_language_hint = data['source_language_hint']
+        if data.get('hint'):
+            self.original_language_hint = data['hint']
 
     def apply_cloze_scoring_results(self, data):
         """Apply cloze scoring results to the note"""
