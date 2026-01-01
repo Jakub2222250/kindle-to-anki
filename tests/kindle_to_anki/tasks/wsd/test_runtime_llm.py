@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Integration test for Word Sense Disambiguation via LLM runtime.
+Compares outputs across different models.
 """
 
 from kindle_to_anki.core.bootstrap import bootstrap_all
@@ -9,6 +10,32 @@ from kindle_to_anki.tasks.wsd.schema import WSDInput
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 bootstrap_all()
+
+MODELS = ["gpt-5.1", "gpt-5-mini"]
+
+# Baseline outputs for A/B testing (original results before runtime modifications)
+BASELINE_OUTPUTS = {
+    ("pl", "en"): {
+        "pl_en_1": {
+            "gpt-5.1": "a burst or spray of light, sparks, or similar particles",
+            "gpt-5-mini": "snop — a shaft or stream (of light or sparks); beam (here: a burst/stream of sparks)"
+        },
+        "pl_en_2": {
+            "gpt-5.1": "a cat (a small domesticated carnivorous mammal kept as a pet or for catching mice)",
+            "gpt-5-mini": "kot — cat (domestic cat)"
+        }
+    },
+    ("en", "pl"): {
+        "en_pl_1": {
+            "gpt-5.1": "sposób wyrażania się charakterystyczny dla danej dziedziny, środowiska lub grupy; fachowe określenia używane w danym języku lub kontekście",
+            "gpt-5-mini": "terminologia, żargon lub sposób wyrażania się używany w określonym kontekście"
+        },
+        "en_pl_2": {
+            "gpt-5.1": "dawać pewność, że coś na pewno nastąpi, będzie prawdziwe lub zostanie spełnione; stanowić gwarancję czegoś",
+            "gpt-5-mini": "gwarantować, zapewniać (sprawić, że coś na pewno będzie miało miejsce lub będzie przyjmowane)"
+        }
+    }
+}
 
 # Test cases per language pair: (source_lang, target_lang) -> list of test cases
 TEST_CASES = {
@@ -47,8 +74,8 @@ TEST_CASES = {
 }
 
 
-def run_wsd_test(source_lang: str, target_lang: str):
-    """Run WSD test for a specific language pair."""
+def run_wsd_comparison(source_lang: str, target_lang: str):
+    """Run WSD comparison across models for a specific language pair."""
     test_cases = TEST_CASES.get((source_lang, target_lang), [])
     if not test_cases:
         print(f"No test cases for {source_lang} -> {target_lang}")
@@ -65,34 +92,44 @@ def run_wsd_test(source_lang: str, target_lang: str):
         for case in test_cases
     ]
     
-    print(f"\nTesting WSD runtime ({source_lang} -> {target_lang}) with {len(wsd_inputs)} inputs...")
-    
     runtime = ChatCompletionWSD()
-    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=2, source_language_code=source_lang, target_language_code=target_lang)
+    results_by_model = {}
     
-    outputs = runtime.disambiguate(
-        wsd_inputs,
-        runtime_config=runtime_config,
-        use_test_cache=True,
-        ignore_cache=True
-    )
-    
-    print(f"WSD completed. Got {len(outputs)} outputs.")
-    
-    for i, (output_item, test_case) in enumerate(zip(outputs, test_cases)):
-        print(f"\nTest case {i+1}: {test_case['word']} (lemma: {test_case['lemma']})")
-        print(f"Sentence: {test_case['sentence']}")
-        print(f"Definition: {output_item.definition}")
+    for model_id in MODELS:
+        print(f"\n--- Running {model_id} ---")
+        runtime_config = RuntimeConfig(model_id=model_id, batch_size=len(wsd_inputs), source_language_code=source_lang, target_language_code=target_lang)
         
-        assert output_item.definition, f"Empty definition for test case {i+1}"
+        outputs = runtime.disambiguate(
+            wsd_inputs,
+            runtime_config=runtime_config,
+            use_test_cache=True,
+            ignore_cache=False
+        )
+        results_by_model[model_id] = outputs
     
-    print(f"\n✓ WSD runtime test ({source_lang} -> {target_lang}) completed successfully")
+    # Print comparison
+    print(f"\n{'='*80}")
+    print(f"WSD COMPARISON ({source_lang} -> {target_lang})")
+    print(f"{'='*80}")
+    
+    for i, test_case in enumerate(test_cases):
+        print(f"\n[{test_case['word']} -> {test_case['lemma']}] {test_case['sentence']}")
+        print("-" * 60)
+        for model_id in MODELS:
+            definition = results_by_model[model_id][i].definition
+            print(f"  {model_id:15} | {definition}")
+        
+        # Verify all models produced output
+        for model_id in MODELS:
+            assert results_by_model[model_id][i].definition, f"Empty definition from {model_id} for {test_case['word']}"
+    
+    print(f"\n✓ WSD comparison ({source_lang} -> {target_lang}) completed")
 
 
 def test_wsd_runtime_llm():
-    """Integration test of Word Sense Disambiguation via LLM runtime - focus on plural forms with singular lemmas."""
+    """Integration test comparing WSD across models."""
     for (source_lang, target_lang) in TEST_CASES.keys():
-        run_wsd_test(source_lang, target_lang)
+        run_wsd_comparison(source_lang, target_lang)
 
 
 if __name__ == "__main__":

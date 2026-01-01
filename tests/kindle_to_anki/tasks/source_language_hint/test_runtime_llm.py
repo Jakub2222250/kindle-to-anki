@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Integration test for Source Language Hint via LLM runtime.
+Compares outputs across different models.
 """
 
 from kindle_to_anki.core.bootstrap import bootstrap_all
@@ -9,6 +10,8 @@ from kindle_to_anki.tasks.source_language_hint.schema import SourceLanguageHintI
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 bootstrap_all()
+
+MODELS = ["gpt-5.1", "gpt-5-mini"]
 
 TEST_CASES = {
     "pl": [
@@ -30,8 +33,8 @@ TEST_CASES = {
 }
 
 
-def run_source_language_hint_test(source_lang: str):
-    """Run source language hint test for a specific language."""
+def run_source_language_hint_comparison(source_lang: str):
+    """Run source language hint comparison across models."""
     test_cases = TEST_CASES.get(source_lang, [])
     if not test_cases:
         print(f"No test cases for {source_lang}")
@@ -48,34 +51,44 @@ def run_source_language_hint_test(source_lang: str):
         for case in test_cases
     ]
     
-    print(f"\nTesting Source Language Hint runtime ({source_lang}) with {len(hint_inputs)} inputs...")
-    
     runtime = ChatCompletionSourceLanguageHint()
-    runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=2, source_language_code=source_lang, target_language_code="en")
+    results_by_model = {}
     
-    outputs = runtime.generate(
-        hint_inputs,
-        runtime_config=runtime_config,
-        use_test_cache=True,
-        ignore_cache=True
-    )
-    
-    print(f"Source Language Hint completed. Got {len(outputs)} outputs.")
-    
-    for i, (output_item, test_case) in enumerate(zip(outputs, test_cases)):
-        print(f"\nTest case {i+1}: {test_case['word']}")
-        print(f"Sentence: {test_case['sentence']}")
-        print(f"Source language hint: {output_item.source_language_hint}")
+    for model_id in MODELS:
+        print(f"\n--- Running {model_id} ---")
+        runtime_config = RuntimeConfig(model_id=model_id, batch_size=len(hint_inputs), source_language_code=source_lang, target_language_code="en")
         
-        assert output_item.source_language_hint, f"Empty source language hint for test case {i+1}"
+        outputs = runtime.generate(
+            hint_inputs,
+            runtime_config=runtime_config,
+            use_test_cache=True,
+            ignore_cache=True
+        )
+        results_by_model[model_id] = outputs
     
-    print(f"\n✓ Source Language Hint runtime test ({source_lang}) completed successfully")
+    # Print comparison
+    print(f"\n{'='*80}")
+    print(f"SOURCE LANGUAGE HINT COMPARISON ({source_lang})")
+    print(f"{'='*80}")
+    
+    for i, test_case in enumerate(test_cases):
+        print(f"\n[{test_case['word']}] {test_case['sentence']}")
+        print("-" * 60)
+        for model_id in MODELS:
+            hint = results_by_model[model_id][i].source_language_hint
+            print(f"  {model_id:15} | {hint}")
+        
+        # Verify all models produced output
+        for model_id in MODELS:
+            assert results_by_model[model_id][i].source_language_hint, f"Empty hint from {model_id} for {test_case['word']}"
+    
+    print(f"\n✓ Source Language Hint comparison ({source_lang}) completed")
 
 
 def test_source_language_hint_runtime_llm():
-    """Integration test of Source Language Hint via LLM runtime."""
+    """Integration test comparing Source Language Hint across models."""
     for source_lang in TEST_CASES.keys():
-        run_source_language_hint_test(source_lang)
+        run_source_language_hint_comparison(source_lang)
 
 
 if __name__ == "__main__":
