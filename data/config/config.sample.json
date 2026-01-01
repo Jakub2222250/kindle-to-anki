@@ -18,6 +18,16 @@
       "model_id": "gpt-5.1",
       "batch_size": 30
     },
+    "cloze_scoring": {
+      "runtime": "chat_completion_cloze_scoring",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
+    "usage_level": {
+      "runtime": "chat_completion_usage_level",
+      "model_id": "gpt-5.1",
+      "batch_size": 30
+    },
     "translation": {
       "runtime": "chat_completion_translation",
       "model_id": "gpt-5.1",

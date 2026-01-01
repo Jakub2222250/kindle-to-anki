@@ -54,19 +54,26 @@ class AnkiNote:
             return []
 
         if wsd_data.get('definition'):
-            self.definition = wsd_data['definition']  # Override glosbe_url with LLM definition
+            self.definition = wsd_data['definition']
 
-        if wsd_data.get('original_language_definition'):
-            self.original_language_hint = wsd_data['original_language_definition']
+        if wsd_data.get('source_language_hint'):
+            self.original_language_hint = wsd_data['source_language_hint']
 
-        if wsd_data.get('cloze_deletion_score') is not None:
-            score = wsd_data['cloze_deletion_score']
-            # Enable cloze if score is 7 or higher
+    def apply_cloze_scoring_results(self, data):
+        """Apply cloze scoring results to the note"""
+        if not data:
+            return
+        if data.get('cloze_deletion_score') is not None:
+            score = data['cloze_deletion_score']
             self.cloze_deletion_score = score
             self.cloze_enabled = score if score >= 7 else None
 
-        if wsd_data.get('usage_level') is not None:
-            self.usage_level = wsd_data['usage_level']
+    def apply_usage_level_results(self, data):
+        """Apply usage level results to the note"""
+        if not data:
+            return
+        if data.get('usage_level') is not None:
+            self.usage_level = data['usage_level']
 
     def generate_book_abbrev(self, book_name):
         """Generate book abbreviation for use as tag"""

@@ -78,9 +78,7 @@ class WSDProvider:
                 # Create a dict that matches the expected format for apply_wsd_results
                 wsd_data = {
                     "definition": wsd_result.definition,
-                    "original_language_definition": wsd_result.original_language_definition,
-                    "cloze_deletion_score": wsd_result.cloze_deletion_score,
-                    "usage_level": wsd_result.usage_level
+                    "source_language_hint": wsd_result.source_language_hint
                 }
                 note.apply_wsd_results(wsd_data)
                 note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)

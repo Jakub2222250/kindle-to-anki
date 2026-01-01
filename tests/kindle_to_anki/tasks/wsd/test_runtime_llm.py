@@ -83,13 +83,10 @@ def run_wsd_test(source_lang: str, target_lang: str):
         print(f"\nTest case {i+1}: {test_case['word']} (lemma: {test_case['lemma']})")
         print(f"Sentence: {test_case['sentence']}")
         print(f"Definition: {output_item.definition}")
-        print(f"Original definition: {output_item.original_language_definition}")
-        print(f"Cloze score: {output_item.cloze_deletion_score}")
+        print(f"Source language hint: {output_item.source_language_hint}")
         
         assert output_item.definition, f"Empty definition for test case {i+1}"
-        assert output_item.original_language_definition, f"Empty original definition for test case {i+1}"
-        assert isinstance(output_item.cloze_deletion_score, int), f"Invalid cloze score type for test case {i+1}"
-        assert 0 <= output_item.cloze_deletion_score <= 10, f"Invalid cloze score range for test case {i+1}"
+        assert output_item.source_language_hint, f"Empty source language hint for test case {i+1}"
     
     print(f"\n✓ WSD runtime test ({source_lang} -> {target_lang}) completed successfully")
 

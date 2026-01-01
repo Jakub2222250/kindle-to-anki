@@ -2,16 +2,14 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class WSDInput:
+class ClozeScoringInput:
     uid: str
     word: str
     lemma: str
     pos: str
     sentence: str
 
-from typing import Optional
 
 @dataclass(frozen=True)
-class WSDOutput:
-    definition: str
-    source_language_hint: str
+class ClozeScoringOutput:
+    cloze_deletion_score: int

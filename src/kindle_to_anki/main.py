@@ -8,6 +8,8 @@ from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.tasks.collect_candidates.provider import CollectCandidatesProvider
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
 from kindle_to_anki.tasks.wsd.provider import WSDProvider
+from kindle_to_anki.tasks.cloze_scoring.provider import ClozeScoringProvider
+from kindle_to_anki.tasks.usage_level.provider import UsageLevelProvider
 from kindle_to_anki.tasks.collocation.provider import CollocationProvider
 from kindle_to_anki.tasks.lui.provider import LUIProvider
 
@@ -31,6 +33,8 @@ def export_kindle_vocab():
     candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates"))
     translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("translation"))
     wsd_provider = WSDProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("wsd"))
+    cloze_scoring_provider = ClozeScoringProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("cloze_scoring"))
+    usage_level_provider = UsageLevelProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("usage_level"))
     collocation_provider = CollocationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collocation"))
     lui_provider = LUIProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("lui"))
 
@@ -78,6 +82,8 @@ def export_kindle_vocab():
         task_settings = {
             "lui": config_manager.get_task_setting("lui"),
             "wsd": config_manager.get_task_setting("wsd"),
+            "cloze_scoring": config_manager.get_task_setting("cloze_scoring"),
+            "usage_level": config_manager.get_task_setting("usage_level"),
             "translation": config_manager.get_task_setting("translation"),
             "collocation": config_manager.get_task_setting("collocation")
         }
@@ -118,6 +124,36 @@ def export_kindle_vocab():
             runtime_config=RuntimeConfig(
                 model_id=wsd_setting["model_id"],
                 batch_size=wsd_setting["batch_size"],
+                source_language_code=source_language_code,
+                target_language_code=target_language_code
+            ),
+            ignore_cache=False
+        )
+        sleep(SLEEP_TIME)  # Opportunity to read output
+
+        # Score cloze deletion suitability
+        cloze_setting = config_manager.get_task_setting("cloze_scoring")
+        cloze_scoring_provider.score(
+            notes=notes,
+            runtime_choice=cloze_setting["runtime"],
+            runtime_config=RuntimeConfig(
+                model_id=cloze_setting["model_id"],
+                batch_size=cloze_setting["batch_size"],
+                source_language_code=source_language_code,
+                target_language_code=target_language_code
+            ),
+            ignore_cache=False
+        )
+        sleep(SLEEP_TIME)  # Opportunity to read output
+
+        # Estimate usage level
+        usage_level_setting = config_manager.get_task_setting("usage_level")
+        usage_level_provider.estimate(
+            notes=notes,
+            runtime_choice=usage_level_setting["runtime"],
+            runtime_config=RuntimeConfig(
+                model_id=usage_level_setting["model_id"],
+                batch_size=usage_level_setting["batch_size"],
                 source_language_code=source_language_code,
                 target_language_code=target_language_code
             ),
