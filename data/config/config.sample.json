@@ -21,7 +21,7 @@
     "translation": {
       "runtime": "chat_completion_translation",
       "model_id": "gpt-5.1",
-      "batch_size": 30
+      "batch_size": 20
     },
     "hint": {
       "enabled": true,

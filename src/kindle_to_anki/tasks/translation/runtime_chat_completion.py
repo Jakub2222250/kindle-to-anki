@@ -170,11 +170,8 @@ Output JSON as an object where keys are the UIDs and values are objects with:
 
     def _make_batch_translation_call(self, batch_inputs: List[TranslationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for translation"""
-        items_list = []
-        for input_item in batch_inputs:
-            items_list.append(f'{{"uid": "{input_item.uid}", "sentence": "{input_item.context}"}}')
-
-        items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
+        items_list = [{"uid": input_item.uid, "sentence": input_item.context} for input_item in batch_inputs]
+        items_json = json.dumps(items_list, ensure_ascii=False, indent=2)
 
         prompt = self._build_prompt(items_json, source_language_name, target_language_name)
 
