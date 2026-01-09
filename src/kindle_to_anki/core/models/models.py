@@ -48,3 +48,15 @@ GROK_3_MINI = ModelSpec(
     output_token_cost_per_1m=0.50,
     typical_latency_ms=500,
 )
+
+GEMINI_2_FLASH = ModelSpec(
+    id="gemini-2.0-flash",
+    platform_id="gemini",
+    family="chat_completion",
+    quality_tier="medium",
+    encoding="cl100k_base",
+    supports_json=True,
+    input_token_cost_per_1m=0.00,
+    output_token_cost_per_1m=0.00,
+    typical_latency_ms=700,
+)

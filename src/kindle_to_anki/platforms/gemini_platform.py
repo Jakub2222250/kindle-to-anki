@@ -1,6 +1,6 @@
 # platforms/gemini_platform.py
 import os
-import google.generativeai as genai
+from google import genai
 
 from .chat_completion_platform import ChatCompletionPlatform
 
@@ -13,8 +13,7 @@ class GeminiPlatform(ChatCompletionPlatform):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         self.client = None
         if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.client = genai
+            self.client = genai.Client(api_key=self.api_key)
         self._credentials_valid = None
 
     def call_api(self, model: str, prompt: str, **kwargs) -> str:
@@ -24,8 +23,7 @@ class GeminiPlatform(ChatCompletionPlatform):
         if not self.client:
             raise RuntimeError("Gemini client not initialized - API key missing")
 
-        model_instance = self.client.GenerativeModel(model)
-        response = model_instance.generate_content(prompt, **kwargs)
+        response = self.client.models.generate_content(model=model, contents=prompt, **kwargs)
         return response.text
 
     def validate_credentials(self):
@@ -38,7 +36,7 @@ class GeminiPlatform(ChatCompletionPlatform):
             self._credentials_valid = False
             return False
         try:
-            list(self.client.list_models())
+            self.client.models.list()
             self._credentials_valid = True
         except Exception:
             self._credentials_valid = False

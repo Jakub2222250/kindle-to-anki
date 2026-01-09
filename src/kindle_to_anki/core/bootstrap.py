@@ -1,6 +1,7 @@
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from kindle_to_anki.platforms.openai_platform import OpenAIPlatform
 from kindle_to_anki.platforms.grok_platform import GrokPlatform
+from kindle_to_anki.platforms.gemini_platform import GeminiPlatform
 from kindle_to_anki.platforms.deepl_platform import DeepLPlatform
 
 from kindle_to_anki.core.models.registry import ModelRegistry
@@ -24,6 +25,7 @@ _bootstrapped = False
 def bootstrap_platform_registry():
     PlatformRegistry.register(OpenAIPlatform())
     PlatformRegistry.register(GrokPlatform())
+    PlatformRegistry.register(GeminiPlatform())
     PlatformRegistry.register(DeepLPlatform())
 
 
@@ -32,6 +34,7 @@ def bootstrap_model_registry():
     ModelRegistry.register(models.GPT_5_MINI)
     ModelRegistry.register(models.GROK_4)
     ModelRegistry.register(models.GROK_3_MINI)
+    ModelRegistry.register(models.GEMINI_2_FLASH)
 
 
 def bootstrap_runtime_registry():
