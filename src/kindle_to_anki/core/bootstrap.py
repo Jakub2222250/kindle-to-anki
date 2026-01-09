@@ -34,7 +34,7 @@ def bootstrap_model_registry():
     ModelRegistry.register(models.GPT_5_MINI)
     ModelRegistry.register(models.GROK_4)
     ModelRegistry.register(models.GROK_3_MINI)
-    ModelRegistry.register(models.GEMINI_2_FLASH)
+    ModelRegistry.register(models.GEMINI_3_FLASH)
 
 
 def bootstrap_runtime_registry():

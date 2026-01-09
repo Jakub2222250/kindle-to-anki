@@ -3,6 +3,7 @@ from typing import Optional, Literal
 
 ModelFamily = Literal["chat_completion", "embedding", "translation"]
 
+
 @dataclass(frozen=True)
 class ModelSpec:
     id: str                     # e.g. "gpt-5-mini"
@@ -20,3 +21,7 @@ class ModelSpec:
     notes: Optional[str] = None
     supports_json: Optional[bool] = None
 
+    # Rate limits (optional, for free tiers etc.)
+    rpm_limit: Optional[int] = None  # requests per minute
+    tpm_limit: Optional[int] = None  # tokens per minute
+    rpd_limit: Optional[int] = None  # requests per day

@@ -11,7 +11,7 @@ from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 bootstrap_all()
 
-MODELS = ["gpt-5.1", "gpt-5-mini", "gemini-2.0-flash"]
+MODELS = ["gpt-5.1", "gpt-5-mini", "gemini-3-flash"]
 
 # Baseline outputs for A/B testing (original results before runtime modifications)
 BASELINE_OUTPUTS = {
@@ -19,24 +19,24 @@ BASELINE_OUTPUTS = {
         "pl_en_1": {
             "gpt-5.1": "a burst or spray of light, sparks, or similar particles",
             "gpt-5-mini": "snop — a shaft or stream (of light or sparks); beam (here: a burst/stream of sparks)",
-            "gemini-2.0-flash": "N/A"
+            "gemini-3-flash": "N/A"
         },
         "pl_en_2": {
             "gpt-5.1": "a cat (a small domesticated carnivorous mammal kept as a pet or for catching mice)",
             "gpt-5-mini": "kot — cat (domestic cat)",
-            "gemini-2.0-flash": "N/A"
+            "gemini-3-flash": "N/A"
         }
     },
     ("en", "pl"): {
         "en_pl_1": {
             "gpt-5.1": "sposób wyrażania się charakterystyczny dla danej dziedziny, środowiska lub grupy; fachowe określenia używane w danym języku lub kontekście",
             "gpt-5-mini": "terminologia, żargon lub sposób wyrażania się używany w określonym kontekście",
-            "gemini-2.0-flash": "N/A"
+            "gemini-3-flash": "N/A"
         },
         "en_pl_2": {
             "gpt-5.1": "dawać pewność, że coś na pewno nastąpi, będzie prawdziwe lub zostanie spełnione; stanowić gwarancję czegoś",
             "gpt-5-mini": "gwarantować, zapewniać (sprawić, że coś na pewno będzie miało miejsce lub będzie przyjmowane)",
-            "gemini-2.0-flash": "N/A"
+            "gemini-3-flash": "N/A"
         }
     }
 }
