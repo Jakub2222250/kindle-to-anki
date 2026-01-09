@@ -50,7 +50,7 @@ GROK_3_MINI = ModelSpec(
 )
 
 GEMINI_3_FLASH = ModelSpec(
-    id="gemini-3-flash",
+    id="gemini-3-flash-preview",
     platform_id="gemini",
     family="chat_completion",
     quality_tier="medium",
