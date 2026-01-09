@@ -63,3 +63,27 @@ GEMINI_3_FLASH = ModelSpec(
     tpm_limit=1_000_000,
     rpd_limit=1500,
 )
+
+GEMINI_3_PRO = ModelSpec(
+    id="gemini-3-pro-preview",
+    platform_id="gemini",
+    family="chat_completion",
+    quality_tier="high",
+    encoding="cl100k_base",
+    supports_json=True,
+    input_token_cost_per_1m=2.00,
+    output_token_cost_per_1m=12.00,
+    typical_latency_ms=1000,
+)
+
+GEMINI_2_5_FLASH = ModelSpec(
+    id="gemini-2.5-flash",
+    platform_id="gemini",
+    family="chat_completion",
+    quality_tier="medium",
+    encoding="cl100k_base",
+    supports_json=True,
+    input_token_cost_per_1m=0.15,
+    output_token_cost_per_1m=0.60,
+    typical_latency_ms=500,
+)
