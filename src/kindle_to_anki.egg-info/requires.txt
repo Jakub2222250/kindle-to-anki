@@ -1,5 +1,0 @@
-openai
-pycountry
-requests
-thefuzz
-tiktoken
