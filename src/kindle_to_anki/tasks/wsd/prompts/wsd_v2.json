@@ -18,8 +18,5 @@
   "constraints": {
     "json_only": true,
     "no_explanation": true
-  },
-  "runtime_overrides": {
-    "temperature": 0.0
   }
 }

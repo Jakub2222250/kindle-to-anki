@@ -11,6 +11,7 @@ from kindle_to_anki.core.pricing.token_estimator import count_tokens
 from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.core.prompts import get_prompt
 from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.translation_cache import TranslationCache
@@ -21,7 +22,7 @@ class ChatCompletionTranslation:
     Runtime for translation using chat-completion LLMs.
     Supports multiple platforms and models.
     """
-    
+
     id: str = "chat_completion_translation"
     display_name: str = "Chat Completion Translation Runtime"
     supported_tasks = ["translation"]
@@ -35,14 +36,12 @@ class ChatCompletionTranslation:
         return 125
 
     def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
-        return f"""Translate the following {source_language_name} sentences to {target_language_name}.
-
-Sentences to translate:
-{items_json}
-
-{self._get_llm_translation_instructions(source_language_name, target_language_name)}
-
-Respond with valid JSON. No additional text."""
+        prompt = get_prompt("translation")
+        return prompt.build(
+            items_json=items_json,
+            source_language_name=source_language_name,
+            target_language_name=target_language_name,
+        )
 
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
@@ -50,10 +49,10 @@ Respond with valid JSON. No additional text."""
         target_language_name = get_language_name_in_english(config.target_language_code)
         static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
-        
+
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
         output_tokens_per_item = self._estimate_output_tokens_per_item(config)
-        
+
         batch_size = config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
 
@@ -76,7 +75,7 @@ Respond with valid JSON. No additional text."""
         """
         if not translation_inputs:
             return []
-        
+
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
 
@@ -130,11 +129,11 @@ Respond with valid JSON. No additional text."""
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM translation.")
-            
+
             if retries >= MAX_RETRIES:
                 print("All successful translation results already saved to cache. Running script again usually fixes the issue. Exiting.")
                 raise RuntimeError("Translation failed after retries")
-            
+
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
@@ -161,12 +160,6 @@ Respond with valid JSON. No additional text."""
 
         print(f"{source_language_name} context translation (LLM) completed.")
         return translated_outputs
-
-    def _get_llm_translation_instructions(self, source_language_name: str, target_language_name: str) -> str:
-        return f"""Translate the {source_language_name} sentences to {target_language_name}. Provide natural, accurate translations that preserve the meaning and context.
-
-Output JSON as an object where keys are the UIDs and values are objects with:
-- "context_translation": {target_language_name} translation of the sentence"""
 
     def _make_batch_translation_call(self, batch_inputs: List[TranslationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for translation"""
@@ -202,6 +195,7 @@ Output JSON as an object where keys are the UIDs and values are objects with:
         print(f"  Batch translation API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
 
         return json.loads(response_text), runtime_config.model_id, processing_timestamp
+
     def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[TranslationInput]:
         """Process inputs in batches for translation"""
 

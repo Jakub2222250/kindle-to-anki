@@ -11,6 +11,7 @@ from kindle_to_anki.core.pricing.token_estimator import count_tokens
 from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.core.prompts import get_prompt
 from .schema import HintInput, HintOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.hint_cache import HintCache
@@ -30,24 +31,21 @@ class ChatCompletionHint:
         return 100
 
     def _build_prompt(self, items_json: str, source_language_name: str) -> str:
-        return f"""Provide {source_language_name} definition hints for the following words.
-
-Items to process:
-{items_json}
-
-For each item, provide a {source_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form. The lemma word should be hidden in the hint.
-
-Respond with valid JSON as an object where keys are the UIDs and values are objects with hint. No additional text."""
+        prompt = get_prompt("hint")
+        return prompt.build(
+            items_json=items_json,
+            source_language_name=source_language_name,
+        )
 
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
         source_language_name = get_language_name_in_english(config.source_language_code)
         static_prompt = self._build_prompt("placeholder", source_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
-        
+
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
         output_tokens_per_item = self._estimate_output_tokens_per_item(config)
-        
+
         batch_size = config.batch_size
         assert batch_size is not None
 
@@ -66,7 +64,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
     def generate(self, hint_inputs: List[HintInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[HintOutput]:
         if not hint_inputs:
             return []
-        
+
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
 

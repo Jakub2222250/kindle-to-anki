@@ -1,18 +1,17 @@
 {
-  "id": "wsd_v1",
-  "task": "wsd",
+  "id": "usage_level_v1",
+  "task": "usage_level",
   "flavor": "stable",
   "version": "1.0",
   "input_schema": {
     "items_json": "string",
-    "source_language_name": "string",
-    "target_language_name": "string"
+    "source_language_name": "string"
   },
   "output_schema": {
     "type": "object",
     "keys": "uid",
     "value": {
-      "definition": "string"
+      "usage_level": "integer"
     }
   },
   "constraints": {

@@ -1,0 +1,11 @@
+Translate the following {source_language_name} sentences to {target_language_name}.
+
+Sentences to translate:
+{items_json}
+
+Translate the {source_language_name} sentences to {target_language_name}. Provide natural, accurate translations that preserve the meaning and context.
+
+Output JSON as an object where keys are the UIDs and values are objects with:
+- "context_translation": {target_language_name} translation of the sentence
+
+Respond with valid JSON. No additional text.

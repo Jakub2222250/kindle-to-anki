@@ -11,6 +11,7 @@ from kindle_to_anki.core.pricing.token_estimator import count_tokens
 from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.core.prompts import get_prompt
 from .schema import UsageLevelInput, UsageLevelOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.usage_level_cache import UsageLevelCache
@@ -30,27 +31,21 @@ class ChatCompletionUsageLevel:
         return 130
 
     def _build_prompt(self, items_json: str, source_language_name: str) -> str:
-        return f"""Estimate the usage level for the following {source_language_name} word senses.
-
-Items to process:
-{items_json}
-
-For each item, estimate the word sense's usage level for modern general usage:
-1=rare/specialized, 2=uncommon/domain-specific, 3=common in educated speech/writing, 4=very common in everyday usage, 5=core vocabulary used frequently by native speakers.
-
-Base on frequency in modern general usage, whether it's a core or niche sense, and suitability for language learners.
-
-Respond with valid JSON as an object where keys are the UIDs and values are objects with usage_level. No additional text."""
+        prompt = get_prompt("usage_level")
+        return prompt.build(
+            items_json=items_json,
+            source_language_name=source_language_name,
+        )
 
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
         source_language_name = get_language_name_in_english(config.source_language_code)
         static_prompt = self._build_prompt("placeholder", source_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
-        
+
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
         output_tokens_per_item = self._estimate_output_tokens_per_item(config)
-        
+
         batch_size = config.batch_size
         assert batch_size is not None
 
@@ -69,7 +64,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
     def estimate(self, usage_inputs: List[UsageLevelInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[UsageLevelOutput]:
         if not usage_inputs:
             return []
-        
+
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
 

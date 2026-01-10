@@ -1,0 +1,11 @@
+Find collocations for the following {source_language_name} words and sentences.
+
+Words to analyze:
+{items_json}
+
+For each {source_language_name} word and sentence provided, find common {source_language_name} collocations or phrases that include the inflected input word.
+
+Output JSON as an object where keys are the UIDs and values are objects with:
+- "collocations": A JSON list of 0-3 short collocations in {source_language_name} that commonly use the input word form
+
+Respond with valid JSON. No additional text.

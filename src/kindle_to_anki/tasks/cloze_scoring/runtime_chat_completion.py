@@ -11,6 +11,7 @@ from kindle_to_anki.core.pricing.token_estimator import count_tokens
 from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.core.prompts import get_prompt
 from .schema import ClozeScoringInput, ClozeScoringOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.cloze_scoring_cache import ClozeScoringCache
@@ -30,24 +31,21 @@ class ChatCompletionClozeScoring:
         return 100
 
     def _build_prompt(self, items_json: str, source_language_name: str) -> str:
-        return f"""Score the following {source_language_name} sentences for cloze deletion suitability.
-
-Items to process:
-{items_json}
-
-For each item, provide a score from 0 to 10 indicating how suitable the sentence is for cloze deletion in Anki where the word would be replaced with [...]. 0 means not suitable at all, 10 means very suitable. Consider context clues, sentence completeness, and learning value.
-
-Respond with valid JSON as an object where keys are the UIDs and values are objects with cloze_deletion_score. No additional text."""
+        prompt = get_prompt("cloze_scoring")
+        return prompt.build(
+            items_json=items_json,
+            source_language_name=source_language_name,
+        )
 
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
         source_language_name = get_language_name_in_english(config.source_language_code)
         static_prompt = self._build_prompt("placeholder", source_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
-        
+
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
         output_tokens_per_item = self._estimate_output_tokens_per_item(config)
-        
+
         batch_size = config.batch_size
         assert batch_size is not None
 
@@ -66,7 +64,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are obje
     def score(self, scoring_inputs: List[ClozeScoringInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[ClozeScoringOutput]:
         if not scoring_inputs:
             return []
-        
+
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
 

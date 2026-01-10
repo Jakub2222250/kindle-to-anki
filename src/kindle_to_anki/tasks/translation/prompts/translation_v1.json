@@ -1,6 +1,6 @@
 {
-  "id": "wsd_v1",
-  "task": "wsd",
+  "id": "translation_v1",
+  "task": "translation",
   "flavor": "stable",
   "version": "1.0",
   "input_schema": {
@@ -12,7 +12,7 @@
     "type": "object",
     "keys": "uid",
     "value": {
-      "definition": "string"
+      "context_translation": "string"
     }
   },
   "constraints": {

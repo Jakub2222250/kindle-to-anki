@@ -12,6 +12,7 @@ from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostRepor
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from kindle_to_anki.platforms.chat_completion_platform import ChatCompletionPlatform
+from kindle_to_anki.core.prompts import get_prompt
 from .schema import CollocationInput, CollocationOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.collocation_cache import CollocationCache
@@ -35,14 +36,11 @@ class ChatCompletionCollocation:
         return 115
 
     def _build_prompt(self, items_json: str, source_language_name: str) -> str:
-        return f"""Find collocations for the following {source_language_name} words and sentences.
-
-Words to analyze:
-{items_json}
-
-{self._get_llm_collocation_instructions(source_language_name)}
-
-Respond with valid JSON. No additional text."""
+        prompt = get_prompt("collocation")
+        return prompt.build(
+            items_json=items_json,
+            source_language_name=source_language_name,
+        )
 
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
@@ -50,10 +48,10 @@ Respond with valid JSON. No additional text."""
         target_language_name = get_language_name_in_english(config.target_language_code)
         static_prompt = self._build_prompt("placeholder", source_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
-        
+
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
         output_tokens_per_item = self._estimate_output_tokens_per_item(config)
-        
+
         batch_size = config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
 
@@ -76,7 +74,7 @@ Respond with valid JSON. No additional text."""
         """
         if not collocation_inputs:
             return []
-        
+
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
 
@@ -130,11 +128,11 @@ Respond with valid JSON. No additional text."""
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM collocation analysis.")
-            
+
             if retries >= MAX_RETRIES:
                 print("All successful collocation results already saved to cache. Running script again usually fixes the issue. Exiting.")
                 raise RuntimeError("Collocation generation failed after retries")
-            
+
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
@@ -161,12 +159,6 @@ Respond with valid JSON. No additional text."""
 
         print(f"{source_language_name} collocation generation (LLM) completed.")
         return collocation_outputs
-
-    def _get_llm_collocation_instructions(self, source_language_name: str) -> str:
-        return f"""For each {source_language_name} word and sentence provided, find common {source_language_name} collocations or phrases that include the inflected input word.
-
-Output JSON as an object where keys are the UIDs and values are objects with:
-- "collocations": A JSON list of 0-3 short collocations in {source_language_name} that commonly use the input word form"""
 
     def _make_batch_collocation_call(self, batch_inputs: List[CollocationInput], processing_timestamp: str, source_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for collocation generation"""
@@ -244,5 +236,5 @@ Output JSON as an object where keys are the UIDs and values are objects with:
             except Exception as e:
                 print(f"  BATCH FAILED - {str(e)}")
                 failing_inputs.extend(batch)
-                
+
         return failing_inputs

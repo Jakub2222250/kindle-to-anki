@@ -1,0 +1,11 @@
+Estimate the usage level for the following {source_language_name} word senses.
+
+Items to process:
+{items_json}
+
+For each item, estimate the word sense's usage level for modern general usage:
+1=rare/specialized, 2=uncommon/domain-specific, 3=common in educated speech/writing, 4=very common in everyday usage, 5=core vocabulary used frequently by native speakers.
+
+Base on frequency in modern general usage, whether it's a core or niche sense, and suitability for language learners.
+
+Respond with valid JSON as an object where keys are the UIDs and values are objects with usage_level. No additional text.

@@ -1,0 +1,8 @@
+Score the following {source_language_name} sentences for cloze deletion suitability.
+
+Items to process:
+{items_json}
+
+For each item, provide a score from 0 to 10 indicating how suitable the sentence is for cloze deletion in Anki where the word would be replaced with [...]. 0 means not suitable at all, 10 means very suitable. Consider context clues, sentence completeness, and learning value.
+
+Respond with valid JSON as an object where keys are the UIDs and values are objects with cloze_deletion_score. No additional text.

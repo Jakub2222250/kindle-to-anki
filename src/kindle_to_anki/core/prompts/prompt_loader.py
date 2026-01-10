@@ -16,7 +16,6 @@ class PromptSpec:
         self.template = template
         self.id = spec.get("id", "unknown")
         self.version = spec.get("version", "0.0")
-        self.runtime_overrides = spec.get("runtime_overrides", {})
 
     def build(self, **kwargs) -> str:
         return self.template.format(**kwargs)
@@ -51,6 +50,11 @@ class PromptLoader:
 # Default prompts per task
 DEFAULT_PROMPTS = {
     "wsd": "wsd_v1",
+    "usage_level": "usage_level_v1",
+    "translation": "translation_v1",
+    "collocation": "collocation_v1",
+    "hint": "hint_v1",
+    "cloze_scoring": "cloze_scoring_v1",
 }
 
 
