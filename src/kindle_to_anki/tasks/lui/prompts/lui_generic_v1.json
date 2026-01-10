@@ -1,0 +1,25 @@
+{
+  "id": "lui_generic_v1",
+  "task": "lui",
+  "flavor": "generic",
+  "version": "1.0",
+  "input_schema": {
+    "items_json": "string",
+    "language_name": "string"
+  },
+  "output_schema": {
+    "type": "object",
+    "keys": "uid",
+    "value": {
+      "lemma": "string",
+      "part_of_speech": "string",
+      "aspect": "string",
+      "original_form": "string",
+      "unit_type": "string"
+    }
+  },
+  "constraints": {
+    "json_only": true,
+    "no_explanation": true
+  }
+}

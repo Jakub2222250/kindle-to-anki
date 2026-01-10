@@ -65,6 +65,13 @@ DEFAULT_PROMPTS = {
     "cloze_scoring": "cloze_scoring_v1",
 }
 
+# LUI has language-specific defaults
+LUI_LANGUAGE_DEFAULTS = {
+    "pl": "lui_pl_v1",
+    "es": "lui_es_v1",
+}
+LUI_GENERIC_DEFAULT = "lui_generic_v1"
+
 
 def get_prompt(task: str, prompt_id: str = None) -> PromptSpec:
     """Get a prompt by task and optional id. Uses default if id not specified."""
@@ -73,3 +80,10 @@ def get_prompt(task: str, prompt_id: str = None) -> PromptSpec:
         if prompt_id is None:
             raise ValueError(f"No default prompt configured for task: {task}")
     return PromptLoader.load(task, prompt_id)
+
+
+def get_lui_prompt(language_code: str, prompt_id: str = None) -> PromptSpec:
+    """Get LUI prompt, with language-specific defaults."""
+    if prompt_id is None:
+        prompt_id = LUI_LANGUAGE_DEFAULTS.get(language_code, LUI_GENERIC_DEFAULT)
+    return PromptLoader.load("lui", prompt_id)

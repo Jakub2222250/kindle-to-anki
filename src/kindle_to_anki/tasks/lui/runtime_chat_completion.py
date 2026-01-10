@@ -15,7 +15,7 @@ from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from .schema import LUIInput, LUIOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.lui_cache import LUICache
-from kindle_to_anki.tasks.lui.lui_prompts import get_llm_lexical_unit_identification_instructions
+from kindle_to_anki.core.prompts import get_lui_prompt
 
 
 class ChatCompletionLUI:
@@ -29,7 +29,6 @@ class ChatCompletionLUI:
     supported_model_families = ["chat_completion"]
     supports_batching: bool = True
 
-
     def _estimate_output_tokens_per_item(self, runtime_config: RuntimeConfig) -> int:
         if runtime_config.source_language_code == "pl":
             return 70
@@ -40,15 +39,22 @@ class ChatCompletionLUI:
             return 100
         return 100
 
+    def _build_prompt(self, items_json: str, language_code: str, language_name: str, prompt_id: str = None) -> str:
+        prompt = get_lui_prompt(language_code, prompt_id)
+        # Generic prompt needs language_name, language-specific ones don't
+        if "language_name" in prompt.spec.get("input_schema", {}):
+            return prompt.build(items_json=items_json, language_name=language_name)
+        return prompt.build(items_json=items_json)
+
     def estimate_usage(self, items_count: int, runtime_config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(runtime_config.model_id)
         language_name = get_language_name_in_english(runtime_config.source_language_code)
-        static_prompt = get_llm_lexical_unit_identification_instructions("placeholder", language_name, runtime_config.source_language_code)
+        static_prompt = self._build_prompt("placeholder", runtime_config.source_language_code, language_name, runtime_config.prompt_id)
         instruction_tokens = count_tokens(static_prompt, model)
-        
+
         input_tokens_per_word = self._estimate_input_tokens_per_item(runtime_config)
         output_tokens_per_word = self._estimate_output_tokens_per_item(runtime_config)
-        
+
         batch_size = runtime_config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
 
@@ -71,7 +77,7 @@ class ChatCompletionLUI:
         """
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
-        
+
         print(f"\nStarting lexical unit identification (LLM) for {source_lang}...")
 
         language_pair_code = f"{source_lang}-{target_lang}"
@@ -122,11 +128,11 @@ class ChatCompletionLUI:
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM lexical unit identification.")
-            
+
             if retries >= MAX_RETRIES:
                 print("All successful identification results already saved to cache. Running script again usually fixes the issue. Exiting.")
                 raise RuntimeError("LUI processing failed after retries")
-            
+
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
@@ -189,23 +195,23 @@ class ChatCompletionLUI:
             except Exception as e:
                 print(f"  BATCH FAILED - {str(e)}")
                 failing_inputs.extend(batch)
-                
+
         return lui_outputs, failing_inputs
 
     def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for lexical unit identification"""
-        
+
         # Get the model and platform
         model = ModelRegistry.get(runtime_config.model_id)
         platform = PlatformRegistry.get(model.platform_id)
-        
+
         items_list = []
         for lui_input in batch_inputs:
             items_list.append(f'{{"uid": "{lui_input.uid}", "word": "{lui_input.word}", "sentence": "{lui_input.sentence}"}}')
 
         items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-        prompt = get_llm_lexical_unit_identification_instructions(items_json, language_name, language_code)
+        prompt = self._build_prompt(items_json, language_code, language_name, runtime_config.prompt_id)
 
         input_chars = len(prompt)
         input_tokens = count_tokens(prompt, model)
@@ -224,10 +230,10 @@ class ChatCompletionLUI:
 
         elapsed = time.time() - start_time
         output_text = response
-        
+
         output_chars = len(output_text)
         output_tokens = count_tokens(output_text, model)
-        
+
         actual_cost_str = cost_reporter.actual_cost(input_tokens, output_tokens, len(batch_inputs))
         print(f"  Batch lexical unit identification API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
 
