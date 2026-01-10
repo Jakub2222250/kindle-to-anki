@@ -74,6 +74,7 @@ class ChatCompletionLUI:
     def identify(self, lui_inputs: List[LUIInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
         """
         Perform Lexical Unit Identification on a list of LUIInput objects and return LUIOutput objects.
+        Returns outputs in the same order as inputs.
         """
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
@@ -89,9 +90,9 @@ class ChatCompletionLUI:
 
         cache = LUICache(cache_suffix=cache_suffix)
 
-        # Filter inputs that need LUI and collect cached results
+        # Build output dict keyed by UID to maintain input order
+        outputs_by_uid: Dict[str, LUIOutput] = {}
         inputs_needing_lui = []
-        lui_outputs = []
 
         if not ignore_cache:
             cached_count = 0
@@ -107,7 +108,7 @@ class ChatCompletionLUI:
                         original_form=cached_result.get('original_form', lui_input.word),
                         unit_type=cached_result.get('unit_type', 'lemma')
                     )
-                    lui_outputs.append(lui_output)
+                    outputs_by_uid[lui_input.uid] = lui_output
                 else:
                     inputs_needing_lui.append(lui_input)
 
@@ -118,13 +119,13 @@ class ChatCompletionLUI:
 
         if not inputs_needing_lui:
             print(f"{language_name} lexical unit identification (LLM) completed (all from cache).")
-            return lui_outputs
+            return [outputs_by_uid[lui_input.uid] for lui_input in lui_inputs]
 
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        new_outputs, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang, runtime_config)
-        lui_outputs.extend(new_outputs)
+        new_outputs_by_uid, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang, runtime_config)
+        outputs_by_uid.update(new_outputs_by_uid)
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM lexical unit identification.")
@@ -136,21 +137,22 @@ class ChatCompletionLUI:
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                retry_outputs, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang, runtime_config)
-                lui_outputs.extend(retry_outputs)
+                retry_outputs_by_uid, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang, runtime_config)
+                outputs_by_uid.update(retry_outputs_by_uid)
 
         print(f"{language_name} lexical unit identification (LLM) completed.")
-        return lui_outputs
+        # Return outputs in original input order
+        return [outputs_by_uid[lui_input.uid] for lui_input in lui_inputs]
 
-    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[List[LUIOutput], List[LUIInput]]:
-        """Process inputs in batches for lexical unit identification"""
+    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, LUIOutput], List[LUIInput]]:
+        """Process inputs in batches for lexical unit identification. Returns outputs keyed by UID."""
 
         # Capture timestamp at the start of LUI processing
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
         total_batches = (len(lui_inputs) + runtime_config.batch_size - 1) // runtime_config.batch_size
         failing_inputs = []
-        lui_outputs = []
+        outputs_by_uid: Dict[str, LUIOutput] = {}
 
         for i in range(0, len(lui_inputs), runtime_config.batch_size):
             batch = lui_inputs[i:i + runtime_config.batch_size]
@@ -164,13 +166,20 @@ class ChatCompletionLUI:
                 for lui_input in batch:
                     if lui_input.uid in batch_results:
                         lui_data = batch_results[lui_input.uid]
+                        original_form = lui_data.get("original_form", lui_input.word)
+
+                        # Validate original_form exists in sentence
+                        if original_form.lower() not in lui_input.sentence.lower():
+                            print(f"  FAILED - original_form '{original_form}' not found in sentence for {lui_input.word}")
+                            failing_inputs.append(lui_input)
+                            continue
 
                         # Create LUI result for caching
                         lui_result = {
                             "lemma": lui_data.get("lemma", ""),
                             "part_of_speech": lui_data.get("part_of_speech", ""),
                             "aspect": lui_data.get("aspect", ""),
-                            "original_form": lui_data.get("original_form", lui_input.word),
+                            "original_form": original_form,
                             "unit_type": lui_data.get("unit_type", "lemma")
                         }
 
@@ -185,7 +194,7 @@ class ChatCompletionLUI:
                             original_form=lui_result["original_form"],
                             unit_type=lui_result["unit_type"]
                         )
-                        lui_outputs.append(lui_output)
+                        outputs_by_uid[lui_input.uid] = lui_output
 
                         print(f"  SUCCESS - identified {lui_input.word} → lemma: {lui_output.lemma}, pos: {lui_output.part_of_speech}")
                     else:
@@ -196,7 +205,7 @@ class ChatCompletionLUI:
                 print(f"  BATCH FAILED - {str(e)}")
                 failing_inputs.extend(batch)
 
-        return lui_outputs, failing_inputs
+        return outputs_by_uid, failing_inputs
 
     def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for lexical unit identification"""
