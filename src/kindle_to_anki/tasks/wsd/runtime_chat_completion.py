@@ -35,8 +35,8 @@ class ChatCompletionWSD:
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
         return 125
 
-    def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
-        prompt = get_prompt("wsd")
+    def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str, prompt_id: str = None) -> str:
+        prompt = get_prompt("wsd", prompt_id)
         return prompt.build(
             items_json=items_json,
             source_language_name=source_language_name,
@@ -47,7 +47,7 @@ class ChatCompletionWSD:
         model = ModelRegistry.get(config.model_id)
         source_language_name = get_language_name_in_english(config.source_language_code)
         target_language_name = get_language_name_in_english(config.target_language_code)
-        static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name)
+        static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name, config.prompt_id)
         instruction_tokens = count_tokens(static_prompt, model)
 
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
@@ -168,7 +168,7 @@ class ChatCompletionWSD:
 
         items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
-        prompt = self._build_prompt(items_json, source_language_name, target_language_name)
+        prompt = self._build_prompt(items_json, source_language_name, target_language_name, runtime_config.prompt_id)
 
         # Get the model and platform
         model = ModelRegistry.get(runtime_config.model_id)

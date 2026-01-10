@@ -30,8 +30,8 @@ class ChatCompletionHint:
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
         return 100
 
-    def _build_prompt(self, items_json: str, source_language_name: str) -> str:
-        prompt = get_prompt("hint")
+    def _build_prompt(self, items_json: str, source_language_name: str, prompt_id: str = None) -> str:
+        prompt = get_prompt("hint", prompt_id)
         return prompt.build(
             items_json=items_json,
             source_language_name=source_language_name,
@@ -40,7 +40,7 @@ class ChatCompletionHint:
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
         source_language_name = get_language_name_in_english(config.source_language_code)
-        static_prompt = self._build_prompt("placeholder", source_language_name)
+        static_prompt = self._build_prompt("placeholder", source_language_name, config.prompt_id)
         instruction_tokens = count_tokens(static_prompt, model)
 
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
@@ -132,7 +132,7 @@ class ChatCompletionHint:
             items_list.append(f'{{"uid": "{input_item.uid}", "word": "{input_item.word}", "lemma": "{input_item.lemma}", "pos": "{input_item.pos}", "sentence": "{input_item.sentence}"}}')
 
         items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
-        prompt = self._build_prompt(items_json, source_language_name)
+        prompt = self._build_prompt(items_json, source_language_name, runtime_config.prompt_id)
 
         model = ModelRegistry.get(runtime_config.model_id)
         platform = PlatformRegistry.get(model.platform_id)

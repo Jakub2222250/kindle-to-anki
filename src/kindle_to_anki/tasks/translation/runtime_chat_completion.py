@@ -35,8 +35,8 @@ class ChatCompletionTranslation:
     def _estimate_input_tokens_per_item(self, config: RuntimeConfig) -> int:
         return 125
 
-    def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
-        prompt = get_prompt("translation")
+    def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str, prompt_id: str = None) -> str:
+        prompt = get_prompt("translation", prompt_id)
         return prompt.build(
             items_json=items_json,
             source_language_name=source_language_name,
@@ -47,7 +47,7 @@ class ChatCompletionTranslation:
         model = ModelRegistry.get(config.model_id)
         source_language_name = get_language_name_in_english(config.source_language_code)
         target_language_name = get_language_name_in_english(config.target_language_code)
-        static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name)
+        static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name, config.prompt_id)
         instruction_tokens = count_tokens(static_prompt, model)
 
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
@@ -166,7 +166,7 @@ class ChatCompletionTranslation:
         items_list = [{"uid": input_item.uid, "sentence": input_item.context} for input_item in batch_inputs]
         items_json = json.dumps(items_list, ensure_ascii=False, indent=2)
 
-        prompt = self._build_prompt(items_json, source_language_name, target_language_name)
+        prompt = self._build_prompt(items_json, source_language_name, target_language_name, runtime_config.prompt_id)
 
         # Get the model and platform
         model = ModelRegistry.get(runtime_config.model_id)

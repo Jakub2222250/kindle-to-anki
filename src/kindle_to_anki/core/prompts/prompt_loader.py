@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 # Base path for all task prompts
 TASKS_DIR = Path(__file__).parent.parent.parent / "tasks"
@@ -25,6 +25,14 @@ class PromptLoader:
     """Loads prompt specs and templates from disk."""
 
     _cache: Dict[str, PromptSpec] = {}
+
+    @classmethod
+    def list_prompts(cls, task: str) -> List[str]:
+        """Return all available prompt IDs for a task."""
+        prompts_dir = TASKS_DIR / task / "prompts"
+        if not prompts_dir.exists():
+            return []
+        return [p.stem for p in prompts_dir.glob("*.json")]
 
     @classmethod
     def load(cls, task: str, prompt_id: str) -> PromptSpec:
