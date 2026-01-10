@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Dict, Any
 
+# Base path for all task prompts
+TASKS_DIR = Path(__file__).parent.parent.parent / "tasks"
+
 
 class PromptSpec:
     """Holds prompt specification and template."""
@@ -30,7 +33,7 @@ class PromptLoader:
         if cache_key in cls._cache:
             return cls._cache[cache_key]
 
-        prompts_dir = Path(__file__).parent
+        prompts_dir = TASKS_DIR / task / "prompts"
         spec_path = prompts_dir / f"{prompt_id}.json"
         template_path = prompts_dir / f"{prompt_id}.template.txt"
 

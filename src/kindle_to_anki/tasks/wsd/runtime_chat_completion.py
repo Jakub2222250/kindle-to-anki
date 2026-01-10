@@ -11,8 +11,8 @@ from kindle_to_anki.core.pricing.token_estimator import count_tokens
 from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+from kindle_to_anki.core.prompts import get_prompt
 from .schema import WSDInput, WSDOutput
-from .prompts.prompt_loader import get_prompt
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.wsd_cache import WSDCache
 
