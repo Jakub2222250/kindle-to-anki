@@ -1,0 +1,9 @@
+Process the following {source_language_name} words and sentences. For each item, provide analysis in the specified format.
+
+Items to process:
+{items_json}
+
+For each item, output JSON with:
+1. definition: {target_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form.
+
+Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text.

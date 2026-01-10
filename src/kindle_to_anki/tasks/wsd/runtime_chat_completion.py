@@ -11,8 +11,8 @@ from kindle_to_anki.core.pricing.token_estimator import count_tokens
 from kindle_to_anki.core.pricing.realtime_cost_reporter import RealtimeCostReporter
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
-from kindle_to_anki.platforms.chat_completion_platform import ChatCompletionPlatform
 from .schema import WSDInput, WSDOutput
+from .prompts.prompt_loader import get_prompt
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.wsd_cache import WSDCache
 
@@ -36,14 +36,12 @@ class ChatCompletionWSD:
         return 125
 
     def _build_prompt(self, items_json: str, source_language_name: str, target_language_name: str) -> str:
-        return f"""Process the following {source_language_name} words and sentences. For each item, provide analysis in the specified format.
-
-Items to process:
-{items_json}
-
-For each item, {self._get_wsd_llm_instructions(source_language_name, target_language_name)}
-
-Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text."""
+        prompt = get_prompt("wsd")
+        return prompt.build(
+            items_json=items_json,
+            source_language_name=source_language_name,
+            target_language_name=target_language_name,
+        )
 
     def estimate_usage(self, items_count: int, config: RuntimeConfig) -> UsageBreakdown:
         model = ModelRegistry.get(config.model_id)
@@ -51,10 +49,10 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
         target_language_name = get_language_name_in_english(config.target_language_code)
         static_prompt = self._build_prompt("placeholder", source_language_name, target_language_name)
         instruction_tokens = count_tokens(static_prompt, model)
-        
+
         input_tokens_per_item = self._estimate_input_tokens_per_item(config)
         output_tokens_per_item = self._estimate_output_tokens_per_item(config)
-        
+
         batch_size = config.batch_size
         assert batch_size is not None, "Batch size must be specified in RuntimeConfig"
 
@@ -77,7 +75,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
         """
         if not wsd_inputs:
             return []
-        
+
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
 
@@ -123,7 +121,7 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
         if not inputs_needing_wsd:
             print(f"{source_language_name} Word Sense Disambiguation (LLM) completed (all from cache).")
             return [output for output in outputs if output is not None]
-        
+
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
@@ -131,11 +129,11 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
 
         while len(failing_inputs) > 0:
             print(f"{len(failing_inputs)} inputs failed LLM Word Sense Disambiguation.")
-            
+
             if retries >= MAX_RETRIES:
                 print("All successful WSD results already saved to cache. Running script again usually fixes the issue. Exiting.")
                 raise RuntimeError("WSD failed after retries")
-            
+
             if retries < MAX_RETRIES:
                 retries += 1
                 print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
@@ -161,10 +159,6 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
 
         print(f"{source_language_name} Word Sense Disambiguation (LLM) completed.")
         return wsd_outputs
-
-    def _get_wsd_llm_instructions(self, source_language_name: str, target_language_name: str) -> str:
-        return f"""output JSON with:
-1. definition: {target_language_name} definition of the lemma form (not the inflected input word), with the meaning determined by how the input word is used in the input sentence. Consider the part of speech when providing a concise dictionary-style gloss for the base form."""
 
     def _make_batch_wsd_call(self, batch_inputs: List[WSDInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
         """Make batch LLM API call for WSD"""
@@ -237,5 +231,5 @@ Respond with valid JSON as an object where keys are the UIDs and values are the 
             except Exception as e:
                 print(f"  BATCH FAILED - {str(e)}")
                 failing_inputs.extend(batch)
-                
+
         return failing_inputs

@@ -1,0 +1,9 @@
+Process the following {source_language_name} words and sentences. For each item, provide analysis in the specified format.
+
+Items to process:
+{items_json}
+
+For each item, output JSON with:
+1. definition: A concise {target_language_name} gloss (1-6 words preferred) of the lemma as used in context. Prioritize brevity for flashcard recall, but include enough detail to distinguish this sense from other common meanings.
+
+Respond with valid JSON as an object where keys are the UIDs and values are the analysis objects. No additional text.
