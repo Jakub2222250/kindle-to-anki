@@ -1,0 +1,3 @@
+{"uid": "en_hint_001", "word": "parlance", "lemma": "parlance", "pos": "noun", "sentence": "Using the parlance, each object is an instance of a class.", "source_lang": "en", "target_lang": "pl"}
+{"uid": "en_hint_002", "word": "polymorphism", "lemma": "polymorphism", "pos": "noun", "sentence": "Polymorphism allows different types to be treated uniformly.", "source_lang": "en", "target_lang": "pl"}
+{"uid": "en_hint_003", "word": "inheritance", "lemma": "inheritance", "pos": "noun", "sentence": "Inheritance enables code reuse through class hierarchies.", "source_lang": "en", "target_lang": "pl"}

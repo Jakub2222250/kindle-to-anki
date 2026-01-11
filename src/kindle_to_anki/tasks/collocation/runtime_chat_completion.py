@@ -164,7 +164,7 @@ class ChatCompletionCollocation:
         """Make batch LLM API call for collocation generation"""
         items_list = []
         for input_item in batch_inputs:
-            items_list.append(f'{{"uid": "{input_item.uid}", "word": "{input_item.word}", "lemma": "{input_item.lemma}", "pos": "{input_item.pos}", "sentence": "{input_item.sentence}"}}')
+            items_list.append(f'{{"uid": "{input_item.uid}", "lemma": "{input_item.lemma}", "pos": "{input_item.pos}"}}')
 
         items_json = "[\n  " + ",\n  ".join(items_list) + "\n]"
 
@@ -228,9 +228,9 @@ class ChatCompletionCollocation:
                         # Save to cache
                         cache.set(input_item.uid, collocation_result, model_used, timestamp)
 
-                        print(f"  SUCCESS - found collocations for {input_item.word}")
+                        print(f"  SUCCESS - found collocations for {input_item.lemma}")
                     else:
-                        print(f"  FAILED - no collocation result for {input_item.word}")
+                        print(f"  FAILED - no collocation result for {input_item.lemma}")
                         failing_inputs.append(input_item)
 
             except Exception as e:

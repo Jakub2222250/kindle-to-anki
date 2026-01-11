@@ -43,14 +43,12 @@ class CollocationProvider:
         collocation_inputs: List[CollocationInput] = []
         for note in notes:
             # Only process notes with required fields
-            if note.kindle_usage and note.expression and note.kindle_word:
+            if note.expression:
                 pos_tag = getattr(note, 'pos_tag', 'unknown')
                 collocation_input = CollocationInput(
                     uid=note.uid,
-                    word=note.kindle_word,
                     lemma=note.expression,
                     pos=pos_tag,
-                    sentence=note.kindle_usage
                 )
                 collocation_inputs.append(collocation_input)
 

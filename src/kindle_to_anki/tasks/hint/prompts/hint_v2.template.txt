@@ -1,0 +1,20 @@
+Generate concise {source_language_name} definition hints for the following words.
+
+Items to process:
+{items_json}
+
+For each item, output a short {source_language_name} hint that:
+- Describes the meaning of the LEMMA (base form), as determined by its use in the given sentence
+- Is suitable for the FRONT of an Anki card (aim for ~3–8 words)
+- Matches the part of speech of the lemma
+- Uses singular, lemma-aligned phrasing when possible
+- Does NOT contain the lemma, the inflected form, or obvious morphological variants
+- Prefers simple, high-frequency words
+- Avoids technical, scientific, or taxonomic terms unless unavoidable
+- Avoids examples and explanatory phrasing; use dictionary-style wording only
+
+Respond with valid JSON as a single object where:
+- keys are the item UIDs
+- values are objects with a single field: "hint"
+
+No additional text.

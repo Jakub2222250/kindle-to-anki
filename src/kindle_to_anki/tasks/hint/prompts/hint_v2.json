@@ -1,0 +1,21 @@
+{
+  "id": "hint_v2",
+  "task": "hint",
+  "flavor": "anki_optimized",
+  "version": "2.0",
+  "input_schema": {
+    "items_json": "string",
+    "source_language_name": "string"
+  },
+  "output_schema": {
+    "type": "object",
+    "keys": "uid",
+    "value": {
+      "hint": "string"
+    }
+  },
+  "constraints": {
+    "json_only": true,
+    "no_explanation": true
+  }
+}

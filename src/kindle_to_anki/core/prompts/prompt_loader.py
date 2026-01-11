@@ -61,7 +61,7 @@ DEFAULT_PROMPTS = {
     "usage_level": "usage_level_v1",
     "translation": "translation_v1",
     "collocation": "collocation_v1",
-    "hint": "hint_v1",
+    "hint": "hint_v2",
     "cloze_scoring": "cloze_scoring_v1",
 }
 
