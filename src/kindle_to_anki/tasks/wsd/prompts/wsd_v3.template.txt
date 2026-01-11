@@ -1,0 +1,23 @@
+Process the following {source_language_name} words and sentences.
+
+Items to process:
+{items_json}
+
+For each item, output JSON with the following rule:
+
+definition:
+- Provide a concise {target_language_name} dictionary-style gloss (1–6 words preferred)
+- The gloss MUST correspond to the LEMMA (base form), never the inflected surface form
+- If the input word is plural, declined, conjugated, or otherwise inflected, normalize to the lemma before defining
+- The gloss must reflect the meaning determined by the word's use in the given sentence
+- Do NOT encode number, tense, case, or person in the gloss
+
+Examples:
+- input: "koty" → gloss should correspond to lemma "kot", not "cats"
+- input: "szedłem" → gloss should correspond to lemma "iść", not "went"
+
+Respond with valid JSON as a single object where:
+- keys are the item UIDs
+- values are objects with a single field: "definition"
+
+No additional text. No explanations.
