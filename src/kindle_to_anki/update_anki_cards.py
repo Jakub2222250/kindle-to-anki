@@ -13,15 +13,13 @@ from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.prompts import get_default_prompt_id, get_lui_default_prompt_id
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
-from kindle_to_anki.tasks.wsd.schema import WSDInput, WSDOutput
-from kindle_to_anki.tasks.hint.schema import HintInput, HintOutput
-from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
-from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
-from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
-from kindle_to_anki.tasks.cloze_scoring.schema import ClozeScoringInput, ClozeScoringOutput
-from kindle_to_anki.tasks.usage_level.schema import UsageLevelInput, UsageLevelOutput
-
-from pprint import pprint
+from kindle_to_anki.tasks.wsd.schema import WSDInput
+from kindle_to_anki.tasks.hint.schema import HintInput
+from kindle_to_anki.tasks.lui.schema import LUIInput
+from kindle_to_anki.tasks.collocation.schema import CollocationInput
+from kindle_to_anki.tasks.translation.schema import TranslationInput
+from kindle_to_anki.tasks.cloze_scoring.schema import ClozeScoringInput
+from kindle_to_anki.tasks.usage_level.schema import UsageLevelInput
 
 
 AVAILABLE_TASKS = {
@@ -295,8 +293,6 @@ def run_task_on_notes(
                 runtime_config.model_id, runtime_config.prompt_id
             )
 
-            print("Generation metadata updated:", new_meta)
-
             # Build fields dict from output
             fields_update = {"Generation_Metadata": new_meta}
             preview_parts = []
@@ -330,9 +326,6 @@ def run_task_on_notes(
                 print(f"  Queued {task_input.uid}: {', '.join(preview_parts[:2])}")
 
         # Update cards
-
-        # pprint(actions)
-
         if actions:
             try:
                 successful, errors = anki.update_notes_by_id(actions)

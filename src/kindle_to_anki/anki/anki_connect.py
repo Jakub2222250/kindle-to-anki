@@ -261,7 +261,6 @@ class AnkiConnect:
 
         try:
             results = self._invoke("multi", {"actions": actions})
-            print(f"DEBUG: multi response: {results}")
             successful = 0
             errors = []
             for i, r in enumerate(results):
