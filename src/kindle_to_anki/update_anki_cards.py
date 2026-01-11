@@ -15,6 +15,8 @@ from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.tasks.wsd.schema import WSDInput, WSDOutput
 from kindle_to_anki.tasks.hint.schema import HintInput, HintOutput
+from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
+from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
 
 
 AVAILABLE_TASKS = {
@@ -33,6 +35,22 @@ AVAILABLE_TASKS = {
         "output_field": "Hint",
         "output_attr": "hint",
         "runtime_method": "generate",
+    },
+    "lui": {
+        "name": "Lexical Unit Identification",
+        "runtime_key": "lui",
+        "input_class": LUIInput,
+        "output_fields": ["Expression", "Part_Of_Speech", "Aspect", "Surface_Lexical_Unit", "Unit_Type"],
+        "output_attrs": ["lemma", "part_of_speech", "aspect", "surface_lexical_unit", "unit_type"],
+        "runtime_method": "identify",
+    },
+    "collocation": {
+        "name": "Collocation Generation",
+        "runtime_key": "collocation",
+        "input_class": CollocationInput,
+        "output_field": "Collocations",
+        "output_attr": "collocations",
+        "runtime_method": "generate_collocations",
     },
 }
 
@@ -82,20 +100,37 @@ def build_task_input(task_key: str, note: dict) -> object:
     surface_lexical_unit = fields.get('Surface_Lexical_Unit', {}).get('value', '').strip()
     context = fields.get('Context_Sentence', {}).get('value', '').strip()
     pos = fields.get('Part_Of_Speech', {}).get('value', '').strip() or 'unknown'
-
-    if not (uid and expression and context):
-        return None
+    raw_lookup = fields.get('Raw_Lookup_String', {}).get('value', '').strip()
+    raw_context = fields.get('Raw_Context_Text', {}).get('value', '').strip()
 
     task_info = AVAILABLE_TASKS[task_key]
     input_class = task_info["input_class"]
 
-    return input_class(
-        uid=uid,
-        word=surface_lexical_unit or expression,
-        lemma=expression,
-        pos=pos,
-        sentence=context,
-    )
+    if task_key == "lui":
+        # LUI uses raw lookup word and raw context
+        word = raw_lookup or surface_lexical_unit or expression
+        sentence = raw_context or context
+        if not (uid and word and sentence):
+            return None
+        return input_class(uid=uid, word=word, sentence=sentence)
+
+    elif task_key == "collocation":
+        # Collocation uses lemma and pos
+        if not (uid and expression):
+            return None
+        return input_class(uid=uid, lemma=expression, pos=pos)
+
+    else:
+        # WSD, hint use full context
+        if not (uid and expression and context):
+            return None
+        return input_class(
+            uid=uid,
+            word=surface_lexical_unit or expression,
+            lemma=expression,
+            pos=pos,
+            sentence=context,
+        )
 
 
 def get_note_task_metadata(note: dict, task_key: str) -> dict | None:
@@ -151,9 +186,11 @@ def run_task_on_notes(
 ):
     """Run the selected task on notes and update Anki."""
     task_info = AVAILABLE_TASKS[task_key]
-    output_field = task_info["output_field"]
-    output_attr = task_info["output_attr"]
     runtime_method = task_info["runtime_method"]
+
+    # Handle single vs multi-field outputs
+    output_fields = task_info.get("output_fields", [task_info.get("output_field")])
+    output_attrs = task_info.get("output_attrs", [task_info.get("output_attr")])
 
     # Build inputs
     task_inputs = []
@@ -177,7 +214,9 @@ def run_task_on_notes(
     if dry_run:
         print("DRY RUN - no changes will be made")
         for inp in task_inputs[:10]:
-            print(f"  Would process: {inp.uid} - {inp.word}")
+            # Handle different input types
+            word_attr = getattr(inp, 'word', None) or getattr(inp, 'lemma', None) or ''
+            print(f"  Would process: {inp.uid} - {word_attr}")
         if len(task_inputs) > 10:
             print(f"  ... and {len(task_inputs) - 10} more")
         return
@@ -198,27 +237,38 @@ def run_task_on_notes(
         # Build batch update actions
         actions = []
         for task_input, output in zip(batch_inputs, outputs):
-            output_value = getattr(output, output_attr, None)
-            if output_value is not None:
-                note_id = note_id_map[task_input.uid]
-                existing_meta = note_metadata_map.get(task_input.uid, '')
-                new_meta = build_generation_metadata_update(
-                    existing_meta, task_key, runtime_id,
-                    runtime_config.model_id, runtime_config.prompt_id
-                )
+            note_id = note_id_map[task_input.uid]
+            existing_meta = note_metadata_map.get(task_input.uid, '')
+            new_meta = build_generation_metadata_update(
+                existing_meta, task_key, runtime_id,
+                runtime_config.model_id, runtime_config.prompt_id
+            )
+
+            # Build fields dict from output
+            fields_update = {"Generation_Metadata": new_meta}
+            preview_parts = []
+
+            for field, attr in zip(output_fields, output_attrs):
+                value = getattr(output, attr, None)
+                if value is not None:
+                    # Handle list outputs (e.g., collocations)
+                    if isinstance(value, list):
+                        value = ", ".join(str(v) for v in value)
+                    fields_update[field] = str(value)
+                    preview = str(value)[:30] + "..." if len(str(value)) > 30 else str(value)
+                    preview_parts.append(f"{field}={preview}")
+
+            if len(fields_update) > 1:  # More than just metadata
                 actions.append({
                     "action": "updateNoteFields",
                     "params": {
                         "note": {
                             "id": note_id,
-                            "fields": {
-                                output_field: str(output_value),
-                                "Generation_Metadata": new_meta,
-                            }
+                            "fields": fields_update
                         }
                     }
                 })
-                print(f"  Queued {task_input.uid}: {output_field}={output_value[:50] if len(str(output_value)) > 50 else output_value}")
+                print(f"  Queued {task_input.uid}: {', '.join(preview_parts[:2])}")
 
         # Update cards
         if actions:
