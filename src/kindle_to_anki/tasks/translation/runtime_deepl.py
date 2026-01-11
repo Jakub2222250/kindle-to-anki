@@ -127,19 +127,20 @@ class DeepLTranslation:
             est_cost = pricing_policy.estimate_cost(usage).usd
             print(f"  {total_chars} chars, estimated cost: ${est_cost:.6f}")
 
+            start_time = time.time()
+
             try:
-                start_time = time.time()
                 translations = platform.translate(texts, target_lang, source_lang)
-                elapsed = time.time() - start_time
-
-                print(f"  Batch completed in {elapsed:.2f}s")
-
-                for inp, trans in zip(batch, translations):
-                    cache.set(inp.uid, self.id, "deepl", "", {"context_translation": trans}, processing_timestamp)
-                    print(f"  SUCCESS - translated UID {inp.uid}")
-
             except Exception as e:
-                print(f"  BATCH FAILED - {str(e)}")
+                print(f"  API call failed: {e}")
                 failing_inputs.extend(batch)
+                continue
+
+            elapsed = time.time() - start_time
+            print(f"  Batch completed in {elapsed:.2f}s")
+
+            for inp, trans in zip(batch, translations):
+                cache.set(inp.uid, self.id, "deepl", "", {"context_translation": trans}, processing_timestamp)
+                print(f"  SUCCESS - translated UID {inp.uid}")
 
         return failing_inputs

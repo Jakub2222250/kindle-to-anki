@@ -4,6 +4,7 @@ from typing import List, Tuple, Dict, Any
 from typing_extensions import runtime
 
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.core.runtimes.batch_call_result import BatchCallResult
 from kindle_to_anki.core.pricing.usage_scope import UsageScope
 from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
 from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
@@ -160,55 +161,55 @@ class ChatCompletionLUI:
 
             print(f"\nProcessing lexical unit identification batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
-            try:
-                batch_results, model_used, timestamp = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code, runtime_config)
+            result = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code, runtime_config)
 
-                for lui_input in batch:
-                    if lui_input.uid in batch_results:
-                        lui_data = batch_results[lui_input.uid]
-                        surface_lexical_unit = lui_data.get("surface_lexical_unit", lui_input.word)
-
-                        # Validate surface_lexical_unit exists in sentence
-                        if surface_lexical_unit.lower() not in lui_input.sentence.lower():
-                            print(f"  FAILED - surface_lexical_unit '{surface_lexical_unit}' not found in sentence for {lui_input.word}")
-                            failing_inputs.append(lui_input)
-                            continue
-
-                        # Create LUI result for caching
-                        lui_result = {
-                            "lemma": lui_data.get("lemma", ""),
-                            "part_of_speech": lui_data.get("part_of_speech", ""),
-                            "aspect": lui_data.get("aspect", ""),
-                            "surface_lexical_unit": surface_lexical_unit,
-                            "unit_type": lui_data.get("unit_type", "lemma")
-                        }
-
-                        # Save to cache
-                        cache.set(lui_input.uid, self.id, model_used, runtime_config.prompt_id, lui_result, timestamp)
-
-                        # Create LUIOutput
-                        lui_output = LUIOutput(
-                            lemma=lui_result["lemma"],
-                            part_of_speech=lui_result["part_of_speech"],
-                            aspect=lui_result["aspect"],
-                            surface_lexical_unit=lui_result["surface_lexical_unit"],
-                            unit_type=lui_result["unit_type"]
-                        )
-                        outputs_by_uid[lui_input.uid] = lui_output
-
-                        print(f"  SUCCESS - identified {lui_input.word} → lemma: {lui_output.lemma}, pos: {lui_output.part_of_speech}")
-                    else:
-                        print(f"  FAILED - no LUI result for {lui_input.word}")
-                        failing_inputs.append(lui_input)
-
-            except Exception as e:
-                print(f"  BATCH FAILED - {str(e)}")
+            if not result.success:
+                print(f"  BATCH FAILED - {result.error}")
                 failing_inputs.extend(batch)
+                continue
+
+            for lui_input in batch:
+                if lui_input.uid in result.results:
+                    lui_data = result.results[lui_input.uid]
+                    surface_lexical_unit = lui_data.get("surface_lexical_unit", lui_input.word)
+
+                    # Validate surface_lexical_unit exists in sentence
+                    if surface_lexical_unit.lower() not in lui_input.sentence.lower():
+                        print(f"  FAILED - surface_lexical_unit '{surface_lexical_unit}' not found in sentence for {lui_input.word}")
+                        failing_inputs.append(lui_input)
+                        continue
+
+                    # Create LUI result for caching
+                    lui_result = {
+                        "lemma": lui_data.get("lemma", ""),
+                        "part_of_speech": lui_data.get("part_of_speech", ""),
+                        "aspect": lui_data.get("aspect", ""),
+                        "surface_lexical_unit": surface_lexical_unit,
+                        "unit_type": lui_data.get("unit_type", "lemma")
+                    }
+
+                    # Save to cache
+                    cache.set(lui_input.uid, self.id, result.model_id, runtime_config.prompt_id, lui_result, result.timestamp)
+
+                    # Create LUIOutput
+                    lui_output = LUIOutput(
+                        lemma=lui_result["lemma"],
+                        part_of_speech=lui_result["part_of_speech"],
+                        aspect=lui_result["aspect"],
+                        surface_lexical_unit=lui_result["surface_lexical_unit"],
+                        unit_type=lui_result["unit_type"]
+                    )
+                    outputs_by_uid[lui_input.uid] = lui_output
+
+                    print(f"  SUCCESS - identified {lui_input.word} → lemma: {lui_output.lemma}, pos: {lui_output.part_of_speech}")
+                else:
+                    print(f"  FAILED - no LUI result for {lui_input.word}")
+                    failing_inputs.append(lui_input)
 
         return outputs_by_uid, failing_inputs
 
-    def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
-        """Make batch LLM API call for lexical unit identification"""
+    def _make_batch_lui_call(self, batch_inputs: List[LUIInput], processing_timestamp: str, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> BatchCallResult:
+        """Make batch LLM API call for lexical unit identification. Returns BatchCallResult with success/failure state."""
 
         # Get the model and platform
         model = ModelRegistry.get(runtime_config.model_id)
@@ -235,7 +236,11 @@ class ChatCompletionLUI:
 
         start_time = time.time()
 
-        response = platform.call_api(runtime_config.model_id, prompt)
+        try:
+            response = platform.call_api(runtime_config.model_id, prompt)
+        except Exception as e:
+            print(f"  API call failed: {e}")
+            return BatchCallResult(success=False, error=str(e))
 
         elapsed = time.time() - start_time
         output_text = response
@@ -246,4 +251,10 @@ class ChatCompletionLUI:
         actual_cost_str = cost_reporter.actual_cost(input_tokens, output_tokens, len(batch_inputs))
         print(f"  Batch lexical unit identification API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
 
-        return json.loads(output_text), runtime_config.model_id, processing_timestamp
+        try:
+            parsed_results = json.loads(output_text)
+        except json.JSONDecodeError as e:
+            print(f"  Failed to parse API response as JSON: {e}")
+            return BatchCallResult(success=False, error=f"JSON parse error: {e}")
+
+        return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)

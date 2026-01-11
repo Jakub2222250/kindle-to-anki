@@ -1,8 +1,9 @@
 import json
 import time
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
 
 from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
+from kindle_to_anki.core.runtimes.batch_call_result import BatchCallResult
 from kindle_to_anki.core.pricing.usage_scope import UsageScope
 from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
@@ -161,8 +162,8 @@ class ChatCompletionTranslation:
         print(f"{source_language_name} context translation (LLM) completed.")
         return translated_outputs
 
-    def _make_batch_translation_call(self, batch_inputs: List[TranslationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, Any], str, str]:
-        """Make batch LLM API call for translation"""
+    def _make_batch_translation_call(self, batch_inputs: List[TranslationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> BatchCallResult:
+        """Make batch LLM API call for translation. Returns BatchCallResult with success/failure state."""
         items_list = [{"uid": input_item.uid, "sentence": input_item.context} for input_item in batch_inputs]
         items_json = json.dumps(items_list, ensure_ascii=False, indent=2)
 
@@ -185,7 +186,11 @@ class ChatCompletionTranslation:
 
         start_time = time.time()
 
-        response_text = platform.call_api(runtime_config.model_id, prompt)
+        try:
+            response_text = platform.call_api(runtime_config.model_id, prompt)
+        except Exception as e:
+            print(f"  API call failed: {e}")
+            return BatchCallResult(success=False, error=str(e))
 
         elapsed = time.time() - start_time
         output_chars = len(response_text)
@@ -194,7 +199,13 @@ class ChatCompletionTranslation:
         actual_cost_str = cost_reporter.actual_cost(input_tokens, output_tokens, len(batch_inputs))
         print(f"  Batch translation API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
 
-        return json.loads(response_text), runtime_config.model_id, processing_timestamp
+        try:
+            parsed_results = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            print(f"  Failed to parse API response as JSON: {e}")
+            return BatchCallResult(success=False, error=f"JSON parse error: {e}")
+
+        return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
 
     def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[TranslationInput]:
         """Process inputs in batches for translation"""
@@ -211,28 +222,28 @@ class ChatCompletionTranslation:
 
             print(f"\nProcessing translation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
-            try:
-                batch_results, model_used, timestamp = self._make_batch_translation_call(batch, processing_timestamp, source_language_name, target_language_name, runtime_config)
+            result = self._make_batch_translation_call(batch, processing_timestamp, source_language_name, target_language_name, runtime_config)
 
-                for input_item in batch:
-                    if input_item.uid in batch_results:
-                        translation_data = batch_results[input_item.uid]
-
-                        # Create translation result for caching
-                        translation_result = {
-                            "context_translation": translation_data.get("context_translation", "")
-                        }
-
-                        # Save to cache
-                        cache.set(input_item.uid, self.id, model_used, runtime_config.prompt_id, translation_result, timestamp)
-
-                        print(f"  SUCCESS - translated sentence for UID {input_item.uid}")
-                    else:
-                        print(f"  FAILED - no translation result for UID {input_item.uid}")
-                        failing_inputs.append(input_item)
-
-            except Exception as e:
-                print(f"  BATCH FAILED - {str(e)}")
+            if not result.success:
+                print(f"  BATCH FAILED - {result.error}")
                 failing_inputs.extend(batch)
+                continue
+
+            for input_item in batch:
+                if input_item.uid in result.results:
+                    translation_data = result.results[input_item.uid]
+
+                    # Create translation result for caching
+                    translation_result = {
+                        "context_translation": translation_data.get("context_translation", "")
+                    }
+
+                    # Save to cache
+                    cache.set(input_item.uid, self.id, result.model_id, runtime_config.prompt_id, translation_result, result.timestamp)
+
+                    print(f"  SUCCESS - translated sentence for UID {input_item.uid}")
+                else:
+                    print(f"  FAILED - no translation result for UID {input_item.uid}")
+                    failing_inputs.append(input_item)
 
         return failing_inputs

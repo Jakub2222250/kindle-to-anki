@@ -2,7 +2,7 @@ import json
 import time
 from typing import List, Dict, Any
 
-
+from kindle_to_anki.core.runtimes.batch_call_result import BatchCallResult
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.caching.lui_cache import LUICache
 from .ma_polish_sgjp_helper import morfeusz_tag_to_pos_string
@@ -12,12 +12,12 @@ def disambiguate_lemma_pos(
     platform,
     model: str,
     items: List[Dict[str, Any]],
-) -> Dict[str, Dict[str, Any]]:
+) -> BatchCallResult:
     """
     Resolves lemma for a batch of Polish tokens using context and
     Morfeusz options, determining whether 'się' should be absorbed.
 
-    Returns:
+    Returns BatchCallResult with results:
         {
           "uid1": {"candidate_index": 0, "absorb_się": true},
           "uid2": {"candidate_index": 1, "absorb_się": false},
@@ -64,20 +64,29 @@ def disambiguate_lemma_pos(
 
     print("\nSending LLM disambiguation request...")
 
-    response = platform.generate_chat_completion(
-        model=model,
-        prompt=user_prompt
-    )
+    try:
+        response = platform.generate_chat_completion(
+            model=model,
+            prompt=user_prompt
+        )
+    except Exception as e:
+        print(f"  API call failed: {e}")
+        return BatchCallResult(success=False, error=str(e))
 
-    # Strict JSON parsing — fail fast if the model misbehaves
     content = response.choices[0].message.content
 
     print("Sending LLM disambiguation request completed.")
 
-    return json.loads(content)
+    try:
+        parsed_results = json.loads(content)
+    except json.JSONDecodeError as e:
+        print(f"  Failed to parse API response as JSON: {e}")
+        return BatchCallResult(success=False, error=f"JSON parse error: {e}")
+
+    return BatchCallResult(success=True, results=parsed_results, model_id=model)
 
 
-def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote], platform, model: str):
+def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote], platform, model: str) -> BatchCallResult:
 
     items = []
 
@@ -97,11 +106,8 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote], platform, model: str):
             )
         items.append(item)
 
-    # Call the LLM disambiguation function
-    disambiguate_lemma_pos_response = disambiguate_lemma_pos(platform, model, items)
-
-    # Return the results directly (lemma and candidate_index for each item)
-    return disambiguate_lemma_pos_response
+    # Call the LLM disambiguation function - returns BatchCallResult
+    return disambiguate_lemma_pos(platform, model, items)
 
 
 def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache, platform, model: str):
@@ -120,59 +126,59 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache, platform, m
 
         print(f"\nProcessing batch {batch_num}/{total_batches} ({len(batch)} notes)")
 
-        try:
-            disambiguation_results = perform_wsd_on_lemma_and_pos(batch, platform, model)
+        result = perform_wsd_on_lemma_and_pos(batch, platform, model)
 
-            for note in batch:
-                if note.uid in disambiguation_results:
-                    disamb_result = disambiguation_results[note.uid]
-
-                    selected_index = disamb_result['candidate_index']
-                    _, _, interpretation = note.morfeusz_candidates[selected_index]
-
-                    absorb_się = disamb_result['absorb_się']
-
-                    # Get part of speech first for validation
-                    tag = interpretation[2]
-                    readable_pos, aspect = morfeusz_tag_to_pos_string(tag)
-
-                    # Validate absorb_się - only verbs can absorb się
-                    if absorb_się and 'verb' not in readable_pos.lower():
-                        print(f"    WARNING: Overriding absorb_się=True for non-verb '{note.kindle_word}' ({readable_pos})")
-                        absorb_się = False
-
-                    # Get lemma
-                    lemma = interpretation[1].split(":")[0] if ":" in interpretation[1] else interpretation[1]
-                    if absorb_się:
-                        lemma = lemma + ' się'
-
-                    # Create MA result for caching
-                    ma_result = {
-                        "candidate_index": selected_index,
-                        "absorb_się": absorb_się,
-                        "morfeusz_lemma": lemma,
-                        "morfeusz_tag": tag,
-                        "part_of_speech": readable_pos,
-                        "aspect": aspect
-                    }
-
-                    # Save to cache
-                    cache.set(note.uid, "polish_hybrid_llm_lui", model, "", ma_result, processing_timestamp)
-
-                    # Update note with normal MA fields
-                    note.morfeusz_tag = tag
-                    note.morfeusz_lemma = lemma
-                    note.part_of_speech = readable_pos
-                    note.aspect = aspect
-
-                    print(f"  SUCCESS - processed MA for {note.kindle_word}")
-                else:
-                    print(f"  FAILED - no result for {note.kindle_word}")
-                    failing_notes.append(note)
-
-        except Exception as e:
-            print(f"  BATCH FAILED - {str(e)}")
+        if not result.success:
+            print(f"  BATCH FAILED - {result.error}")
             failing_notes.extend(batch)
+            continue
+
+        for note in batch:
+            if note.uid in result.results:
+                disamb_result = result.results[note.uid]
+
+                selected_index = disamb_result['candidate_index']
+                _, _, interpretation = note.morfeusz_candidates[selected_index]
+
+                absorb_się = disamb_result['absorb_się']
+
+                # Get part of speech first for validation
+                tag = interpretation[2]
+                readable_pos, aspect = morfeusz_tag_to_pos_string(tag)
+
+                # Validate absorb_się - only verbs can absorb się
+                if absorb_się and 'verb' not in readable_pos.lower():
+                    print(f"    WARNING: Overriding absorb_się=True for non-verb '{note.kindle_word}' ({readable_pos})")
+                    absorb_się = False
+
+                # Get lemma
+                lemma = interpretation[1].split(":")[0] if ":" in interpretation[1] else interpretation[1]
+                if absorb_się:
+                    lemma = lemma + ' się'
+
+                # Create MA result for caching
+                ma_result = {
+                    "candidate_index": selected_index,
+                    "absorb_się": absorb_się,
+                    "morfeusz_lemma": lemma,
+                    "morfeusz_tag": tag,
+                    "part_of_speech": readable_pos,
+                    "aspect": aspect
+                }
+
+                # Save to cache
+                cache.set(note.uid, "polish_hybrid_llm_lui", model, "", ma_result, processing_timestamp)
+
+                # Update note with normal MA fields
+                note.morfeusz_tag = tag
+                note.morfeusz_lemma = lemma
+                note.part_of_speech = readable_pos
+                note.aspect = aspect
+
+                print(f"  SUCCESS - processed MA for {note.kindle_word}")
+            else:
+                print(f"  FAILED - no result for {note.kindle_word}")
+                failing_notes.append(note)
 
     return failing_notes
 
