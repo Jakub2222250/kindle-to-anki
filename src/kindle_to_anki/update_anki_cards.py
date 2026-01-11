@@ -10,13 +10,15 @@ from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.configuration.options_display import show_task_options
 from kindle_to_anki.configuration.prompts import prompt_choice, prompt_yes_no, prompt_int, prompt_choice_by_index
 from kindle_to_anki.core.bootstrap import bootstrap_all
-from kindle_to_anki.core.prompts import get_default_prompt_id
+from kindle_to_anki.core.prompts import get_default_prompt_id, get_lui_default_prompt_id
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.tasks.wsd.schema import WSDInput, WSDOutput
 from kindle_to_anki.tasks.hint.schema import HintInput, HintOutput
 from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
 from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
+
+from pprint import pprint
 
 
 AVAILABLE_TASKS = {
@@ -64,7 +66,7 @@ def get_deck_filter_options(deck) -> list[str]:
     return options
 
 
-def build_anki_query(deck, deck_choice: str, card_age: str) -> str:
+def build_anki_query(deck, deck_choice: str, card_age: str, custom_filter: str = "") -> str:
     """Build Anki search query based on user choices."""
     # Determine deck filter
     if deck_choice.startswith("parent:"):
@@ -88,6 +90,8 @@ def build_anki_query(deck, deck_choice: str, card_age: str) -> str:
     query = f'{deck_filter} "note:{NOTE_TYPE_NAME}"'
     if age_filter:
         query += f" {age_filter}"
+    if custom_filter:
+        query += f" {custom_filter}"
 
     return query
 
@@ -244,6 +248,8 @@ def run_task_on_notes(
                 runtime_config.model_id, runtime_config.prompt_id
             )
 
+            print("Generation metadata updated:", new_meta)
+
             # Build fields dict from output
             fields_update = {"Generation_Metadata": new_meta}
             preview_parts = []
@@ -271,10 +277,17 @@ def run_task_on_notes(
                 print(f"  Queued {task_input.uid}: {', '.join(preview_parts[:2])}")
 
         # Update cards
+
+        # pprint(actions)
+
         if actions:
             try:
-                anki.update_notes_by_id(actions)
-                total_updated += len(actions)
+                successful, errors = anki.update_notes_by_id(actions)
+                total_updated += successful
+                if errors:
+                    print(f"  {len(errors)} update(s) failed:")
+                    for err in errors:
+                        print(f"    Note {err['note_id']}: {err['error']}")
             except Exception as e:
                 print(f"  Batch update failed: {e}")
 
@@ -348,7 +361,10 @@ def main():
 
     # Resolve effective prompt_id (use task default if none specified)
     if not prompt_id:
-        prompt_id = get_default_prompt_id(task_key)
+        if task_key == "lui":
+            prompt_id = get_lui_default_prompt_id(deck.source_language_code)
+        else:
+            prompt_id = get_default_prompt_id(task_key)
 
     print(f"\nUsing runtime: {runtime_id}, model: {model_id}, batch size: {batch_size}, prompt: {prompt_id}")
 
@@ -375,8 +391,11 @@ def main():
     limit_input = input("Max cards to process (0 or blank for no limit): ").strip()
     card_limit = int(limit_input) if limit_input and limit_input.isdigit() and int(limit_input) > 0 else None
 
+    # Custom filter
+    custom_filter = input("Additional Anki filter (blank for none): ").strip()
+
     # Build query and fetch cards
-    query = build_anki_query(deck, deck_choice, card_age)
+    query = build_anki_query(deck, deck_choice, card_age, custom_filter)
     print(f"\nAnki query: {query}")
 
     anki = AnkiConnect()

@@ -5,6 +5,7 @@ from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
+from kindle_to_anki.core.prompts import get_lui_default_prompt_id
 from kindle_to_anki.tasks.collect_candidates.provider import CollectCandidatesProvider
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
 from kindle_to_anki.tasks.wsd.provider import WSDProvider
@@ -23,7 +24,7 @@ from time import sleep
 
 
 def export_kindle_vocab():
-    
+
     SLEEP_TIME = 0
 
     print("Starting Kindle to Anki export process.")
@@ -43,14 +44,14 @@ def export_kindle_vocab():
     # Initialize configuration manager
     config_manager = ConfigManager()
     target_language_code = "en"
-    
+
     # Get available anki decks by language pair
     anki_decks_by_source_language = config_manager.get_anki_decks_by_source_language()
 
     notes_by_language, latest_candidate_timestamp = candidate_provider.collect_candidates(
         runtime_choice="kindle"
     )
-    
+
     if not notes_by_language or len(notes_by_language) == 0:
         print("No candidate notes collected. Exiting process.")
         return
@@ -102,6 +103,7 @@ def export_kindle_vocab():
 
         # Enrich notes with lexical unit identification
         lui_setting = config_manager.get_task_setting("lui")
+        lui_prompt_id = lui_setting.get("prompt_id") or get_lui_default_prompt_id(source_language_code)
         lui_provider.identify(
             notes=notes,
             runtime_choice=lui_setting["runtime"],
@@ -109,7 +111,8 @@ def export_kindle_vocab():
                 model_id=lui_setting["model_id"],
                 batch_size=lui_setting["batch_size"],
                 source_language_code=source_language_code,
-                target_language_code=target_language_code
+                target_language_code=target_language_code,
+                prompt_id=lui_prompt_id
             ),
             ignore_cache=False
         )

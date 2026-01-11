@@ -226,18 +226,22 @@ class AnkiConnect:
             return []
 
         # Execute batch update
-        successful = self.update_notes_by_id(actions)
+        successful, errors = self.update_notes_by_id(actions)
+        if errors:
+            print(f"  {len(errors)} update(s) failed:")
+            for err in errors:
+                print(f"    Note {err['note_id']}: {err['error']}")
         return uid_list[:successful]
 
-    def update_notes_by_id(self, updates: list[dict]) -> int:
+    def update_notes_by_id(self, updates: list[dict]) -> tuple[int, list[dict]]:
         """
         Batch update notes by note ID. Each update should be either:
         - A dict with 'note_id' and 'fields' keys, or
         - A pre-built action dict with 'action' and 'params' keys
-        Returns the number of successful updates.
+        Returns tuple of (successful_count, list of errors with note info).
         """
         if not updates:
-            return 0
+            return 0, []
 
         # Normalize to action format
         actions = []
@@ -257,9 +261,18 @@ class AnkiConnect:
 
         try:
             results = self._invoke("multi", {"actions": actions})
-            successful = sum(1 for r in results if r is None or (isinstance(r, dict) and r.get('error') is None))
+            print(f"DEBUG: multi response: {results}")
+            successful = 0
+            errors = []
+            for i, r in enumerate(results):
+                if r is None or (isinstance(r, dict) and r.get('error') is None):
+                    successful += 1
+                else:
+                    error_msg = r if isinstance(r, str) else (r.get('error') if isinstance(r, dict) else str(r))
+                    note_id = actions[i].get('params', {}).get('note', {}).get('id', 'unknown')
+                    errors.append({'note_id': note_id, 'error': error_msg})
             print(f"Successfully updated {successful}/{len(actions)} notes")
-            return successful
+            return successful, errors
         except Exception as e:
             raise Exception(f"Batch update failed: {e}")
 
