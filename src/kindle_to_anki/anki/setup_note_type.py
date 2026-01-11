@@ -27,6 +27,8 @@ FIELDS = [
     "Unit_Type",
     "Generation_Metadata",
     "Usage_Level",
+    "Raw_Context_Text",
+    "Raw_Lookup_String",
 ]
 
 CARD_TEMPLATES = [

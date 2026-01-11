@@ -5,7 +5,7 @@ import unicodedata
 class AnkiNote:
     def __init__(self, word, stem, usage, language, book_name, position, timestamp, uid=None):
 
-        # Save off all original kindle fields that will not be modified
+        # Save off all raw fields provided by e-reader
         self.kindle_word = word
         self.kindle_stem = stem
         self.kindle_usage = usage
@@ -36,6 +36,8 @@ class AnkiNote:
         self.cloze_enabled = None
         self.generation_metadata = {}
         self.usage_level = ""
+        self.raw_context_text = self.kindle_usage or ""
+        self.raw_lookup_string = self.kindle_word or ""
 
         # Generate book abbreviation
         self.book_abbrev = self.generate_book_abbrev(self.kindle_book_name)
@@ -185,4 +187,6 @@ class AnkiNote:
                 f"{self.unit_type}\t"
                 f"{self.get_generation_metadata_output()}\t"
                 f"{self.usage_level}\t"
+                f"{self.raw_context_text}\t"
+                f"{self.raw_lookup_string}\t"
                 f"{self.tags}\n")
