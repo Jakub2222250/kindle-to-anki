@@ -63,7 +63,7 @@ class DeepLTranslation:
         if not ignore_cache:
             cached_count = 0
             for translation_input in translation_inputs:
-                cached_result = cache.get(translation_input.uid)
+                cached_result = cache.get(translation_input.uid, self.id, "deepl", "")
                 if cached_result:
                     cached_count += 1
                     outputs.append(TranslationOutput(translation=cached_result.get('context_translation', '')))
@@ -89,7 +89,7 @@ class DeepLTranslation:
         translated_outputs = []
         for i, output in enumerate(outputs):
             if output is None:
-                cached_result = cache.get(translation_inputs[i].uid)
+                cached_result = cache.get(translation_inputs[i].uid, self.id, "deepl", "")
                 if cached_result:
                     translated_outputs.append(TranslationOutput(translation=cached_result.get('context_translation', '')))
                 else:
@@ -135,7 +135,7 @@ class DeepLTranslation:
                 print(f"  Batch completed in {elapsed:.2f}s")
 
                 for inp, trans in zip(batch, translations):
-                    cache.set(inp.uid, {"context_translation": trans}, "deepl", processing_timestamp)
+                    cache.set(inp.uid, self.id, "deepl", "", {"context_translation": trans}, processing_timestamp)
                     print(f"  SUCCESS - translated UID {inp.uid}")
 
             except Exception as e:

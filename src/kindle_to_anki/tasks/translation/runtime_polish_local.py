@@ -27,7 +27,7 @@ class PolishLocalTranslation:
     def translate(self, translation_inputs: List[TranslationInput], ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
         """
         Translate a list of TranslationInput objects and return TranslationOutput objects.
-        
+
         NOTE: This runtime is specifically designed for Polish to English translation.
         source_lang and target_lang parameters are accepted for API compatibility but ignored.
         """
@@ -51,7 +51,7 @@ class PolishLocalTranslation:
             cached_count = 0
 
             for translation_input in translation_inputs:
-                cached_result = cache.get(translation_input.uid)
+                cached_result = cache.get(translation_input.uid, self.id, self.model_name, "")
                 if cached_result:
                     cached_count += 1
                     translation_output = TranslationOutput(
@@ -81,7 +81,7 @@ class PolishLocalTranslation:
             if output is None:
                 # This was a non-cached input, get from cache now
                 translation_input = translation_inputs[i]
-                cached_result = cache.get(translation_input.uid)
+                cached_result = cache.get(translation_input.uid, self.id, self.model_name, "")
                 if cached_result:
                     translation_output = TranslationOutput(
                         translation=cached_result.get('context_translation', '')
@@ -98,17 +98,17 @@ class PolishLocalTranslation:
 
     def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache):
         """Process inputs in batches for translation using local MarianMT model"""
-        
+
         # Capture timestamp at the start of translation processing
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
         total_batches = (len(inputs_needing_translation) + self.batch_size - 1) // self.batch_size
-        
+
         print(f"Translating {len(inputs_needing_translation)} inputs using local MarianMT model...")
 
         # Import transformers only when needed
         from transformers import MarianMTModel, MarianTokenizer
-        
+
         # Load model and tokenizer
         tokenizer = MarianTokenizer.from_pretrained(self.model_name)
         model = MarianMTModel.from_pretrained(self.model_name)
@@ -135,6 +135,6 @@ class PolishLocalTranslation:
                 }
 
                 # Save to cache
-                cache.set(input_item.uid, translation_result, self.model_name, processing_timestamp)
+                cache.set(input_item.uid, self.id, self.model_name, "", translation_result, processing_timestamp)
 
                 print(f"    SUCCESS - translated sentence for UID {input_item.uid}")

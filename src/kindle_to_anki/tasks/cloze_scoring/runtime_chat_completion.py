@@ -85,7 +85,7 @@ class ChatCompletionClozeScoring:
         if not ignore_cache:
             cached_count = 0
             for scoring_input in scoring_inputs:
-                cached_result = cache.get(scoring_input.uid)
+                cached_result = cache.get(scoring_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     cached_count += 1
                     outputs.append(ClozeScoringOutput(cloze_deletion_score=cached_result.get('cloze_deletion_score', 0)))
@@ -115,7 +115,7 @@ class ChatCompletionClozeScoring:
         for i, output in enumerate(outputs):
             if output is None:
                 scoring_input = scoring_inputs[i]
-                cached_result = cache.get(scoring_input.uid)
+                cached_result = cache.get(scoring_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     scoring_outputs.append(ClozeScoringOutput(cloze_deletion_score=cached_result.get('cloze_deletion_score', 0)))
                 else:
@@ -170,7 +170,7 @@ class ChatCompletionClozeScoring:
 
                 for input_item in batch:
                     if input_item.uid in batch_results:
-                        cache.set(input_item.uid, batch_results[input_item.uid], model_used, timestamp)
+                        cache.set(input_item.uid, self.id, model_used, runtime_config.prompt_id, batch_results[input_item.uid], timestamp)
                         print(f"  SUCCESS - scored {input_item.word}")
                     else:
                         print(f"  FAILED - no result for {input_item.word}")

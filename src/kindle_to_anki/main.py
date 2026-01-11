@@ -5,7 +5,7 @@ from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
-from kindle_to_anki.core.prompts import get_lui_default_prompt_id
+from kindle_to_anki.core.prompts import get_default_prompt_id, get_lui_default_prompt_id
 from kindle_to_anki.tasks.collect_candidates.provider import CollectCandidatesProvider
 from kindle_to_anki.tasks.translation.provider import TranslationProvider
 from kindle_to_anki.tasks.wsd.provider import WSDProvider
@@ -124,6 +124,7 @@ def export_kindle_vocab():
 
         # Provide word sense disambiguation via LLM
         wsd_setting = config_manager.get_task_setting("wsd")
+        wsd_prompt_id = wsd_setting.get("prompt_id") or get_default_prompt_id("wsd")
         wsd_provider.disambiguate(
             notes=notes,
             runtime_choice=wsd_setting["runtime"],
@@ -131,7 +132,8 @@ def export_kindle_vocab():
                 model_id=wsd_setting["model_id"],
                 batch_size=wsd_setting["batch_size"],
                 source_language_code=source_language_code,
-                target_language_code=target_language_code
+                target_language_code=target_language_code,
+                prompt_id=wsd_prompt_id
             ),
             ignore_cache=False
         )
@@ -151,6 +153,7 @@ def export_kindle_vocab():
         # Generate hints
         hint_setting = config_manager.get_task_setting("hint")
         if hint_setting.get("enabled", True):
+            hint_prompt_id = hint_setting.get("prompt_id") or get_default_prompt_id("hint")
             hint_provider.generate(
                 notes=notes,
                 runtime_choice=hint_setting["runtime"],
@@ -158,7 +161,8 @@ def export_kindle_vocab():
                     model_id=hint_setting["model_id"],
                     batch_size=hint_setting["batch_size"],
                     source_language_code=source_language_code,
-                    target_language_code=target_language_code
+                    target_language_code=target_language_code,
+                    prompt_id=hint_prompt_id
                 ),
                 ignore_cache=False
             )
@@ -167,6 +171,7 @@ def export_kindle_vocab():
         # Score cloze deletion suitability
         cloze_setting = config_manager.get_task_setting("cloze_scoring")
         if cloze_setting.get("enabled", True):
+            cloze_prompt_id = cloze_setting.get("prompt_id") or get_default_prompt_id("cloze_scoring")
             cloze_scoring_provider.score(
                 notes=notes,
                 runtime_choice=cloze_setting["runtime"],
@@ -174,7 +179,8 @@ def export_kindle_vocab():
                     model_id=cloze_setting["model_id"],
                     batch_size=cloze_setting["batch_size"],
                     source_language_code=source_language_code,
-                    target_language_code=target_language_code
+                    target_language_code=target_language_code,
+                    prompt_id=cloze_prompt_id
                 ),
                 ignore_cache=False
             )
@@ -187,6 +193,7 @@ def export_kindle_vocab():
         # Estimate usage level
         usage_level_setting = config_manager.get_task_setting("usage_level")
         if usage_level_setting.get("enabled", True):
+            usage_level_prompt_id = usage_level_setting.get("prompt_id") or get_default_prompt_id("usage_level")
             usage_level_provider.estimate(
                 notes=notes,
                 runtime_choice=usage_level_setting["runtime"],
@@ -194,7 +201,8 @@ def export_kindle_vocab():
                     model_id=usage_level_setting["model_id"],
                     batch_size=usage_level_setting["batch_size"],
                     source_language_code=source_language_code,
-                    target_language_code=target_language_code
+                    target_language_code=target_language_code,
+                    prompt_id=usage_level_prompt_id
                 ),
                 ignore_cache=False
             )
@@ -202,6 +210,7 @@ def export_kindle_vocab():
 
         # Provide translations
         translation_setting = config_manager.get_task_setting("translation")
+        translation_prompt_id = translation_setting.get("prompt_id") or get_default_prompt_id("translation")
         translation_provider.translate(
             notes=notes,
             runtime_choice=translation_setting["runtime"],
@@ -209,7 +218,8 @@ def export_kindle_vocab():
                 model_id=translation_setting["model_id"],
                 batch_size=translation_setting["batch_size"],
                 source_language_code=source_language_code,
-                target_language_code=target_language_code
+                target_language_code=target_language_code,
+                prompt_id=translation_prompt_id
             ),
             ignore_cache=False,
             use_test_cache=False
@@ -219,6 +229,7 @@ def export_kindle_vocab():
         # Provide collocations
         collocation_setting = config_manager.get_task_setting("collocation")
         if collocation_setting.get("enabled", True):
+            collocation_prompt_id = collocation_setting.get("prompt_id") or get_default_prompt_id("collocation")
             collocation_provider.generate_collocations(
                 notes=notes,
                 runtime_choice=collocation_setting["runtime"],
@@ -226,7 +237,8 @@ def export_kindle_vocab():
                     model_id=collocation_setting["model_id"],
                     batch_size=collocation_setting["batch_size"],
                     source_language_code=source_language_code,
-                    target_language_code=target_language_code
+                    target_language_code=target_language_code,
+                    prompt_id=collocation_prompt_id
                 ),
                 ignore_cache=False
             )

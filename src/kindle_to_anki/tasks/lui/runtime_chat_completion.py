@@ -98,7 +98,7 @@ class ChatCompletionLUI:
             cached_count = 0
 
             for lui_input in lui_inputs:
-                cached_result = cache.get(lui_input.uid)
+                cached_result = cache.get(lui_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     cached_count += 1
                     lui_output = LUIOutput(
@@ -184,7 +184,7 @@ class ChatCompletionLUI:
                         }
 
                         # Save to cache
-                        cache.set(lui_input.uid, lui_result, model_used, timestamp)
+                        cache.set(lui_input.uid, self.id, model_used, runtime_config.prompt_id, lui_result, timestamp)
 
                         # Create LUIOutput
                         lui_output = LUIOutput(

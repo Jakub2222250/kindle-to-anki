@@ -85,7 +85,7 @@ class ChatCompletionUsageLevel:
         if not ignore_cache:
             cached_count = 0
             for usage_input in usage_inputs:
-                cached_result = cache.get(usage_input.uid)
+                cached_result = cache.get(usage_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     cached_count += 1
                     outputs.append(UsageLevelOutput(usage_level=cached_result.get('usage_level')))
@@ -115,7 +115,7 @@ class ChatCompletionUsageLevel:
         for i, output in enumerate(outputs):
             if output is None:
                 usage_input = usage_inputs[i]
-                cached_result = cache.get(usage_input.uid)
+                cached_result = cache.get(usage_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     usage_outputs.append(UsageLevelOutput(usage_level=cached_result.get('usage_level')))
                 else:
@@ -170,7 +170,7 @@ class ChatCompletionUsageLevel:
 
                 for input_item in batch:
                     if input_item.uid in batch_results:
-                        cache.set(input_item.uid, batch_results[input_item.uid], model_used, timestamp)
+                        cache.set(input_item.uid, self.id, model_used, runtime_config.prompt_id, batch_results[input_item.uid], timestamp)
                         print(f"  SUCCESS - estimated {input_item.lemma}")
                     else:
                         print(f"  FAILED - no result for {input_item.lemma}")

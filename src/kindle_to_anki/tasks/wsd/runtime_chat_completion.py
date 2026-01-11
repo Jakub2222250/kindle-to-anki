@@ -101,7 +101,7 @@ class ChatCompletionWSD:
             cached_count = 0
 
             for wsd_input in wsd_inputs:
-                cached_result = cache.get(wsd_input.uid)
+                cached_result = cache.get(wsd_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     cached_count += 1
                     wsd_output = WSDOutput(
@@ -145,7 +145,7 @@ class ChatCompletionWSD:
             if output is None:
                 # This was a non-cached input, get from cache now
                 wsd_input = wsd_inputs[i]
-                cached_result = cache.get(wsd_input.uid)
+                cached_result = cache.get(wsd_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     wsd_output = WSDOutput(
                         definition=cached_result.get('definition', '')
@@ -221,7 +221,7 @@ class ChatCompletionWSD:
                         wsd_data = batch_results[input_item.uid]
 
                         # Save to cache
-                        cache.set(input_item.uid, wsd_data, model_used, timestamp)
+                        cache.set(input_item.uid, self.id, model_used, runtime_config.prompt_id, wsd_data, timestamp)
 
                         print(f"  SUCCESS - enriched {input_item.word}")
                     else:

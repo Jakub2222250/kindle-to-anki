@@ -157,7 +157,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache, platform, m
                     }
 
                     # Save to cache
-                    cache.set(note.uid, ma_result, model, processing_timestamp)
+                    cache.set(note.uid, "polish_hybrid_llm_lui", model, "", ma_result, processing_timestamp)
 
                     # Update note with normal MA fields
                     note.morfeusz_tag = tag
@@ -173,7 +173,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache, platform, m
         except Exception as e:
             print(f"  BATCH FAILED - {str(e)}")
             failing_notes.extend(batch)
-            
+
     return failing_notes
 
 
@@ -193,7 +193,7 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False, platform
         cached_count = 0
 
         for note in notes:
-            cached_result = cache.get(note.uid)
+            cached_result = cache.get(note.uid, "polish_hybrid_llm_lui", model, "")
             if cached_result:
                 cached_count += 1
                 # Apply cached MA result
@@ -226,11 +226,11 @@ def update_notes_with_llm(notes, cache_suffix='pl', ignore_cache=False, platform
 
     while len(failing_notes) > 0:
         print(f"{len(failing_notes)} notes failed LLM MA processing.")
-        
+
         if retries >= MAX_RETRIES:
             print("All successful MA results already saved to cache. Running script again usually fixes the issue. Exiting.")
             exit()
-        
+
         if retries < MAX_RETRIES:
             retries += 1
             print(f"Retrying {len(failing_notes)} failed notes (attempt {retries} of {MAX_RETRIES})...")

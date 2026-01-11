@@ -85,7 +85,7 @@ class ChatCompletionHint:
         if not ignore_cache:
             cached_count = 0
             for hint_input in hint_inputs:
-                cached_result = cache.get(hint_input.uid)
+                cached_result = cache.get(hint_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     cached_count += 1
                     outputs.append(HintOutput(hint=cached_result.get('hint', '')))
@@ -115,7 +115,7 @@ class ChatCompletionHint:
         for i, output in enumerate(outputs):
             if output is None:
                 hint_input = hint_inputs[i]
-                cached_result = cache.get(hint_input.uid)
+                cached_result = cache.get(hint_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     hint_outputs.append(HintOutput(hint=cached_result.get('hint', '')))
                 else:
@@ -170,7 +170,7 @@ class ChatCompletionHint:
 
                 for input_item in batch:
                     if input_item.uid in batch_results:
-                        cache.set(input_item.uid, batch_results[input_item.uid], model_used, timestamp)
+                        cache.set(input_item.uid, self.id, model_used, runtime_config.prompt_id, batch_results[input_item.uid], timestamp)
                         print(f"  SUCCESS - generated hint for {input_item.word}")
                     else:
                         print(f"  FAILED - no result for {input_item.word}")

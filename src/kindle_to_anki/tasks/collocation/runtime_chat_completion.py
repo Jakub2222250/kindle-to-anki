@@ -99,7 +99,7 @@ class ChatCompletionCollocation:
             cached_count = 0
 
             for collocation_input in collocation_inputs:
-                cached_result = cache.get(collocation_input.uid)
+                cached_result = cache.get(collocation_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     cached_count += 1
                     collocations = cached_result.get('collocations', [])
@@ -144,7 +144,7 @@ class ChatCompletionCollocation:
             if output is None:
                 # This was a non-cached input, get from cache now
                 collocation_input = collocation_inputs[i]
-                cached_result = cache.get(collocation_input.uid)
+                cached_result = cache.get(collocation_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     collocations = cached_result.get('collocations', [])
                     collocation_output = CollocationOutput(
@@ -226,7 +226,7 @@ class ChatCompletionCollocation:
                         }
 
                         # Save to cache
-                        cache.set(input_item.uid, collocation_result, model_used, timestamp)
+                        cache.set(input_item.uid, self.id, model_used, runtime_config.prompt_id, collocation_result, timestamp)
 
                         print(f"  SUCCESS - found collocations for {input_item.lemma}")
                     else:

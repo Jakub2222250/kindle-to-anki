@@ -101,7 +101,7 @@ class ChatCompletionTranslation:
             cached_count = 0
 
             for translation_input in translation_inputs:
-                cached_result = cache.get(translation_input.uid)
+                cached_result = cache.get(translation_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     cached_count += 1
                     translation_output = TranslationOutput(
@@ -146,7 +146,7 @@ class ChatCompletionTranslation:
             if output is None:
                 # This was a non-cached input, get from cache now
                 translation_input = translation_inputs[i]
-                cached_result = cache.get(translation_input.uid)
+                cached_result = cache.get(translation_input.uid, self.id, runtime_config.model_id, runtime_config.prompt_id)
                 if cached_result:
                     translation_output = TranslationOutput(
                         translation=cached_result.get('context_translation', '')
@@ -224,7 +224,7 @@ class ChatCompletionTranslation:
                         }
 
                         # Save to cache
-                        cache.set(input_item.uid, translation_result, model_used, timestamp)
+                        cache.set(input_item.uid, self.id, model_used, runtime_config.prompt_id, translation_result, timestamp)
 
                         print(f"  SUCCESS - translated sentence for UID {input_item.uid}")
                     else:
