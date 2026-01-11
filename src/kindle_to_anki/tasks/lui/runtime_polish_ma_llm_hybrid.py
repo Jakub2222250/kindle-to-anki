@@ -14,13 +14,13 @@ class PolishMALLMHybridLUI:
     """
     Runtime for Polish Lexical Unit Identification using Morfeusz2 morphological analyzer
     combined with LLM for disambiguation when needed.
-    
+
     This is a hybrid approach that uses:
     1. Morfeusz2 to get all possible morphological analyses
     2. Simple heuristics for clear cases (single candidate, no complex particles)
     3. LLM for complex disambiguation (multiple candidates, reflexive verbs with 'się')
     """
-    
+
     id: str = "polish_ma_llm_hybrid_lui"
     display_name: str = "Polish MA+LLM Hybrid LUI Runtime"
     supported_tasks = ["lui"]
@@ -34,10 +34,10 @@ class PolishMALLMHybridLUI:
         pass
 
     def identify(self, lui_inputs: List[LUIInput], source_lang: str, target_lang: str, 
-                config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
+                 config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
         """
         Perform Lexical Unit Identification on Polish words using Morfeusz2 + LLM hybrid approach.
-        
+
         Args:
             lui_inputs: List of LUIInput objects containing word and sentence context
             source_lang: Source language (should be "pl" for Polish)
@@ -45,7 +45,7 @@ class PolishMALLMHybridLUI:
             config: Runtime configuration containing model settings
             ignore_cache: Whether to ignore LLM cache
             use_test_cache: Whether to use test cache
-            
+
         Returns:
             List of LUIOutput objects with identified lexical units
         """
@@ -60,7 +60,7 @@ class PolishMALLMHybridLUI:
         print(f"\nStarting Polish MA+LLM hybrid lexical unit identification for {len(lui_inputs)} items...")
 
         morf = morfeusz2.Morfeusz()
-        
+
         # Convert LUIInputs to temporary AnkiNotes for processing with existing logic
         temp_notes = []
         for lui_input in lui_inputs:
@@ -104,11 +104,11 @@ class PolishMALLMHybridLUI:
                     platform = PlatformRegistry.get(model.platform)
                 except KeyError:
                     print(f"Warning: Model {config.model_id} not found in registry, falling back to defaults")
-            
+
             cache_suffix = 'pl-en_hybrid'
             if use_test_cache:
                 cache_suffix += "_test"
-            
+
             # Pass platform and model to the updated function
             update_notes_with_llm(
                 notes_requiring_llm_ma, 
@@ -121,7 +121,7 @@ class PolishMALLMHybridLUI:
         # Post-process all notes for reflexive verbs and lemma normalization
         for note in temp_notes:
             if "się" in note.morfeusz_lemma:
-                note.original_form = self._absorb_nearest_sie(note.kindle_word, note.kindle_usage)
+                note.surface_lexical_unit = self._absorb_nearest_sie(note.kindle_word, note.kindle_usage)
                 # Set unit_type to reflexive for verbs with się
                 note.unit_type = "reflexive"
             else:
@@ -130,7 +130,7 @@ class PolishMALLMHybridLUI:
 
             # Normalize morfeusz lemma to best lemma for Anki learning now that final POS is known
             # Morfeusz lemma already has "się" absorbed if applicable for verbs
-            note.expression = normalize_lemma(note.original_form, note.morfeusz_lemma, note.part_of_speech, note.morfeusz_tag)
+            note.expression = normalize_lemma(note.surface_lexical_unit, note.morfeusz_lemma, note.part_of_speech, note.morfeusz_tag)
 
         # Convert back to LUIOutputs
         lui_outputs = []
@@ -139,7 +139,7 @@ class PolishMALLMHybridLUI:
                 lemma=note.expression,
                 part_of_speech=note.part_of_speech,
                 aspect=getattr(note, 'aspect', ''),
-                original_form=getattr(note, 'original_form', note.kindle_word),
+                surface_lexical_unit=getattr(note, 'surface_lexical_unit', note.kindle_word),
                 unit_type=getattr(note, 'unit_type', 'lemma')
             )
             lui_outputs.append(lui_output)
@@ -209,7 +209,7 @@ class PolishMALLMHybridLUI:
     def _check_if_requires_llm_ma(self, note: AnkiNote):
         """
         Determine if a note requires LLM-based morphological analysis.
-        
+
         LLM is needed if:
         1. "się" is adjacent to the word (reflexive verbs need context-aware analysis)
         2. Multiple morphological candidates exist (disambiguation needed)

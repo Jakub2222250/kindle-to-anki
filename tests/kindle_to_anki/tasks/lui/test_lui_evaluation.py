@@ -81,12 +81,12 @@ def compare_output(expected: Dict[str, str], actual: LUIOutput) -> Dict[str, boo
         "lemma": actual.lemma,
         "part_of_speech": actual.part_of_speech,
         "aspect": actual.aspect,
-        "original_form": actual.original_form,
+        "surface_lexical_unit": actual.surface_lexical_unit,
         "unit_type": actual.unit_type,
     }
     return {
         field: expected.get(field, "").lower().strip() == actual_dict.get(field, "").lower().strip()
-        for field in ["lemma", "part_of_speech", "aspect", "original_form", "unit_type"]
+        for field in ["lemma", "part_of_speech", "aspect", "surface_lexical_unit", "unit_type"]
     }
 
 
@@ -132,7 +132,7 @@ def run_evaluation(
 
     # Evaluate results
     eval_results = []
-    field_correct = {"lemma": 0, "part_of_speech": 0, "aspect": 0, "original_form": 0, "unit_type": 0}
+    field_correct = {"lemma": 0, "part_of_speech": 0, "aspect": 0, "surface_lexical_unit": 0, "unit_type": 0}
     passed = 0
 
     for tc, output in zip(test_cases, lui_outputs):
@@ -140,7 +140,7 @@ def run_evaluation(
             "lemma": output.lemma,
             "part_of_speech": output.part_of_speech,
             "aspect": output.aspect,
-            "original_form": output.original_form,
+            "surface_lexical_unit": output.surface_lexical_unit,
             "unit_type": output.unit_type,
         }
         field_matches = compare_output(tc.expected, output)
@@ -233,7 +233,7 @@ def print_summary(eval_run: EvalRun):
         print(f"\nFAILED CASES ({len(failures)}):")
         for r in failures:
             print(f"\n  [{r.uid}] {r.word} in: \"{r.sentence}\"")
-            for field in ["lemma", "part_of_speech", "aspect", "original_form", "unit_type"]:
+            for field in ["lemma", "part_of_speech", "aspect", "surface_lexical_unit", "unit_type"]:
                 exp = r.expected.get(field, "")
                 act = r.actual.get(field, "")
                 mark = "✓" if r.field_matches[field] else "✗"
@@ -285,7 +285,7 @@ def print_comparison_table(runs: List[EvalRun]):
         prompt = r.prompt_id or "(default)"
         print(f"{r.model_id:<20} {r.language:<6} {prompt:<15} {r.accuracy:>7.1%}   "
               f"{r.field_accuracy['lemma']:>6.1%}  {r.field_accuracy['part_of_speech']:>6.1%}  "
-              f"{r.field_accuracy['original_form']:>6.1%}")
+              f"{r.field_accuracy['surface_lexical_unit']:>6.1%}")
     print("=" * 90 + "\n")
 
 

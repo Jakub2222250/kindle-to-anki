@@ -79,7 +79,7 @@ def build_task_input(task_key: str, note: dict) -> object:
     fields = note.get('fields', {})
     uid = fields.get('UID', {}).get('value', '').strip()
     expression = fields.get('Expression', {}).get('value', '').strip()
-    original_form = fields.get('Original_Form', {}).get('value', '').strip()
+    surface_lexical_unit = fields.get('Surface_Lexical_Unit', {}).get('value', '').strip()
     context = fields.get('Context_Sentence', {}).get('value', '').strip()
     pos = fields.get('Part_Of_Speech', {}).get('value', '').strip() or 'unknown'
 
@@ -91,7 +91,7 @@ def build_task_input(task_key: str, note: dict) -> object:
 
     return input_class(
         uid=uid,
-        word=original_form or expression,
+        word=surface_lexical_unit or expression,
         lemma=expression,
         pos=pos,
         sentence=context,

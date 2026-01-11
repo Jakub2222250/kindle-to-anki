@@ -16,7 +16,7 @@ bootstrap_all()
 
 def test_runtime_chat_completion():
     """Test the new ChatCompletionLUI runtime."""
-    
+
     # Example usage and testing
     test_notes = [
         AnkiNote(
@@ -50,21 +50,21 @@ def test_runtime_chat_completion():
 
     # Setup runtime and config
     runtime = ChatCompletionLUI()
-    
+
     # Setup the provider
     runtimes = {"chat_completion_lui": runtime}
     provider = LUIProvider(runtimes=runtimes)
-    
+
     # Test with different languages
     for lang_code in ["pl", "es", "de"]:
         lang_notes = [note for note in test_notes if note.kindle_language == lang_code]
-        
+
         if lang_notes:
             print(f"\n=== Testing {lang_code} using Provider ===")
-            
+
             # Update runtime config for this language
             runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code=lang_code, target_language_code="en")
-            
+
             # Test via provider
             provider.identify(
                 notes=lang_notes,
@@ -80,18 +80,18 @@ def test_runtime_chat_completion():
                 print(f"Lemma: {note.expression}")
                 print(f"POS: {note.part_of_speech}")
                 print(f"Aspect: {note.aspect}")
-                print(f"Original Form: {note.original_form}")
+                print(f"Surface Lexical Unit: {note.surface_lexical_unit}")
                 print(f"Unit Type: {note.unit_type}")
                 print()
 
 
 def test_runtime_direct():
     """Test the ChatCompletionLUI runtime directly."""
-    
+
     # Test direct runtime usage
     runtime = ChatCompletionLUI()
     runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30)
-    
+
     # Create LUIInput objects for testing
     lui_inputs = [
         LUIInput(
@@ -105,9 +105,9 @@ def test_runtime_direct():
             sentence="El niño está corriendo en el parque."
         )
     ]
-    
+
     print("\n=== Testing Direct Runtime Usage ===")
-    
+
     # Test Polish
     pl_inputs = [lui_inputs[0]]
     pl_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="pl", target_language_code="en")
@@ -117,13 +117,13 @@ def test_runtime_direct():
         ignore_cache=False,
         use_test_cache=True
     )
-    
+
     for lui_input, lui_output in zip(pl_inputs, pl_outputs):
         print(f"Input - UID: {lui_input.uid}, Word: {lui_input.word}")
         print(f"Output - Lemma: {lui_output.lemma}, POS: {lui_output.part_of_speech}")
         print(f"         Aspect: {lui_output.aspect}, Unit Type: {lui_output.unit_type}")
         print()
-    
+
     # Test Spanish
     es_inputs = [lui_inputs[1]]
     es_config = RuntimeConfig(model_id="gpt-5.1", batch_size=30, source_language_code="es", target_language_code="en")
@@ -133,7 +133,7 @@ def test_runtime_direct():
         ignore_cache=False,
         use_test_cache=True
     )
-    
+
     for lui_input, lui_output in zip(es_inputs, es_outputs):
         print(f"Input - UID: {lui_input.uid}, Word: {lui_input.word}")
         print(f"Output - Lemma: {lui_output.lemma}, POS: {lui_output.part_of_speech}")

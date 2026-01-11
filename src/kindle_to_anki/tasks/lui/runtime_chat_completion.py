@@ -105,7 +105,7 @@ class ChatCompletionLUI:
                         lemma=cached_result.get('lemma', ''),
                         part_of_speech=cached_result.get('part_of_speech', ''),
                         aspect=cached_result.get('aspect', ''),
-                        original_form=cached_result.get('original_form', lui_input.word),
+                        surface_lexical_unit=cached_result.get('surface_lexical_unit', lui_input.word),
                         unit_type=cached_result.get('unit_type', 'lemma')
                     )
                     outputs_by_uid[lui_input.uid] = lui_output
@@ -166,11 +166,11 @@ class ChatCompletionLUI:
                 for lui_input in batch:
                     if lui_input.uid in batch_results:
                         lui_data = batch_results[lui_input.uid]
-                        original_form = lui_data.get("original_form", lui_input.word)
+                        surface_lexical_unit = lui_data.get("surface_lexical_unit", lui_input.word)
 
-                        # Validate original_form exists in sentence
-                        if original_form.lower() not in lui_input.sentence.lower():
-                            print(f"  FAILED - original_form '{original_form}' not found in sentence for {lui_input.word}")
+                        # Validate surface_lexical_unit exists in sentence
+                        if surface_lexical_unit.lower() not in lui_input.sentence.lower():
+                            print(f"  FAILED - surface_lexical_unit '{surface_lexical_unit}' not found in sentence for {lui_input.word}")
                             failing_inputs.append(lui_input)
                             continue
 
@@ -179,7 +179,7 @@ class ChatCompletionLUI:
                             "lemma": lui_data.get("lemma", ""),
                             "part_of_speech": lui_data.get("part_of_speech", ""),
                             "aspect": lui_data.get("aspect", ""),
-                            "original_form": original_form,
+                            "surface_lexical_unit": surface_lexical_unit,
                             "unit_type": lui_data.get("unit_type", "lemma")
                         }
 
@@ -191,7 +191,7 @@ class ChatCompletionLUI:
                             lemma=lui_result["lemma"],
                             part_of_speech=lui_result["part_of_speech"],
                             aspect=lui_result["aspect"],
-                            original_form=lui_result["original_form"],
+                            surface_lexical_unit=lui_result["surface_lexical_unit"],
                             unit_type=lui_result["unit_type"]
                         )
                         outputs_by_uid[lui_input.uid] = lui_output

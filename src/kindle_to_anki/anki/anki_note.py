@@ -17,7 +17,7 @@ class AnkiNote:
         # Output fields
         self.uid = ""
         self.expression = self.kindle_stem or ""
-        self.original_form = self.kindle_word or ""
+        self.surface_lexical_unit = self.kindle_word or ""
         self.part_of_speech = ""
         self.definition = ""
         self.aspect = ""
@@ -138,14 +138,14 @@ class AnkiNote:
 
     def get_context_sentence_cloze(self):
         """Get context sentence with word replaced by [...]"""
-        if self.context_sentence and self.original_form:
-            return self.context_sentence.replace(self.original_form, "<b>[...]</b>", 1)
+        if self.context_sentence and self.surface_lexical_unit:
+            return self.context_sentence.replace(self.surface_lexical_unit, "<b>[...]</b>", 1)
         return ""
 
     def get_context_sentence_bold_word(self):
         """Get context sentence with word in bold"""
-        if self.context_sentence and self.original_form:
-            return self.context_sentence.replace(self.original_form, f"<b>{self.original_form}</b>", 1)
+        if self.context_sentence and self.surface_lexical_unit:
+            return self.context_sentence.replace(self.surface_lexical_unit, f"<b>{self.surface_lexical_unit}</b>", 1)
         return self.context_sentence or ""
 
     def get_cloze_enabled_output(self):
@@ -172,7 +172,7 @@ class AnkiNote:
                 f"{self.context_translation}\t"
                 f"{self.part_of_speech}\t"
                 f"{self.aspect}\t"
-                f"{self.original_form}\t"
+                f"{self.surface_lexical_unit}\t"
                 f"{self.get_context_sentence_cloze()}\t"
                 f"{self.collocations}\t"
                 f"{self.original_language_hint}\t"

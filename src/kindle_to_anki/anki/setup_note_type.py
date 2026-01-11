@@ -14,7 +14,7 @@ FIELDS = [
     "Context_Translation",
     "Part_Of_Speech",
     "Aspect",
-    "Original_Form",
+    "Surface_Lexical_Unit",
     "Context_Sentence_Cloze",
     "Collocations",
     "Original_Language_Hint",

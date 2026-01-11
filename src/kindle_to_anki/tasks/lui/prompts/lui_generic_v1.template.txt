@@ -13,14 +13,14 @@ Return a JSON object keyed by UID. Each value must contain:
 - "lemma": dictionary form (verbs: infinitive; nouns: singular nominative/base form)
 - "part_of_speech": one of [verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase]
 - "aspect": verbs only: "perf", "impf", or "" (if not applicable)
-- "original_form": exact substring from the sentence (character-perfect match)
+- "surface_lexical_unit": exact substring from the sentence (character-perfect match)
 - "unit_type": one of ["lemma", "reflexive", "idiom"]
 
 NO additional text. Valid JSON only.
 
 HARD CONSTRAINTS
 1. SUBSTRING RULE  
-   "original_form" MUST appear verbatim in the sentence. No normalization, no expansion.
+   "surface_lexical_unit" MUST appear verbatim in the sentence. No normalization, no expansion.
 
 2. MINIMALITY RULE  
    Prefer the smallest unit that preserves meaning. Absorb additional tokens ONLY if meaning changes without them.
@@ -45,7 +45,7 @@ EXCLUDE when:
 - The construction is purely syntactic or stylistic
 - The base verb meaning remains essentially the same
 
-If excluded, do NOT include particle/pronoun in lemma or original_form.
+If excluded, do NOT include particle/pronoun in lemma or surface_lexical_unit.
 
 ---
 

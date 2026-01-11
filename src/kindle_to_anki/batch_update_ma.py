@@ -23,7 +23,7 @@ def get_all_notes(anki_connect_instance: AnkiConnect, lang: str) -> list[dict]:
         clean_context_sentence = existing_note.get("Context_Sentence", "").replace("<b>", "").replace("</b>", "").strip()
 
         note = AnkiNote(
-            word=existing_note.get("Original_Form", ""),
+            word=existing_note.get("Surface_Lexical_Unit", ""),
             stem=existing_note.get("Expression", ""),
             usage=clean_context_sentence,
             language=lang,
@@ -50,8 +50,8 @@ def generate_card_updates(uid_to_old_note_info_dict: dict, notes_to_reprocess: l
         if old_note["Expression"] != note.expression:
             fields["Expression"] = note.expression
 
-        if old_note["Original_Form"] != note.original_form:
-            fields["Original_Form"] = note.original_form
+        if old_note["Surface_Lexical_Unit"] != note.surface_lexical_unit:
+            fields["Surface_Lexical_Unit"] = note.surface_lexical_unit
 
         if old_note["Part_Of_Speech"] != note.part_of_speech:
             fields["Part_Of_Speech"] = note.part_of_speech
@@ -102,9 +102,9 @@ if __name__ == "__main__":
             existing_note = uid_to_old_note_info_dict[note.uid]
 
             # Avoid words that were manually or automatically updated with się or idiom
-            if (len(existing_note["Original_Form"].split()) == 2 and "się" in existing_note["Original_Form"].lower().split()):
+            if (len(existing_note["Surface_Lexical_Unit"].split()) == 2 and "się" in existing_note["Surface_Lexical_Unit"].lower().split()):
                 # Set the kindle_word back to without się for typical MA behavior
-                note.kindle_word = existing_note["Original_Form"].replace(" się", "").replace("się ", "")
+                note.kindle_word = existing_note["Surface_Lexical_Unit"].replace(" się", "").replace("się ", "")
                 print("Added original word without się for reprocessing:", note.kindle_word)
                 notes_to_reprocess.append(note)
             elif existing_note["Part_Of_Speech"] == "adj":
@@ -112,7 +112,7 @@ if __name__ == "__main__":
             else:
                 num_of_unsuitable_notes += 1
 
-        print(f"Identified {num_of_unsuitable_notes} unsuitable notes with multiple word original_form. Skipping these.")
+        print(f"Identified {num_of_unsuitable_notes} unsuitable notes with multiple word surface_lexical_unit. Skipping these.")
         print(f"\nReprocessing {len(notes_to_reprocess)} notes for lexical unit identification...")
 
         for note in notes_to_reprocess:

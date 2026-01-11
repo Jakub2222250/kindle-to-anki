@@ -14,7 +14,7 @@
       "lemma": "string",
       "part_of_speech": "string",
       "aspect": "string",
-      "original_form": "string",
+      "surface_lexical_unit": "string",
       "unit_type": "string"
     }
   },

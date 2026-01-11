@@ -89,7 +89,7 @@ class AnkiConnect:
                 fields = note.get('fields', {})
                 note_data = {
                     'UID': fields.get('UID', {}).get('value', '').strip(),
-                    'Original_Form': fields.get('Original_Form', {}).get('value', '').strip(),
+                    'Surface_Lexical_Unit': fields.get('Surface_Lexical_Unit', {}).get('value', '').strip(),
                     'Expression': fields.get('Expression', {}).get('value', '').strip(),
                     'Context_Sentence': fields.get('Context_Sentence', {}).get('value', '').strip(),
                     'Context_Translation': fields.get('Context_Translation', {}).get('value', '').strip(),
@@ -118,7 +118,7 @@ class AnkiConnect:
                 fields = {
                     "UID": anki_note.uid,
                     "Expression": anki_note.expression,
-                    "Original_Form": anki_note.original_form,
+                    "Surface_Lexical_Unit": anki_note.surface_lexical_unit,
                     "Part_Of_Speech": anki_note.part_of_speech,
                     "Definition": anki_note.definition,
                     "Aspect": anki_note.aspect,

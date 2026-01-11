@@ -27,14 +27,14 @@ Return a JSON object keyed by UID. Each value must contain:
 - "lemma": dictionary form (verbs: infinitive; nouns: singular nominative)
 - "part_of_speech": one of [verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase]
 - "aspect": verbs only: "perf", "impf", or ""
-- "original_form": exact substring from the sentence (character-perfect match)
+- "surface_lexical_unit": exact substring from the sentence (character-perfect match)
 - "unit_type": one of ["lemma", "reflexive", "idiom"]
 
 NO additional text. Valid JSON only.
 
 HARD CONSTRAINTS
 1. SUBSTRING RULE  
-   "original_form" MUST appear verbatim in the sentence. No normalization, no expansion.
+   "surface_lexical_unit" MUST appear verbatim in the sentence. No normalization, no expansion.
 
 2. MINIMALITY RULE  
    Prefer the smallest unit that preserves meaning. Absorb additional tokens ONLY if meaning changes without them.
@@ -59,7 +59,7 @@ EXCLUDE "się" when:
   (e.g., "Ona się myje" → learn "myje")
 - It functions impersonally or passively without changing verb meaning
 
-If excluded, do NOT include "się" in lemma or original_form.
+If excluded, do NOT include "się" in lemma or surface_lexical_unit.
 
 ---
 
@@ -101,13 +101,13 @@ Never absorb arguments (objects, complements) unless idiomatic.
 EXAMPLES (AUTHORITATIVE)
 
 "Ona się myje codziennie"  
-→ lemma: "myć", original_form: "myje", unit_type: "lemma"
+→ lemma: "myć", surface_lexical_unit: "myje", unit_type: "lemma"
 
 "Martwi się o dzieci"  
-→ lemma: "martwić się", original_form: "Martwi się", unit_type: "reflexive"
+→ lemma: "martwić się", surface_lexical_unit: "Martwi się", unit_type: "reflexive"
 
 "Dał się nabrać na tę historię"  
-→ lemma: "dać się", original_form: "Dał się", unit_type: "idiom"
+→ lemma: "dać się", surface_lexical_unit: "Dał się", unit_type: "idiom"
 """
 
 
@@ -128,14 +128,14 @@ Return a JSON object keyed by UID. Each value must contain:
 - "lemma": dictionary form (verbs: infinitive; nouns: singular masculine)
 - "part_of_speech": one of [verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase]
 - "aspect": verbs only: "perf", "impf", or ""
-- "original_form": exact substring from the sentence (character-perfect match)
+- "surface_lexical_unit": exact substring from the sentence (character-perfect match)
 - "unit_type": one of ["lemma", "reflexive", "idiom"]
 
 NO additional text. Valid JSON only.
 
 HARD CONSTRAINTS
 1. SUBSTRING RULE  
-   "original_form" MUST appear verbatim in the sentence. No normalization, no expansion.
+   "surface_lexical_unit" MUST appear verbatim in the sentence. No normalization, no expansion.
 
 2. MINIMALITY RULE  
    Prefer the smallest unit that preserves meaning. Absorb additional tokens ONLY if meaning changes without them.
@@ -165,7 +165,7 @@ EXCLUDE reflexive pronouns when:
 - Optional reflexive with same core meaning  
   (e.g., "(Se) comió la manzana" → learn "comió")
 
-If excluded, do NOT include pronoun in lemma or original_form.
+If excluded, do NOT include pronoun in lemma or surface_lexical_unit.
 
 ---
 
@@ -209,16 +209,16 @@ Never absorb arguments (direct objects, complements) unless idiomatic.
 EXAMPLES (AUTHORITATIVE)
 
 "Se da cuenta de la situación"  
-→ lemma: "darse cuenta", original_form: "Se da cuenta", unit_type: "idiom"
+→ lemma: "darse cuenta", surface_lexical_unit: "Se da cuenta", unit_type: "idiom"
 
 "Habla español perfectamente"  
-→ lemma: "hablar", original_form: "Habla", unit_type: "lemma"
+→ lemma: "hablar", surface_lexical_unit: "Habla", unit_type: "lemma"
 
 "Se llama María"  
-→ lemma: "llamarse", original_form: "Se llama", unit_type: "reflexive"
+→ lemma: "llamarse", surface_lexical_unit: "Se llama", unit_type: "reflexive"
 
 "Se venden libros aquí"  
-→ lemma: "vender", original_form: "venden", unit_type: "lemma"""
+→ lemma: "vender", surface_lexical_unit: "venden", unit_type: "lemma""""
 
 
 def get_generic_lui_instructions(items_json: str, language_name: str) -> str:
@@ -238,14 +238,14 @@ Return a JSON object keyed by UID. Each value must contain:
 - "lemma": dictionary form (verbs: infinitive; nouns: singular nominative/base form)
 - "part_of_speech": one of [verb, noun, adj, adv, prep, conj, particle, det, pron, num, interj, phrase]
 - "aspect": verbs only: "perf", "impf", or "" (if not applicable)
-- "original_form": exact substring from the sentence (character-perfect match)
+- "surface_lexical_unit": exact substring from the sentence (character-perfect match)
 - "unit_type": one of ["lemma", "reflexive", "idiom"]
 
 NO additional text. Valid JSON only.
 
 HARD CONSTRAINTS
 1. SUBSTRING RULE  
-   "original_form" MUST appear verbatim in the sentence. No normalization, no expansion.
+   "surface_lexical_unit" MUST appear verbatim in the sentence. No normalization, no expansion.
 
 2. MINIMALITY RULE  
    Prefer the smallest unit that preserves meaning. Absorb additional tokens ONLY if meaning changes without them.
@@ -270,7 +270,7 @@ EXCLUDE when:
 - The construction is purely syntactic or stylistic
 - The base verb meaning remains essentially the same
 
-If excluded, do NOT include particle/pronoun in lemma or original_form.
+If excluded, do NOT include particle/pronoun in lemma or surface_lexical_unit.
 
 ---
 
