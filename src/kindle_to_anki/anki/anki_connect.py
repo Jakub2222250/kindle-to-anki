@@ -162,10 +162,13 @@ class AnkiConnect:
                 exit(1)
             raise Exception(f"Failed to create notes batch: {e}")
 
-    def get_uid_to_note_id_map(self):
-        """Get a mapping from UID to Anki note ID for all notes in the deck"""
+    def get_uid_to_note_id_map(self, deck_name: str = None):
+        """Get a mapping from UID to Anki note ID for notes of this note type, optionally filtered by deck"""
         try:
-            query = f'"deck:{self.parent_deck_name}" "note:{self.note_type}"'
+            if deck_name:
+                query = f'"deck:{deck_name}" "note:{self.note_type}"'
+            else:
+                query = f'"note:{self.note_type}"'
             note_ids = self._invoke("findNotes", {"query": query})
 
             if not note_ids:
@@ -185,50 +188,80 @@ class AnkiConnect:
         except Exception as e:
             raise Exception(f"Failed to get UID to note ID map: {e}")
 
-    def update_notes_fields(self, card_updates):
-        """Update multiple notes' fields using UID as note ID"""
+    def update_notes_fields(self, card_updates, deck_name: str = None):
+        """Update multiple notes' fields using UID as note ID, batched for efficiency"""
         if not card_updates:
             print("No card updates provided")
             return []
 
         print(f"\nUpdating {len(card_updates)} notes in Anki...")
 
-        successful_updates = []
-        failed_updates = []
+        uid_to_note_id_map = self.get_uid_to_note_id_map(deck_name)
 
-        uid_to_note_id_map = self.get_uid_to_note_id_map()
-
+        # Build batch of update actions
+        actions = []
+        uid_list = []
         for update in card_updates:
             uid = update.get('UID')
+            if not uid or uid not in uid_to_note_id_map:
+                print(f"Warning: UID {uid} not found in deck, skipping")
+                continue
+
+            note_id = int(uid_to_note_id_map[uid])
             fields_to_update = update.get('fields', {})
 
-            id = int(uid_to_note_id_map[uid])
-
-            if not uid or uid not in uid_to_note_id_map:
-                print("Probably never happens")
-                exit()
-
-            print("Updating fields for UID:", uid, id)
-
-            # Use UID directly as note ID
-            try:
-                self._invoke("updateNoteFields", {
+            actions.append({
+                "action": "updateNoteFields",
+                "params": {
                     "note": {
-                        "id": id,
+                        "id": note_id,
                         "fields": fields_to_update
                     }
+                }
+            })
+            uid_list.append(uid)
+
+        if not actions:
+            print("No valid updates to apply")
+            return []
+
+        # Execute batch update
+        successful = self.update_notes_by_id(actions)
+        return uid_list[:successful]
+
+    def update_notes_by_id(self, updates: list[dict]) -> int:
+        """
+        Batch update notes by note ID. Each update should be either:
+        - A dict with 'note_id' and 'fields' keys, or
+        - A pre-built action dict with 'action' and 'params' keys
+        Returns the number of successful updates.
+        """
+        if not updates:
+            return 0
+
+        # Normalize to action format
+        actions = []
+        for update in updates:
+            if 'action' in update and 'params' in update:
+                actions.append(update)
+            else:
+                actions.append({
+                    "action": "updateNoteFields",
+                    "params": {
+                        "note": {
+                            "id": update['note_id'],
+                            "fields": update['fields']
+                        }
+                    }
                 })
-                successful_updates.append(uid)
-            except Exception as e:
-                failed_updates.append(f"Failed to update UID {uid}: {e}")
 
-        print(f"Successfully updated {len(successful_updates)} notes")
-        if failed_updates:
-            print(f"Failed to update {len(failed_updates)} notes:")
-            for failure in failed_updates:
-                print(f"  {failure}")
-
-        return successful_updates
+        try:
+            results = self._invoke("multi", {"actions": actions})
+            successful = sum(1 for r in results if r is None or (isinstance(r, dict) and r.get('error') is None))
+            print(f"Successfully updated {successful}/{len(actions)} notes")
+            return successful
+        except Exception as e:
+            raise Exception(f"Batch update failed: {e}")
 
 
 if __name__ == "__main__":

@@ -223,8 +223,7 @@ def run_task_on_notes(
         # Update cards
         if actions:
             try:
-                anki._invoke("multi", {"actions": actions})
-                print(f"  Updated {len(actions)} cards")
+                anki.update_notes_by_id(actions)
                 total_updated += len(actions)
             except Exception as e:
                 print(f"  Batch update failed: {e}")
