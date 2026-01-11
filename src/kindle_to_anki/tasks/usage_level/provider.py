@@ -61,6 +61,6 @@ class UsageLevelProvider:
             if note.uid in usage_map:
                 result = usage_map[note.uid]
                 note.apply_usage_level_results({"usage_level": result.usage_level})
-                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id, runtime_config.prompt_id)
 
         return notes

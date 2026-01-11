@@ -1,3 +1,4 @@
+from kindle_to_anki.configuration.prompts import prompt_yes_no, prompt_choice_by_index as prompt_choice
 import json
 import urllib.request
 import urllib.error
@@ -9,10 +10,10 @@ from kindle_to_anki.configuration.options_display import show_task_options, get_
 
 class AnkiConnectHelper:
     """Lightweight AnkiConnect helper for deck operations."""
-    
+
     def __init__(self):
         self.anki_url = "http://localhost:8765"
-    
+
     def _invoke(self, action, params=None):
         request_json = {"action": action, "version": 6}
         if params:
@@ -27,21 +28,21 @@ class AnkiConnectHelper:
             return response_data.get('result')
         except urllib.error.URLError:
             return None
-    
+
     def is_reachable(self) -> bool:
         try:
             return self._invoke("version") is not None
         except Exception:
             return False
-    
+
     def get_deck_names(self) -> list[str]:
         result = self._invoke("deckNames")
         return result if result else []
-    
+
     def get_model_names(self) -> list[str]:
         result = self._invoke("modelNames")
         return result if result else []
-    
+
     def create_deck(self, deck_name: str) -> bool:
         result = self._invoke("createDeck", {"deck": deck_name})
         return result is not None
@@ -86,35 +87,13 @@ def save_config(config: dict):
     print(f"Configuration saved to {config_path}")
 
 
-def prompt_yes_no(prompt: str, default: bool = True) -> bool:
-    default_str = "Y/n" if default else "y/N"
-    response = input(f"{prompt} [{default_str}]: ").strip().lower()
-    if not response:
-        return default
-    return response in ('y', 'yes')
-
-
-def prompt_choice(prompt: str, options: list, default: int = 1) -> int:
-    while True:
-        response = input(f"{prompt} [default={default}]: ").strip()
-        if not response:
-            return default
-        try:
-            choice = int(response)
-            if 1 <= choice <= len(options):
-                return choice
-        except ValueError:
-            pass
-        print(f"Please enter a number between 1 and {len(options)}")
-
-
 def offer_create_decks_in_anki(parent: str, staging: str):
     """Offer to create decks in Anki if missing."""
     helper = AnkiConnectHelper()
     if not helper.is_reachable():
         print("AnkiConnect not reachable. Skipping deck creation check.")
         return
-    
+
     existing_decks = helper.get_deck_names()
     for deck_name in [parent, staging]:
         if deck_name in existing_decks:
@@ -133,7 +112,7 @@ def add_deck(config: dict):
     target = input("Target language code (e.g., en) [en]: ").strip().lower() or "en"
     parent = input(f"Parent deck name [Vocab Discovery]: ").strip() or "Vocab Discovery"
     staging = input(f"Staging/import deck name [{parent}::Import]: ").strip() or f"{parent}::Import"
-    
+
     deck = {
         "source_language_code": source,
         "target_language_code": target,
@@ -150,11 +129,11 @@ def remove_deck(config: dict):
     if not decks:
         print("No decks to remove.")
         return
-    
+
     print("\n--- Remove Deck ---")
     for i, deck in enumerate(decks, 1):
         print(f"  [{i}] {deck['source_language_code']} -> {deck['target_language_code']} ({deck['parent_deck_name']})")
-    
+
     choice = prompt_choice("Select deck to remove", decks)
     removed = decks.pop(choice - 1)
     print(f"Removed deck: {removed['source_language_code']} -> {removed['target_language_code']}")
@@ -165,22 +144,22 @@ def edit_deck(config: dict):
     if not decks:
         print("No decks to edit.")
         return
-    
+
     print("\n--- Edit Deck ---")
     for i, deck in enumerate(decks, 1):
         print(f"  [{i}] {deck['source_language_code']} -> {deck['target_language_code']} ({deck['parent_deck_name']})")
-    
+
     choice = prompt_choice("Select deck to edit", decks)
     deck = decks[choice - 1]
-    
+
     new_parent = input(f"Parent deck name [{deck['parent_deck_name']}]: ").strip()
     if new_parent:
         deck["parent_deck_name"] = new_parent
-    
+
     new_staging = input(f"Staging deck name [{deck['staging_deck_name']}]: ").strip()
     if new_staging:
         deck["staging_deck_name"] = new_staging
-    
+
     print("Deck updated.")
     offer_create_decks_in_anki(deck["parent_deck_name"], deck["staging_deck_name"])
 
@@ -192,13 +171,13 @@ def manage_decks(config: dict):
         print(f"Current decks ({len(decks)}):")
         for deck in decks:
             print(f"  - {deck['source_language_code']} -> {deck['target_language_code']} | Parent: {deck['parent_deck_name']} | Import: {deck['staging_deck_name']}")
-        
+
         print("\nOptions:")
         print("  [1] Add deck")
         print("  [2] Remove deck")
         print("  [3] Edit deck")
         print("  [4] Done")
-        
+
         choice = input("Select option [4]: ").strip() or "4"
         if choice == "1":
             add_deck(config)
@@ -212,13 +191,13 @@ def manage_decks(config: dict):
 
 def configure_task(config: dict, task: str, source_language_code: str, target_language_code: str):
     current = config["task_settings"].get(task, DEFAULT_CONFIG["task_settings"].get(task, {}))
-    
+
     # Handle optional tasks
     if task in OPTIONAL_TASKS:
         is_enabled = current.get("enabled", True)
         status = "enabled" if is_enabled else "disabled"
         print(f"\nCurrent {task} setting: {status}, runtime={current.get('runtime')}, model={current.get('model_id')}")
-        
+
         if prompt_yes_no(f"Enable {task}?", default=is_enabled):
             current["enabled"] = True
         else:
@@ -228,27 +207,27 @@ def configure_task(config: dict, task: str, source_language_code: str, target_la
             return
     else:
         print(f"\nCurrent {task} setting: runtime={current.get('runtime')}, model={current.get('model_id')}")
-    
+
     if not prompt_yes_no(f"Change {task} runtime/model settings?", default=False):
         if task in OPTIONAL_TASKS:
             config["task_settings"][task] = current
         return
-    
+
     options = show_task_options(task, source_language_code, target_language_code)
     if not options:
         print(f"No options available for task '{task}'")
         return
-    
+
     # Find default index
     default_idx = 1
     for i, opt in enumerate(options, 1):
         if opt["runtime"] == current.get("runtime") and opt["model_id"] == current.get("model_id"):
             default_idx = i
             break
-    
+
     choice = prompt_choice("Select option", options, default=default_idx)
     selected = options[choice - 1]
-    
+
     new_setting = {
         "runtime": selected["runtime"],
         "model_id": selected["model_id"],
@@ -256,7 +235,7 @@ def configure_task(config: dict, task: str, source_language_code: str, target_la
     }
     if task in OPTIONAL_TASKS:
         new_setting["enabled"] = current.get("enabled", True)
-    
+
     config["task_settings"][task] = new_setting
     print(f"Updated {task}: runtime={selected['runtime']}, model={selected['model_id']}")
 
@@ -266,11 +245,11 @@ def configure_tasks(config: dict):
     if not decks:
         print("Please add at least one deck first to configure tasks.")
         return
-    
+
     # Use first deck's language pair for showing options
     source = decks[0]["source_language_code"]
     target = decks[0]["target_language_code"]
-    
+
     print(f"\n--- Task Configuration (showing costs for {source}->{target}) ---")
     print("Note: Optional tasks can be disabled to reduce API costs.\n")
     for task in CONFIGURABLE_TASKS:
@@ -281,12 +260,12 @@ def check_and_create_note_type():
     """Check if note type exists in Anki and offer to create if missing."""
     from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
     from kindle_to_anki.anki.setup_note_type import setup_note_type
-    
+
     helper = AnkiConnectHelper()
     if not helper.is_reachable():
         print("AnkiConnect not reachable. Skipping note type check.")
         return
-    
+
     existing_models = helper.get_model_names()
     if NOTE_TYPE_NAME in existing_models:
         print(f"\u2713 Note type '{NOTE_TYPE_NAME}' exists")
@@ -298,14 +277,14 @@ def check_and_create_note_type():
 
 def run_setup_wizard():
     print("=== Kindle to Anki Configuration Setup ===\n")
-    
+
     bootstrap_all()
-    
+
     # Check note type at startup
     check_and_create_note_type()
-    
+
     existing_config = load_config()
-    
+
     if existing_config:
         print("Existing configuration found.")
         if prompt_yes_no("Modify existing configuration?"):
@@ -319,7 +298,7 @@ def run_setup_wizard():
     else:
         print("No configuration found. Starting with defaults.")
         config = json.loads(json.dumps(DEFAULT_CONFIG))
-    
+
     # Main menu loop
     while True:
         print("\n=== Main Menu ===")
@@ -327,7 +306,7 @@ def run_setup_wizard():
         print("  [2] Configure tasks")
         print("  [3] Save and exit")
         print("  [4] Exit without saving")
-        
+
         choice = input("Select option: ").strip()
         if choice == "1":
             manage_decks(config)

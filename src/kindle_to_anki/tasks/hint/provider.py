@@ -60,6 +60,6 @@ class HintProvider:
             if note.uid in hint_map:
                 result = hint_map[note.uid]
                 note.apply_hint_results({"hint": result.hint})
-                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id, runtime_config.prompt_id)
 
         return notes

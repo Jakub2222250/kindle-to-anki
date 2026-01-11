@@ -79,6 +79,6 @@ class WSDProvider:
                     "definition": wsd_result.definition
                 }
                 note.apply_wsd_results(wsd_data)
-                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id, runtime_config.prompt_id)
 
         return notes

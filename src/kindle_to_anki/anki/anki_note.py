@@ -156,9 +156,12 @@ class AnkiNote:
         """Get generation_metadata as JSON string for output"""
         return json.dumps(self.generation_metadata) if self.generation_metadata else ""
 
-    def add_generation_metadata(self, task_id, runtime_id, model_id):
+    def add_generation_metadata(self, task_id, runtime_id, model_id, prompt_id=None):
         """Add generation metadata for a task"""
-        self.generation_metadata[task_id] = {"runtime": runtime_id, "model": model_id}
+        task_meta = {"runtime": runtime_id, "model": model_id}
+        if prompt_id:
+            task_meta["prompt"] = prompt_id
+        self.generation_metadata[task_id] = task_meta
 
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""

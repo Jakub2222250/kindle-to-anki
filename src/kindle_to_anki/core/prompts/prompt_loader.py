@@ -73,6 +73,11 @@ LUI_LANGUAGE_DEFAULTS = {
 LUI_GENERIC_DEFAULT = "lui_generic_v1"
 
 
+def get_default_prompt_id(task: str) -> str | None:
+    """Get the default prompt_id for a task."""
+    return DEFAULT_PROMPTS.get(task)
+
+
 def get_prompt(task: str, prompt_id: str = None) -> PromptSpec:
     """Get a prompt by task and optional id. Uses default if id not specified."""
     if prompt_id is None:

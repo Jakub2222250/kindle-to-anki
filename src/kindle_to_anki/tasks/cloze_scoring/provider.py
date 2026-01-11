@@ -60,6 +60,6 @@ class ClozeScoringProvider:
             if note.uid in score_map:
                 result = score_map[note.uid]
                 note.apply_cloze_scoring_results({"cloze_deletion_score": result.cloze_deletion_score})
-                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id)
+                note.add_generation_metadata(self.id, runtime.id, runtime_config.model_id, runtime_config.prompt_id)
 
         return notes
