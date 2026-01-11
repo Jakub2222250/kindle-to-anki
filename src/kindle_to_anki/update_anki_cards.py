@@ -340,7 +340,8 @@ def run_task_on_notes(
     print(f"\nDone. Total updated: {total_updated}")
 
 
-def main():
+def enable_hint_test_for_mature_cards():
+    """Enable hint tests for mature cards (interval >= 100 days) where Hint_Test_Enabled is not blank."""
     bootstrap_all()
 
     config_manager = ConfigManager()
@@ -360,12 +361,119 @@ def main():
 
     deck = anki_decks[lang]
 
-    # Select task
+    # Build query for mature cards
+    query = f'"deck:{deck.parent_deck_name}" "note:{NOTE_TYPE_NAME}" prop:ivl>=100'
+    print(f"\nAnki query: {query}")
+
+    anki = AnkiConnect()
+    note_ids = anki._invoke("findNotes", {"query": query})
+
+    if not note_ids:
+        print("No cards found matching query")
+        return
+
+    print(f"Found {len(note_ids)} cards with interval >= 100 days")
+
+    # Get note info
+    notes_info = anki._invoke("notesInfo", {"notes": note_ids})
+
+    # Filter to cards where Hint_Test_Enabled is blank (empty string)
+    notes_to_update = []
+    for note in notes_info:
+        fields = note.get('fields', {})
+        hint_enabled = fields.get('Hint_Test_Enabled', {}).get('value', '').strip()
+        if not hint_enabled:
+            notes_to_update.append(note)
+
+    if not notes_to_update:
+        print("No cards need updating (all mature cards already have Hint_Test_Enabled set)")
+        return
+
+    print(f"{len(notes_to_update)} cards will have Hint_Test_Enabled set to True")
+
+    # Dry run option
+    dry_run = prompt_yes_no("Dry run (preview only, no changes)?", default=False)
+
+    if dry_run:
+        print("\nDRY RUN - no changes will be made")
+        for note in notes_to_update[:10]:
+            fields = note.get('fields', {})
+            expression = fields.get('Expression', {}).get('value', '').strip()
+            current = fields.get('Hint_Test_Enabled', {}).get('value', '').strip()
+            print(f"  Would update: {expression} (current: {current} -> True)")
+        if len(notes_to_update) > 10:
+            print(f"  ... and {len(notes_to_update) - 10} more")
+        return
+
+    # Confirm before proceeding
+    if not prompt_yes_no(f"Proceed with updating {len(notes_to_update)} cards?", default=True):
+        print("Cancelled")
+        return
+
+    # Build update actions
+    actions = []
+    for note in notes_to_update:
+        note_id = note.get('noteId')
+        actions.append({
+            "action": "updateNoteFields",
+            "params": {
+                "note": {
+                    "id": note_id,
+                    "fields": {"Hint_Test_Enabled": "True"}
+                }
+            }
+        })
+
+    # Execute updates
+    try:
+        successful, errors = anki.update_notes_by_id(actions)
+        if errors:
+            print(f"  {len(errors)} update(s) failed:")
+            for err in errors:
+                print(f"    Note {err['note_id']}: {err['error']}")
+        print(f"\nDone. Total updated: {successful}")
+    except Exception as e:
+        print(f"Update failed: {e}")
+
+
+def main():
+    bootstrap_all()
+
+    # Choose between standard tasks and special tasks
+    special_tasks = {
+        "enable_hint_test_mature": "Enable Hint Test for Mature Cards (ivl>=100)"
+    }
+    all_task_options = list(AVAILABLE_TASKS.keys()) + list(special_tasks.keys())
+
     task_key = prompt_choice(
         "Select task to run:",
-        list(AVAILABLE_TASKS.keys()),
+        all_task_options,
         "wsd"
     )
+
+    # Handle special tasks
+    if task_key in special_tasks:
+        if task_key == "enable_hint_test_mature":
+            enable_hint_test_for_mature_cards()
+        return
+
+    config_manager = ConfigManager()
+    anki_decks = config_manager.get_anki_decks_by_source_language()
+
+    # Select language/deck
+    available_langs = list(anki_decks.keys())
+    if not available_langs:
+        print("No decks configured")
+        return
+
+    if len(available_langs) == 1:
+        lang = available_langs[0]
+        print(f"Using deck for language: {lang}")
+    else:
+        lang = prompt_choice("Select language:", available_langs, available_langs[0])
+
+    deck = anki_decks[lang]
+
     task_info = AVAILABLE_TASKS[task_key]
     print(f"Selected: {task_info['name']}")
 
