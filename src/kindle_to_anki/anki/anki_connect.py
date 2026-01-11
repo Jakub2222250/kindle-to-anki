@@ -127,6 +127,7 @@ class AnkiConnect:
                     "Context_Translation": anki_note.context_translation,
                     "Collocations": anki_note.collocations,
                     "Original_Language_Hint": anki_note.original_language_hint,
+                    "Hint_Test_Enabled": anki_note.hint_test_enabled,
                     "Notes": anki_note.notes,
                     "Source_Book": anki_note.source_book,
                     "Location": anki_note.location,

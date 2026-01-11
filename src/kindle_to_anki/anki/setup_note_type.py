@@ -18,6 +18,7 @@ FIELDS = [
     "Context_Sentence_Cloze",
     "Collocations",
     "Original_Language_Hint",
+    "Hint_Test_Enabled",
     "Notes",
     "Source_Book",
     "Location",
@@ -32,6 +33,7 @@ CARD_TEMPLATES = [
     ("Recognition", "recognition"),
     ("Production", "production"),
     ("Cloze Deletion", "cloze_deletion"),
+    ("Hint Test", "hint_test"),
 ]
 
 
