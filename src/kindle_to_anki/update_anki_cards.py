@@ -17,6 +17,9 @@ from kindle_to_anki.tasks.wsd.schema import WSDInput, WSDOutput
 from kindle_to_anki.tasks.hint.schema import HintInput, HintOutput
 from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
 from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
+from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
+from kindle_to_anki.tasks.cloze_scoring.schema import ClozeScoringInput, ClozeScoringOutput
+from kindle_to_anki.tasks.usage_level.schema import UsageLevelInput, UsageLevelOutput
 
 from pprint import pprint
 
@@ -53,6 +56,30 @@ AVAILABLE_TASKS = {
         "output_field": "Collocations",
         "output_attr": "collocations",
         "runtime_method": "generate_collocations",
+    },
+    "translation": {
+        "name": "Context Translation",
+        "runtime_key": "translation",
+        "input_class": TranslationInput,
+        "output_field": "Context_Translation",
+        "output_attr": "translation",
+        "runtime_method": "translate",
+    },
+    "cloze_scoring": {
+        "name": "Cloze Deletion Scoring",
+        "runtime_key": "cloze_scoring",
+        "input_class": ClozeScoringInput,
+        "output_field": "Cloze_Enabled",
+        "output_attr": "cloze_deletion_score",
+        "runtime_method": "score",
+    },
+    "usage_level": {
+        "name": "Usage Level Estimation",
+        "runtime_key": "usage_level",
+        "input_class": UsageLevelInput,
+        "output_field": "Usage_Level",
+        "output_attr": "usage_level",
+        "runtime_method": "estimate",
     },
 }
 
@@ -106,6 +133,7 @@ def build_task_input(task_key: str, note: dict) -> object:
     pos = fields.get('Part_Of_Speech', {}).get('value', '').strip() or 'unknown'
     raw_lookup = fields.get('Raw_Lookup_String', {}).get('value', '').strip()
     raw_context = fields.get('Raw_Context_Text', {}).get('value', '').strip()
+    definition = fields.get('Definition', {}).get('value', '').strip()
 
     task_info = AVAILABLE_TASKS[task_key]
     input_class = task_info["input_class"]
@@ -124,8 +152,27 @@ def build_task_input(task_key: str, note: dict) -> object:
             return None
         return input_class(uid=uid, lemma=expression, pos=pos)
 
+    elif task_key == "translation":
+        # Translation uses context sentence
+        if not (uid and context):
+            return None
+        return input_class(uid=uid, context=context)
+
+    elif task_key == "usage_level":
+        # Usage level needs word, lemma, pos, sentence, and definition
+        if not (uid and expression and context and definition):
+            return None
+        return input_class(
+            uid=uid,
+            word=surface_lexical_unit or expression,
+            lemma=expression,
+            pos=pos,
+            sentence=context,
+            definition=definition,
+        )
+
     else:
-        # WSD, hint use full context
+        # WSD, hint, cloze_scoring use word/lemma/pos/sentence
         if not (uid and expression and context):
             return None
         return input_class(
@@ -257,11 +304,17 @@ def run_task_on_notes(
             for field, attr in zip(output_fields, output_attrs):
                 value = getattr(output, attr, None)
                 if value is not None:
+                    # Special handling for cloze_scoring: convert score to Cloze_Enabled
+                    if task_key == "cloze_scoring" and attr == "cloze_deletion_score":
+                        score = value
+                        value = str(score) if score >= 7 else ""
                     # Handle list outputs (e.g., collocations)
-                    if isinstance(value, list):
+                    elif isinstance(value, list):
                         value = ", ".join(str(v) for v in value)
-                    fields_update[field] = str(value)
-                    preview = str(value)[:30] + "..." if len(str(value)) > 30 else str(value)
+                    else:
+                        value = str(value)
+                    fields_update[field] = value
+                    preview = value[:30] + "..." if len(value) > 30 else value
                     preview_parts.append(f"{field}={preview}")
 
             if len(fields_update) > 1:  # More than just metadata
