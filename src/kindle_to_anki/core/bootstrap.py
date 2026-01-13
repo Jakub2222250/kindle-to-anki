@@ -37,6 +37,7 @@ def bootstrap_model_registry():
     ModelRegistry.register(models.GEMINI_3_FLASH)
     ModelRegistry.register(models.GEMINI_3_PRO)
     ModelRegistry.register(models.GEMINI_2_5_FLASH)
+    ModelRegistry.register(models.GEMINI_2_0_FLASH)
 
 
 def bootstrap_runtime_registry():

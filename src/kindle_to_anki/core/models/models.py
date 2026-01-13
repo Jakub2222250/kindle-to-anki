@@ -56,11 +56,11 @@ GEMINI_3_FLASH = ModelSpec(
     quality_tier="medium",
     encoding="cl100k_base",
     supports_json=True,
-    input_token_cost_per_1m=0.00,
-    output_token_cost_per_1m=0.00,
+    input_token_cost_per_1m=0.00,  # Free tier
+    output_token_cost_per_1m=0.00,  # Free tier
     typical_latency_ms=700,
-    rpm_limit=15,
-    tpm_limit=1_000_000,
+    rpm_limit=10,  # Free tier limits are dynamic, check AI Studio
+    tpm_limit=250_000,
     rpd_limit=1500,
 )
 
@@ -71,7 +71,7 @@ GEMINI_3_PRO = ModelSpec(
     quality_tier="high",
     encoding="cl100k_base",
     supports_json=True,
-    input_token_cost_per_1m=2.00,
+    input_token_cost_per_1m=2.00,  # No free tier
     output_token_cost_per_1m=12.00,
     typical_latency_ms=1000,
 )
@@ -83,7 +83,25 @@ GEMINI_2_5_FLASH = ModelSpec(
     quality_tier="medium",
     encoding="cl100k_base",
     supports_json=True,
-    input_token_cost_per_1m=0.15,
-    output_token_cost_per_1m=0.60,
+    input_token_cost_per_1m=0.00,  # Free tier (paid: $0.15)
+    output_token_cost_per_1m=0.00,  # Free tier (paid: $0.60)
     typical_latency_ms=500,
+    rpm_limit=10,  # Free tier limits are dynamic, check AI Studio
+    tpm_limit=250_000,
+    rpd_limit=1500,
+)
+
+GEMINI_2_0_FLASH = ModelSpec(
+    id="gemini-2.0-flash",
+    platform_id="gemini",
+    family="chat_completion",
+    quality_tier="medium",
+    encoding="cl100k_base",
+    supports_json=True,
+    input_token_cost_per_1m=0.00,  # Free tier (paid: $0.10)
+    output_token_cost_per_1m=0.00,  # Free tier (paid: $0.40)
+    typical_latency_ms=400,
+    rpm_limit=10,  # Free tier limits are dynamic, check AI Studio
+    tpm_limit=250_000,
+    rpd_limit=1500,
 )

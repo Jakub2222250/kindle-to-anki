@@ -42,15 +42,15 @@ The note type generates three card types for comprehensive vocabulary learning:
 
 ## API Costs
 
-This tool uses LLM APIs (OpenAI GPT by default) to process vocabulary. You provide your own API keys—this project has no affiliation with any provider.
+This tool uses LLM APIs to process vocabulary. The recommended provider is **Google Gemini**, which offers a generous free tier sufficient for most users.
 
-Typical cost: roughly $2–3 per 1000 words processed. A $5 API credits purchase is enough to get started.
+With Gemini's free tier, you can process hundreds of words daily at no cost. For heavier usage, paid tiers are available at roughly $0.50 per 1000 words.
 
 ## Prerequisites
 
 - [Python](https://www.python.org/downloads/)
 - [Anki Desktop](https://apps.ankiweb.net/)
-- [OpenAI API account](https://platform.openai.com/) — $5 API credits purchase
+- [Google AI Studio account](https://aistudio.google.com/) — free tier available
 
 ## Installation
 
@@ -59,11 +59,13 @@ Typical cost: roughly $2–3 per 1000 words processed. A $5 API credits purchase
 py -m pip install -e .
 ```
 
-### 2. Set Up OpenAI API Key
-Get your API key from https://platform.openai.com/api-keys then set environment variable:
+### 2. Set Up Gemini API Key
+Get your free API key from https://aistudio.google.com/apikey then set environment variable:
 ```
-set OPENAI_API_KEY=your-key-here
+set GEMINI_API_KEY=your-key-here
 ```
+
+> **Alternative providers:** OpenAI and Grok are also supported. Set `OPENAI_API_KEY` or `GROK_API_KEY` and update the model in config.json.
 
 ### 3. Install Anki Add-ons
 With Anki open, go to Tools → Add-ons → Get Add-ons and install:

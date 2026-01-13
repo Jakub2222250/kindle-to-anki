@@ -51,13 +51,13 @@ class AnkiConnectHelper:
 DEFAULT_CONFIG = {
     "anki_decks": [],
     "task_settings": {
-        "lui": {"runtime": "chat_completion_lui", "model_id": "gpt-5.1", "batch_size": 30},
-        "wsd": {"runtime": "chat_completion_wsd", "model_id": "gpt-5.1", "batch_size": 30},
-        "hint": {"enabled": True, "runtime": "chat_completion_hint", "model_id": "gpt-5.1", "batch_size": 30},
-        "cloze_scoring": {"enabled": True, "runtime": "chat_completion_cloze_scoring", "model_id": "gpt-5.1", "batch_size": 30},
-        "usage_level": {"enabled": True, "runtime": "chat_completion_usage_level", "model_id": "gpt-5.1", "batch_size": 30},
-        "translation": {"runtime": "chat_completion_translation", "model_id": "gpt-5.1", "batch_size": 30},
-        "collocation": {"enabled": True, "runtime": "chat_completion_collocation", "model_id": "gpt-5-mini", "batch_size": 30}
+        "lui": {"runtime": "chat_completion_lui", "model_id": "gemini-2.5-flash", "batch_size": 30},
+        "wsd": {"runtime": "chat_completion_wsd", "model_id": "gemini-2.5-flash", "batch_size": 30},
+        "hint": {"enabled": True, "runtime": "chat_completion_hint", "model_id": "gemini-2.5-flash", "batch_size": 30},
+        "cloze_scoring": {"enabled": True, "runtime": "chat_completion_cloze_scoring", "model_id": "gemini-2.5-flash", "batch_size": 30},
+        "usage_level": {"enabled": True, "runtime": "chat_completion_usage_level", "model_id": "gemini-2.5-flash", "batch_size": 30},
+        "translation": {"runtime": "chat_completion_translation", "model_id": "gemini-2.5-flash", "batch_size": 30},
+        "collocation": {"enabled": True, "runtime": "chat_completion_collocation", "model_id": "gemini-2.0-flash", "batch_size": 30}
     }
 }
 
