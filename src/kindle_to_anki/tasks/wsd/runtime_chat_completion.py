@@ -16,6 +16,7 @@ from kindle_to_anki.core.prompts import get_prompt
 from .schema import WSDInput, WSDOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.wsd_cache import WSDCache
+from kindle_to_anki.util.json_utils import strip_markdown_code_block
 
 
 class ChatCompletionWSD:
@@ -202,9 +203,11 @@ class ChatCompletionWSD:
         print(f"  Batch WSD API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
 
         try:
-            parsed_results = json.loads(response_text)
+            parsed_results = json.loads(strip_markdown_code_block(response_text))
         except json.JSONDecodeError as e:
+            preview = response_text[:500] if response_text else "(empty response)"
             print(f"  Failed to parse API response as JSON: {e}")
+            print(f"  Raw response preview: {preview}")
             return BatchCallResult(success=False, error=f"JSON parse error: {e}")
 
         return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
