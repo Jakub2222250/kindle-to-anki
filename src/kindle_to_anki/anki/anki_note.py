@@ -73,7 +73,7 @@ class AnkiNote:
         if data.get('cloze_deletion_score') is not None:
             score = data['cloze_deletion_score']
             self.cloze_deletion_score = score
-            self.cloze_enabled = score if score >= 7 else None
+            self.cloze_enabled = "True" if score >= 7 else None
 
     def apply_usage_level_results(self, data):
         """Apply usage level results to the note"""
@@ -154,6 +154,10 @@ class AnkiNote:
         """Get cloze enabled field formatted for output"""
         return "" if not self.cloze_enabled else str(self.cloze_enabled)
 
+    def get_cloze_score_output(self):
+        """Get cloze score field formatted for output"""
+        return "" if self.cloze_deletion_score is None or self.cloze_deletion_score < 0 else str(self.cloze_deletion_score)
+
     def get_generation_metadata_output(self):
         """Get generation_metadata as JSON string for output"""
         return json.dumps(self.generation_metadata) if self.generation_metadata else ""
@@ -183,6 +187,7 @@ class AnkiNote:
                 f"{self.source_book}\t"
                 f"{self.location}\t"
                 f"{self.status}\t"
+                f"{self.get_cloze_score_output()}\t"
                 f"{self.get_cloze_enabled_output()}\t"
                 f"{self.unit_type}\t"
                 f"{self.get_generation_metadata_output()}\t"

@@ -23,6 +23,7 @@ FIELDS = [
     "Source_Book",
     "Location",
     "Status",
+    "Cloze_Score",
     "Cloze_Enabled",
     "Unit_Type",
     "Generation_Metadata",

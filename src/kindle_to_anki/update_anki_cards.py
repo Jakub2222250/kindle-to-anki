@@ -67,8 +67,8 @@ AVAILABLE_TASKS = {
         "name": "Cloze Deletion Scoring",
         "runtime_key": "cloze_scoring",
         "input_class": ClozeScoringInput,
-        "output_field": "Cloze_Enabled",
-        "output_attr": "cloze_deletion_score",
+        "output_fields": ["Cloze_Score", "Cloze_Enabled"],
+        "output_attrs": ["cloze_deletion_score", "cloze_deletion_score"],
         "runtime_method": "score",
     },
     "usage_level": {
@@ -300,10 +300,13 @@ def run_task_on_notes(
             for field, attr in zip(output_fields, output_attrs):
                 value = getattr(output, attr, None)
                 if value is not None:
-                    # Special handling for cloze_scoring: convert score to Cloze_Enabled
+                    # Special handling for cloze_scoring: Cloze_Score gets raw value, Cloze_Enabled is threshold-based
                     if task_key == "cloze_scoring" and attr == "cloze_deletion_score":
                         score = value
-                        value = str(score) if score >= 7 else ""
+                        if field == "Cloze_Score":
+                            value = str(score)
+                        elif field == "Cloze_Enabled":
+                            value = "True" if score >= 7 else ""
                     # Handle list outputs (e.g., collocations)
                     elif isinstance(value, list):
                         value = ", ".join(str(v) for v in value)

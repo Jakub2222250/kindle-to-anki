@@ -132,6 +132,7 @@ class AnkiConnect:
                     "Source_Book": anki_note.source_book,
                     "Location": anki_note.location,
                     "Status": anki_note.status,
+                    "Cloze_Score": anki_note.get_cloze_score_output(),
                     "Cloze_Enabled": anki_note.get_cloze_enabled_output(),
                     "Unit_Type": anki_note.unit_type,
                     "Generation_Metadata": anki_note.get_generation_metadata_output(),
