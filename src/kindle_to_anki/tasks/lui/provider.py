@@ -42,12 +42,12 @@ class LUIProvider:
         # Convert AnkiNotes to LUIInput objects
         lui_inputs: List[LUIInput] = []
         for note in notes:
-            # Use kindle_usage if available, otherwise use context_sentence
-            sentence = note.kindle_usage or note.context_sentence
-            if sentence and note.kindle_word:  # Only process notes with required fields
+            # Use source_usage if available, otherwise use context_sentence
+            sentence = note.source_usage or note.context_sentence
+            if sentence and note.source_word:  # Only process notes with required fields
                 lui_input = LUIInput(
                     uid=note.uid,
-                    word=note.kindle_word,
+                    word=note.source_word,
                     sentence=sentence
                 )
                 lui_inputs.append(lui_input)

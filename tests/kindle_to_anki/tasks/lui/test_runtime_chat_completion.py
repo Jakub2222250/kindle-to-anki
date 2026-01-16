@@ -57,7 +57,7 @@ def test_runtime_chat_completion():
 
     # Test with different languages
     for lang_code in ["pl", "es", "de"]:
-        lang_notes = [note for note in test_notes if note.kindle_language == lang_code]
+        lang_notes = [note for note in test_notes if note.source_language == lang_code]
 
         if lang_notes:
             print(f"\n=== Testing {lang_code} using Provider ===")
@@ -75,8 +75,8 @@ def test_runtime_chat_completion():
             )
 
             for note in lang_notes:
-                print(f"Word: {note.kindle_word}")
-                print(f"Sentence: {note.kindle_usage}")
+                print(f"Word: {note.source_word}")
+                print(f"Sentence: {note.source_usage}")
                 print(f"Lemma: {note.expression}")
                 print(f"POS: {note.part_of_speech}")
                 print(f"Aspect: {note.aspect}")

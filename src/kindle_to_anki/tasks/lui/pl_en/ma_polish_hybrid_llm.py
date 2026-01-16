@@ -93,9 +93,9 @@ def perform_wsd_on_lemma_and_pos(notes: list[AnkiNote], platform, model: str) ->
     for note in notes:
         item = dict()
         item["uid"] = note.uid
-        item["token"] = note.kindle_word
+        item["token"] = note.source_word
         # Clean whitespace: remove leading/trailing spaces and normalize internal whitespace
-        cleaned_sentence = " ".join(note.kindle_usage.split())
+        cleaned_sentence = " ".join(note.source_usage.split())
         item["sentence"] = cleaned_sentence
         morfeusz_candidates = note.morfeusz_candidates
         item["morfeusz_options"] = []
@@ -148,7 +148,7 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache, platform, m
 
                 # Validate absorb_się - only verbs can absorb się
                 if absorb_się and 'verb' not in readable_pos.lower():
-                    print(f"    WARNING: Overriding absorb_się=True for non-verb '{note.kindle_word}' ({readable_pos})")
+                    print(f"    WARNING: Overriding absorb_się=True for non-verb '{note.source_word}' ({readable_pos})")
                     absorb_się = False
 
                 # Get lemma
@@ -175,9 +175,9 @@ def process_notes_in_batches(notes: list[AnkiNote], cache: LUICache, platform, m
                 note.part_of_speech = readable_pos
                 note.aspect = aspect
 
-                print(f"  SUCCESS - processed MA for {note.kindle_word}")
+                print(f"  SUCCESS - processed MA for {note.source_word}")
             else:
-                print(f"  FAILED - no result for {note.kindle_word}")
+                print(f"  FAILED - no result for {note.source_word}")
                 failing_notes.append(note)
 
     return failing_notes

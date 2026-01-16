@@ -43,14 +43,14 @@ class WSDProvider:
         wsd_inputs: List[WSDInput] = []
         for note in notes:
             # Only process notes with required fields
-            if note.kindle_usage and note.expression and note.kindle_word:
+            if note.source_usage and note.expression and note.source_word:
                 pos_tag = getattr(note, 'pos_tag', 'unknown')
                 wsd_input = WSDInput(
                     uid=note.uid,
-                    word=note.kindle_word,
+                    word=note.source_word,
                     lemma=note.expression,
                     pos=pos_tag,
-                    sentence=note.kindle_usage
+                    sentence=note.source_usage
                 )
                 wsd_inputs.append(wsd_input)
 

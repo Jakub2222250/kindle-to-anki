@@ -66,8 +66,8 @@ class PolishMALLMHybridLUI:
         for lui_input in lui_inputs:
             note = AnkiNote(
                 uid=lui_input.uid,
-                kindle_word=lui_input.word,
-                kindle_usage=lui_input.sentence
+                word=lui_input.word,
+                usage=lui_input.sentence
             )
             temp_notes.append(note)
 
@@ -77,7 +77,7 @@ class PolishMALLMHybridLUI:
 
         for note in temp_notes:
             # Get candidates from Morfeusz
-            candidates = morf.analyse(note.kindle_word.lower())
+            candidates = morf.analyse(note.source_word.lower())
             note.morfeusz_candidates = candidates
 
             requires_llm_ma = self._check_if_requires_llm_ma(note)
@@ -121,7 +121,7 @@ class PolishMALLMHybridLUI:
         # Post-process all notes for reflexive verbs and lemma normalization
         for note in temp_notes:
             if "się" in note.morfeusz_lemma:
-                note.surface_lexical_unit = self._absorb_nearest_sie(note.kindle_word, note.kindle_usage)
+                note.surface_lexical_unit = self._absorb_nearest_sie(note.source_word, note.source_usage)
                 # Set unit_type to reflexive for verbs with się
                 note.unit_type = "reflexive"
             else:
@@ -139,7 +139,7 @@ class PolishMALLMHybridLUI:
                 lemma=note.expression,
                 part_of_speech=note.part_of_speech,
                 aspect=getattr(note, 'aspect', ''),
-                surface_lexical_unit=getattr(note, 'surface_lexical_unit', note.kindle_word),
+                surface_lexical_unit=getattr(note, 'surface_lexical_unit', note.source_word),
                 unit_type=getattr(note, 'unit_type', 'lemma')
             )
             lui_outputs.append(lui_output)
@@ -215,29 +215,29 @@ class PolishMALLMHybridLUI:
         2. Multiple morphological candidates exist (disambiguation needed)
         """
         # Check if "się" is adjacent to the word
-        has_sie_before_or_after = self._has_sie_adjacent_to_word(note.kindle_usage, note.kindle_word)
+        has_sie_before_or_after = self._has_sie_adjacent_to_word(note.source_usage, note.source_word)
 
         # Identify if the word has only one candidate
         has_single_candidate = len(note.morfeusz_candidates) == 1
 
         return has_sie_before_or_after or not has_single_candidate
 
-    def _absorb_nearest_sie(self, kindle_word, usage_text):
+    def _absorb_nearest_sie(self, source_word, usage_text):
         """
-        Find the nearest 'się' to the first occurrence of kindle_word and return
+        Find the nearest 'się' to the first occurrence of source_word and return
         all text between them (inclusive). Returns the absorbed phrase as a string.
 
         Args:
-            kindle_word: The target word to find
+            source_word: The target word to find
             usage_text: The sentence containing the word
 
         Returns:
-            String containing 'się' and all words between it and kindle_word
+            String containing 'się' and all words between it and source_word
         """
         words_list = usage_text.split()
 
         # Find the first occurrence of the target word
-        target_word_lower = kindle_word.lower()
+        target_word_lower = source_word.lower()
         target_index = None
 
         for i, word in enumerate(words_list):
@@ -248,7 +248,7 @@ class PolishMALLMHybridLUI:
                 break
 
         if target_index is None:
-            return kindle_word  # Fallback if word not found
+            return source_word  # Fallback if word not found
 
         # Find all occurrences of "się"
         sie_indices = []
@@ -258,7 +258,7 @@ class PolishMALLMHybridLUI:
                 sie_indices.append(i)
 
         if not sie_indices:
-            return kindle_word  # No "się" found, return original word
+            return source_word  # No "się" found, return original word
 
         # Find the nearest "się" to the target word
         nearest_sie_index = min(sie_indices, key=lambda x: abs(x - target_index))

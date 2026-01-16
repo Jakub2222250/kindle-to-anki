@@ -22,7 +22,7 @@ def test_polish_hybrid_cases():
     # Test cases from the original Polish hybrid tests
     test_cases = [
         {
-            'kindle_word': 'uczy',
+            'word': 'uczy',
             'sentence': 'Dziecko szybko uczy się nowych słów.',
             'expected_lemma': 'uczyć się',
             'expected_surface_lexical_unit': 'uczy się',
@@ -30,7 +30,7 @@ def test_polish_hybrid_cases():
             'expected_aspect': 'impf'
         },
         {
-            'kindle_word': 'uczy',
+            'word': 'uczy',
             'sentence': 'Nauczyciel uczy dzieci matematyki.',
             'expected_lemma': 'uczyć',
             'expected_surface_lexical_unit': 'uczy',
@@ -38,7 +38,7 @@ def test_polish_hybrid_cases():
             'expected_aspect': 'impf'
         },
         {
-            'kindle_word': 'zatrzymał',
+            'word': 'zatrzymał',
             'sentence': 'Samochód nagle zatrzymał się na środku drogi.',
             'expected_lemma': 'zatrzymać się',
             'expected_surface_lexical_unit': 'zatrzymał się',
@@ -46,7 +46,7 @@ def test_polish_hybrid_cases():
             'expected_aspect': 'perf'
         },
         {
-            'kindle_word': 'Otworzył',
+            'word': 'Otworzył',
             'sentence': 'Otworzył drzwi bez pukania.',
             'expected_lemma': 'otworzyć',
             'expected_surface_lexical_unit': 'Otworzył',
@@ -54,7 +54,7 @@ def test_polish_hybrid_cases():
             'expected_aspect': 'perf'
         },
         {
-            'kindle_word': 'zawzięcie',
+            'word': 'zawzięcie',
             'sentence': 'Który walił zawzięcie różdżką w blat ławki.',
             'expected_lemma': 'zawzięcie',
             'expected_surface_lexical_unit': 'zawzięcie',
@@ -67,7 +67,7 @@ def test_polish_hybrid_cases():
     notes = []
     for i, test_case in enumerate(test_cases):
         note = AnkiNote(
-            test_case['kindle_word'], 
+            test_case['word'], 
             "", 
             test_case['sentence'], 
             "pl", 
@@ -103,7 +103,7 @@ def test_polish_hybrid_cases():
         # Determine expected unit_type based on whether się appears in the expected lemma
         expected_unit_type = "reflexive" if "się" in test_case['expected_lemma'] else "lemma"
 
-        print(f"\n--- Test Case {i + 1}: {test_case['kindle_word']} ---")
+        print(f"\n--- Test Case {i + 1}: {test_case['word']} ---")
         print(f"Sentence: {test_case['sentence']}")
         print(f"Expected: lemma='{test_case['expected_lemma']}', pos='{test_case['expected_pos']}', aspect='{test_case['expected_aspect']}'")
         print(f"Actual:   lemma='{note.expression}', pos='{note.part_of_speech}', aspect='{note.aspect}'")

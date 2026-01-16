@@ -42,8 +42,8 @@ class TranslationProvider:
         # Convert AnkiNotes to TranslationInput objects
         translation_inputs: List[TranslationInput] = []
         for note in notes:
-            # Use kindle_usage if available, otherwise use context_sentence
-            context = note.kindle_usage or note.context_sentence
+            # Use source_usage if available, otherwise use context_sentence
+            context = note.source_usage or note.context_sentence
             if context:  # Only process notes with context
                 translation_input = TranslationInput(
                     uid=note.uid,

@@ -5,42 +5,42 @@ import unicodedata
 class AnkiNote:
     def __init__(self, word, stem, usage, language, book_name, position, timestamp, uid=None):
 
-        # Save off all raw fields provided by e-reader
-        self.kindle_word = word
-        self.kindle_stem = stem
-        self.kindle_usage = usage
-        self.kindle_language = language
-        self.kindle_book_name = book_name
-        self.kindle_location = position
-        self.kindle_timestamp = timestamp
+        # Save off all raw fields provided by vocabulary source
+        self.source_word = word
+        self.source_stem = stem
+        self.source_usage = usage
+        self.source_language = language
+        self.source_book_name = book_name
+        self.source_location = position
+        self.source_timestamp = timestamp
 
         # Output fields
         self.uid = ""
-        self.expression = self.kindle_stem or ""
-        self.surface_lexical_unit = self.kindle_word or ""
+        self.expression = self.source_stem or ""
+        self.surface_lexical_unit = self.source_word or ""
         self.part_of_speech = ""
         self.definition = ""
         self.aspect = ""
         self.unit_type = "lemma"
-        self.context_sentence = self.kindle_usage or ""
+        self.context_sentence = self.source_usage or ""
         self.context_sentence_cloze = ""
         self.context_translation = ""
         self.collocations = ""
         self.original_language_hint = ""
         self.hint_test_enabled = ""
         self.notes = ""
-        self.source_book = self.kindle_book_name or ""
-        self.location = f"kindle_{position}" if position else ""
+        self.source_book = self.source_book_name or ""
+        self.location = f"loc_{position}" if position else ""
         self.status = "raw"
         self.cloze_deletion_score = -1
         self.cloze_enabled = None
         self.generation_metadata = {}
         self.usage_level = ""
-        self.raw_context_text = self.kindle_usage or ""
-        self.raw_lookup_string = self.kindle_word or ""
+        self.raw_context_text = self.source_usage or ""
+        self.raw_lookup_string = self.source_word or ""
 
         # Generate book abbreviation
-        self.book_abbrev = self.generate_book_abbrev(self.kindle_book_name)
+        self.book_abbrev = self.generate_book_abbrev(self.source_book_name)
 
         # Generate UID (requires book abbreviation and location to be set first)
         self.uid = uid or self.generate_uid()
@@ -116,7 +116,7 @@ class AnkiNote:
     def generate_uid(self):
         """Generate unique ID based on word, book_abbrev, and location"""
         # Normalize stem part similar to book_abbrev
-        word_normalized = unicodedata.normalize('NFD', self.kindle_word or "unknown")
+        word_normalized = unicodedata.normalize('NFD', self.source_word or "unknown")
         stem_part = ''.join(char for char in word_normalized if unicodedata.category(char) != 'Mn')[:10]
         stem_part = stem_part.lower().replace(' ', '_')
         location_part = str(self.location).replace('kindle_', '') if self.location else "0"

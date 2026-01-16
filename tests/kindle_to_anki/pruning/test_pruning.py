@@ -9,7 +9,7 @@ from kindle_to_anki.anki.anki_note import AnkiNote
 
 def test_prune_existing_notes_automatically():
     """Integration test for prune_existing_notes_automatically function."""
-    
+
     print("Testing prune_existing_notes_automatically function...")
 
     # Test cases with expected results
@@ -18,7 +18,7 @@ def test_prune_existing_notes_automatically():
             'expression': 'czytać',
             'part_of_speech': 'verb',
             'definition': 'to read books or texts',
-            'kindle_word': 'czyta',
+            'word': 'czyta',
             'sentence': 'Jan często czyta książki w bibliotece.',
             'expected_retained': False  # Should be pruned due to similar definition
         },
@@ -26,7 +26,7 @@ def test_prune_existing_notes_automatically():
             'expression': 'biegać',
             'part_of_speech': 'verb',
             'definition': 'to run for exercise or sport',
-            'kindle_word': 'biega',
+            'word': 'biega',
             'sentence': 'Maria biega każdego ranka w parku.',
             'expected_retained': True  # Different definition, should be retained
         },
@@ -34,7 +34,7 @@ def test_prune_existing_notes_automatically():
             'expression': 'dom',
             'part_of_speech': 'noun',
             'definition': 'a building where people live, house',
-            'kindle_word': 'dom',
+            'word': 'dom',
             'sentence': 'Nasz dom znajduje się na wsi.',
             'expected_retained': False  # Should be pruned due to very similar definition
         },
@@ -42,7 +42,7 @@ def test_prune_existing_notes_automatically():
             'expression': 'szybko',
             'part_of_speech': 'adv',
             'definition': 'at high speed, quickly',
-            'kindle_word': 'szybko',
+            'word': 'szybko',
             'sentence': 'Samochód jedzie bardzo szybko.',
             'expected_retained': True  # No matching existing note, should be retained
         },
@@ -50,7 +50,7 @@ def test_prune_existing_notes_automatically():
             'expression': 'biegać',
             'part_of_speech': 'noun',
             'definition': 'the act of running',
-            'kindle_word': 'biegać',
+            'word': 'biegać',
             'sentence': 'Biegać to dobry sposób na ćwiczenie.',
             'expected_retained': True  # Different POS from existing note, should be retained
         }
@@ -59,7 +59,7 @@ def test_prune_existing_notes_automatically():
     # Create test notes from test cases
     notes = []
     for i, test_case in enumerate(test_cases):
-        note = AnkiNote(test_case['kindle_word'], "", test_case['sentence'], "pl", "Test Book", f"loc_{i + 1}", "")
+        note = AnkiNote(test_case['word'], "", test_case['sentence'], "pl", "Test Book", f"loc_{i + 1}", "")
         note.expression = test_case['expression']
         note.part_of_speech = test_case['part_of_speech']
         note.definition = test_case['definition']

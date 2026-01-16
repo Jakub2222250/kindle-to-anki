@@ -30,14 +30,14 @@ class ClozeScoringProvider:
 
         scoring_inputs: List[ClozeScoringInput] = []
         for note in notes:
-            if note.kindle_usage and note.expression and note.kindle_word:
+            if note.source_usage and note.expression and note.source_word:
                 pos_tag = getattr(note, 'pos_tag', 'unknown')
                 scoring_input = ClozeScoringInput(
                     uid=note.uid,
-                    word=note.kindle_word,
+                    word=note.source_word,
                     lemma=note.expression,
                     pos=pos_tag,
-                    sentence=note.kindle_usage
+                    sentence=note.source_usage
                 )
                 scoring_inputs.append(scoring_input)
 

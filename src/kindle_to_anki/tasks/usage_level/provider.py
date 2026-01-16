@@ -30,14 +30,14 @@ class UsageLevelProvider:
 
         usage_inputs: List[UsageLevelInput] = []
         for note in notes:
-            if note.kindle_usage and note.expression and note.kindle_word and note.definition:
+            if note.source_usage and note.expression and note.source_word and note.definition:
                 pos_tag = getattr(note, 'pos_tag', 'unknown')
                 usage_input = UsageLevelInput(
                     uid=note.uid,
-                    word=note.kindle_word,
+                    word=note.source_word,
                     lemma=note.expression,
                     pos=pos_tag,
-                    sentence=note.kindle_usage,
+                    sentence=note.source_usage,
                     definition=note.definition
                 )
                 usage_inputs.append(usage_input)
