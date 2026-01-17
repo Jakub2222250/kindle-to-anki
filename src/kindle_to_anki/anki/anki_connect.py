@@ -138,7 +138,8 @@ class AnkiConnect:
                     "Generation_Metadata": anki_note.get_generation_metadata_output(),
                     "Usage_Level": anki_note.usage_level,
                     "Raw_Context_Text": anki_note.raw_context_text,
-                    "Raw_Lookup_String": anki_note.raw_lookup_string
+                    "Raw_Lookup_String": anki_note.raw_lookup_string,
+                    "Lookup_Time": anki_note.get_lookup_time()
                 }
 
                 note_data = {

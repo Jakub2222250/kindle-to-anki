@@ -30,6 +30,7 @@ FIELDS = [
     "Usage_Level",
     "Raw_Context_Text",
     "Raw_Lookup_String",
+    "Lookup_Time",
 ]
 
 CARD_TEMPLATES = [

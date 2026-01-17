@@ -202,6 +202,17 @@ class AnkiNote:
         """Get generation_metadata as JSON string for output"""
         return json.dumps(self.generation_metadata) if self.generation_metadata else ""
 
+    def get_lookup_time(self):
+        """Get timestamp formatted for display, using locale when available."""
+        if not self.source_timestamp:
+            return ""
+        try:
+            # Try locale-aware formatting
+            return self.source_timestamp.strftime("%x %X")
+        except Exception:
+            # Fallback to ISO-ish format
+            return self.source_timestamp.strftime("%Y-%m-%d %H:%M")
+
     def add_generation_metadata(self, task_id, runtime_id, model_id, prompt_id=None):
         """Add generation metadata for a task"""
         task_meta = {"runtime": runtime_id, "model": model_id}
@@ -234,4 +245,5 @@ class AnkiNote:
                 f"{self.usage_level}\t"
                 f"{self.raw_context_text}\t"
                 f"{self.raw_lookup_string}\t"
+                f"{self.get_lookup_time()}\t"
                 f"{self.tags}\n")
