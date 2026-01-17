@@ -67,13 +67,12 @@ def test_polish_hybrid_cases():
     notes = []
     for i, test_case in enumerate(test_cases):
         note = AnkiNote(
-            test_case['word'], 
-            "", 
-            test_case['sentence'], 
-            "pl", 
-            "Test Book", 
-            f"loc_{i + 1}", 
-            ""
+            word=test_case['word'],
+            usage=test_case['sentence'],
+            language="pl",
+            uid=f"test_pl_hybrid_{i + 1}",
+            book_name="Test Book",
+            position=f"loc_{i + 1}"
         )
         notes.append(note)
 

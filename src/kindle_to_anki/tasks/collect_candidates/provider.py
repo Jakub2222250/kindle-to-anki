@@ -45,15 +45,16 @@ class CollectCandidatesProvider:
 
         # Convert CandidateOutput objects to AnkiNote objects and group by language
         notes_by_language = {}
-        latest_timestamp = 0
+        latest_timestamp = None
 
         for candidate_output in candidate_outputs:
             # Create AnkiNote from CandidateOutput
             note = AnkiNote(
                 word=candidate_output.word,
-                stem=candidate_output.stem,
                 usage=candidate_output.usage,
                 language=candidate_output.language,
+                uid=candidate_output.uid,
+                stem=candidate_output.stem,
                 book_name=candidate_output.book_title,
                 position=candidate_output.position,
                 timestamp=candidate_output.timestamp
@@ -65,12 +66,8 @@ class CollectCandidatesProvider:
             notes_by_language[candidate_output.language].append(note)
 
             # Track latest timestamp
-            if candidate_output.timestamp > latest_timestamp:
-                latest_timestamp = candidate_output.timestamp
+            if candidate_output.timestamp:
+                if latest_timestamp is None or candidate_output.timestamp > latest_timestamp:
+                    latest_timestamp = candidate_output.timestamp
 
-        if latest_timestamp > 0:
-            latest_candidate_timestamp = datetime.fromtimestamp(latest_timestamp / 1000)
-        else:
-            latest_candidate_timestamp = None
-
-        return notes_by_language, latest_candidate_timestamp
+        return notes_by_language, latest_timestamp

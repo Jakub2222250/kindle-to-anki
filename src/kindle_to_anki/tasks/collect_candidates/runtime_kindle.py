@@ -1,6 +1,7 @@
 import sqlite3
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 from typing import List
@@ -16,7 +17,7 @@ class KindleCandidateRuntime:
     """
     Runtime for candidate collection from Kindle vocab.db files.
     """
-    
+
     id: str = "kindle_candidate_collection"
     display_name: str = "Kindle Candidate Collection Runtime"
     supported_tasks = ["collect_candidates"]
@@ -38,18 +39,18 @@ class KindleCandidateRuntime:
         Collect candidate data from Kindle database.
         """
         print("\nStarting Kindle candidate collection...")
-        
+
         # Ensure we have the vocab database
         db_path = self.INPUTS_DIR / "vocab.db"
-        
+
         self._ensure_vocab_db(db_path)
-        
+
         metadata_manager = MetadataManager()
         metadata = metadata_manager.load_metadata()
-        
+
         last_timestamp_str = metadata.get("last_vocab_entry_timestamp")
         last_timestamp = datetime.fromisoformat(last_timestamp_str) if last_timestamp_str else None
-        
+
         # Get candidate data based on input parameters
         if last_timestamp:
             vocab_data = self._handle_incremental_import(db_path, last_timestamp)
@@ -70,26 +71,70 @@ class KindleCandidateRuntime:
         for word, stem, usage, lang, book_title, pos, timestamp in vocab_data:
             if stem:  # Only process words with stems
                 processed_count += 1
-                # print(f"[{processed_count}/{total_words}] Found candidate: {word}")
-                
+
+                # Generate UID using Kindle-specific formula
+                uid = self._generate_uid(word, book_title, pos)
+
+                # Convert epoch ms to datetime
+                lookup_time = datetime.fromtimestamp(timestamp / 1000) if timestamp else None
+
                 candidate_output = CandidateOutput(
+                    uid=uid,
                     word=word,
-                    stem=stem,
                     usage=usage,
+                    stem=stem,
                     language=lang,
                     book_title=book_title,
                     position=pos,
-                    timestamp=timestamp
+                    timestamp=lookup_time
                 )
                 candidate_outputs.append(candidate_output)
 
         print(f"Kindle candidate collection completed. Collected {len(candidate_outputs)} candidates.")
         return candidate_outputs
 
+    def _generate_uid(self, word: str, book_title: str, position: str) -> str:
+        """Generate unique ID for Kindle vocabulary entry based on word, book, and location."""
+        # Normalize word part (remove diacritics, lowercase, limit length)
+        word_normalized = unicodedata.normalize('NFD', word or "unknown")
+        word_part = ''.join(char for char in word_normalized if unicodedata.category(char) != 'Mn')[:10]
+        word_part = word_part.lower().replace(' ', '_')
+
+        # Generate book abbreviation
+        book_abbrev = self._generate_book_abbrev(book_title)
+
+        # Location part
+        location_part = str(position) if position else "0"
+
+        return f"{word_part}_{book_abbrev}_{location_part}"
+
+    def _generate_book_abbrev(self, book_name: str) -> str:
+        """Generate book abbreviation for use in UID and tags."""
+        if not book_name:
+            return "unknown"
+
+        # Remove diacritics
+        normalized = unicodedata.normalize('NFD', book_name)
+        without_diacritics = ''.join(char for char in normalized if unicodedata.category(char) != 'Mn')
+
+        result = without_diacritics.lower().replace('-', '_')
+
+        # Remove punctuation
+        for punct in '.,!?;:"()[]{}':
+            result = result.replace(punct, '')
+
+        result = result.replace(' ', '_')
+
+        # Clean up multiple underscores
+        while '__' in result:
+            result = result.replace('__', '_')
+
+        return result.strip('_') or "unknown"
+
     def _ensure_vocab_db(self, provided_db_path: str) -> Path:
         """Ensure vocab.db is available, copying from Kindle device if needed"""
         db_path = Path(provided_db_path)
-        
+
         # Attempt to copy vocab.db via batch script call
         print("\nAttempting to copy vocab.db from Kindle device...")
 

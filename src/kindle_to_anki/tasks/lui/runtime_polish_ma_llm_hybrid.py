@@ -65,9 +65,10 @@ class PolishMALLMHybridLUI:
         temp_notes = []
         for lui_input in lui_inputs:
             note = AnkiNote(
-                uid=lui_input.uid,
                 word=lui_input.word,
-                usage=lui_input.sentence
+                usage=lui_input.sentence,
+                language="pl",
+                uid=lui_input.uid
             )
             temp_notes.append(note)
 

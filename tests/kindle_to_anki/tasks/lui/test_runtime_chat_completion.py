@@ -4,6 +4,7 @@ Test for the new ChatCompletionLUI runtime system.
 This replaces the old test_lui_llm.py with the new structured approach.
 """
 
+from datetime import datetime
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
@@ -21,30 +22,33 @@ def test_runtime_chat_completion():
     test_notes = [
         AnkiNote(
             word="się",
-            stem="się",
             usage="Boi się ciemności.",
             language="pl",
+            uid="test_pl_1",
+            stem="się",
             book_name="Test Book",
             position="123-456",
-            timestamp="2024-01-01T12:00:00Z"
+            timestamp=datetime(2024, 1, 1, 12, 0, 0)
         ),
         AnkiNote(
             word="corriendo",
-            stem="corriendo", 
             usage="El niño está corriendo en el parque.",
             language="es",
+            uid="test_es_1",
+            stem="corriendo",
             book_name="Test Book",
             position="789-1011",
-            timestamp="2024-01-01T12:05:00Z"
+            timestamp=datetime(2024, 1, 1, 12, 5, 0)
         ),
         AnkiNote(
             word="sich",
-            stem="sich",
             usage="Er freut sich über das Geschenk.",
             language="de",
-            book_name="Test Book", 
+            uid="test_de_1",
+            stem="sich",
+            book_name="Test Book",
             position="1213-1415",
-            timestamp="2024-01-01T12:10:00Z"
+            timestamp=datetime(2024, 1, 1, 12, 10, 0)
         )
     ]
 

@@ -1,49 +1,80 @@
+from datetime import datetime
+import hashlib
 import json
 import unicodedata
 
 
 class AnkiNote:
-    def __init__(self, word, stem, usage, language, book_name, position, timestamp, uid=None):
+    """
+    Represents a vocabulary note for Anki import.
 
-        # Save off all raw fields provided by vocabulary source
+    Required fields (fundamental to any vocabulary lookup):
+        - word: The looked-up word form
+        - usage: Context sentence where the word appeared
+        - language: Source language code
+
+    Optional fields (may vary by vocabulary source):
+        - uid: Unique identifier (if not provided, generated from word + usage hash)
+        - stem: Base/dictionary form if known
+        - book_name: Source book/document name
+        - position: Location within the source
+        - timestamp: When the lookup occurred
+    """
+
+    def __init__(
+        self,
+        word: str,
+        usage: str,
+        language: str,
+        uid: str = None,
+        *,  # Force remaining args to be keyword-only
+        stem: str = None,
+        book_name: str = None,
+        position: str = None,
+        timestamp: datetime = None
+    ):
+        # Required fields
         self.source_word = word
-        self.source_stem = stem
         self.source_usage = usage
         self.source_language = language
+
+        # Generate UID if not provided
+        self.uid = uid or self._generate_default_uid(word, usage)
+
+        # Optional source metadata
+        self.source_stem = stem
         self.source_book_name = book_name
         self.source_location = position
         self.source_timestamp = timestamp
 
-        # Output fields
-        self.uid = ""
+        # Output fields derived from source
         self.expression = self.source_stem or ""
         self.surface_lexical_unit = self.source_word or ""
+        self.context_sentence = self.source_usage or ""
+        self.source_book = self.source_book_name or ""
+        self.location = f"loc_{position}" if position else ""
+        self.raw_context_text = self.source_usage or ""
+        self.raw_lookup_string = self.source_word or ""
+
+        # Processing output fields (populated by tasks)
         self.part_of_speech = ""
         self.definition = ""
         self.aspect = ""
         self.unit_type = "lemma"
-        self.context_sentence = self.source_usage or ""
         self.context_sentence_cloze = ""
         self.context_translation = ""
         self.collocations = ""
         self.original_language_hint = ""
         self.hint_test_enabled = ""
         self.notes = ""
-        self.source_book = self.source_book_name or ""
-        self.location = f"loc_{position}" if position else ""
         self.status = "raw"
         self.cloze_deletion_score = -1
         self.cloze_enabled = None
         self.generation_metadata = {}
         self.usage_level = ""
-        self.raw_context_text = self.source_usage or ""
-        self.raw_lookup_string = self.source_word or ""
 
-        # Generate book abbreviation
+        # Generate book abbreviation for tagging
         self.book_abbrev = self.generate_book_abbrev(self.source_book_name)
-
-        # Generate UID (requires book abbreviation and location to be set first)
-        self.uid = uid or self.generate_uid()
 
         # Format usage text for HTML
         self.format_context_sentence()
@@ -113,14 +144,17 @@ class AnkiNote:
 
         return result if result else "unknown"
 
-    def generate_uid(self):
-        """Generate unique ID based on word, book_abbrev, and location"""
-        # Normalize stem part similar to book_abbrev
-        word_normalized = unicodedata.normalize('NFD', self.source_word or "unknown")
-        stem_part = ''.join(char for char in word_normalized if unicodedata.category(char) != 'Mn')[:10]
-        stem_part = stem_part.lower().replace(' ', '_')
-        location_part = str(self.location).replace('kindle_', '') if self.location else "0"
-        return f"{stem_part}_{self.book_abbrev}_{location_part}"
+    @staticmethod
+    def normalize_for_uid(text: str, max_length: int = None) -> str:
+        """Normalize text for use in UID generation (remove diacritics, lowercase, etc.)"""
+        if not text:
+            return "unknown"
+        normalized = unicodedata.normalize('NFD', text)
+        result = ''.join(char for char in normalized if unicodedata.category(char) != 'Mn')
+        result = result.lower().replace(' ', '_')
+        if max_length:
+            result = result[:max_length]
+        return result if result else "unknown"
 
     def format_context_sentence(self):
         """Format usage text for HTML display"""
@@ -137,6 +171,12 @@ class AnkiNote:
             base_tags.append(self.book_abbrev)
 
         self.tags = " ".join(base_tags)
+
+    def _generate_default_uid(self, word: str, usage: str) -> str:
+        """Generate a default UID from word and usage hash when not provided by runtime."""
+        word_part = self.normalize_for_uid(word, max_length=10)
+        usage_hash = hashlib.md5(usage.encode('utf-8')).hexdigest()[:8]
+        return f"{word_part}_{usage_hash}"
 
     def get_context_sentence_cloze(self):
         """Get context sentence with word replaced by [...]"""

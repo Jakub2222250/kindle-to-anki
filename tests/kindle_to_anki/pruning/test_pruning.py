@@ -59,7 +59,14 @@ def test_prune_existing_notes_automatically():
     # Create test notes from test cases
     notes = []
     for i, test_case in enumerate(test_cases):
-        note = AnkiNote(test_case['word'], "", test_case['sentence'], "pl", "Test Book", f"loc_{i + 1}", "")
+        note = AnkiNote(
+            word=test_case['word'],
+            usage=test_case['sentence'],
+            language="pl",
+            uid=f"test_pruning_{i + 1}",
+            book_name="Test Book",
+            position=f"loc_{i + 1}"
+        )
         note.expression = test_case['expression']
         note.part_of_speech = test_case['part_of_speech']
         note.definition = test_case['definition']
