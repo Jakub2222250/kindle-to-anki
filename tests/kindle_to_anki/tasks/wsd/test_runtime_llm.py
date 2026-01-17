@@ -134,7 +134,7 @@ def run_evaluation(
     wsd_outputs = runtime.disambiguate(
         wsd_inputs,
         runtime_config=runtime_config,
-        ignore_cache=True,
+        ignore_cache=False,
         use_test_cache=True,
     )
     duration = time.time() - start_time

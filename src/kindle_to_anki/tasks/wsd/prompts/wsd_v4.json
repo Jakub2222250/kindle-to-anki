@@ -1,0 +1,22 @@
+{
+  "id": "wsd_v4",
+  "task": "wsd",
+  "flavor": "lemma_with_nuance",
+  "version": "4.0",
+  "input_schema": {
+    "items_json": "string",
+    "source_language_name": "string",
+    "target_language_name": "string"
+  },
+  "output_schema": {
+    "type": "object",
+    "keys": "uid",
+    "value": {
+      "definition": "string"
+    }
+  },
+  "constraints": {
+    "json_only": true,
+    "no_explanation": true
+  }
+}
