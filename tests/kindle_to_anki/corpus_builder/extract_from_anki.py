@@ -23,6 +23,7 @@ CORPUS_DIRS = {
     "wsd": Path(__file__).parent.parent / "tasks/wsd/fixtures",
     "collocation": Path(__file__).parent.parent / "tasks/collocation/fixtures",
     "hint": Path(__file__).parent.parent / "tasks/hint/fixtures",
+    "cloze_scoring": Path(__file__).parent.parent / "tasks/cloze_scoring/fixtures",
 }
 
 
@@ -54,6 +55,16 @@ class HintCorpusEntry:
     sentence: str
     source_lang: str
     target_lang: str
+
+
+@dataclass
+class ClozeScoringCorpusEntry:
+    uid: str
+    word: str
+    lemma: str
+    pos: str
+    sentence: str
+    source_lang: str
 
 
 def generate_uid(prefix: str, *args) -> str:
@@ -148,6 +159,33 @@ def note_to_hint_entry(note: Dict, source_lang: str, target_lang: str) -> Option
     )
 
 
+def note_to_cloze_scoring_entry(note: Dict, source_lang: str) -> Optional[ClozeScoringCorpusEntry]:
+    """Convert Anki note to cloze scoring corpus entry."""
+    fields = note.get("fields", {})
+
+    word = fields.get("Raw_Lookup_String", {}).get("value", "").strip()
+    lemma = fields.get("Expression", {}).get("value", "").strip()
+    pos = fields.get("Part_Of_Speech", {}).get("value", "").strip().lower()
+    sentence = fields.get("Raw_Context_Text", {}).get("value", "").strip()
+
+    if not all([word, lemma, sentence]):
+        return None
+
+    pos_map = {"rzeczownik": "noun", "czasownik": "verb", "przymiotnik": "adj", "przysłówek": "adv"}
+    pos = pos_map.get(pos, pos)
+
+    uid = generate_uid(f"{source_lang}_cloze", lemma, sentence[:50])
+
+    return ClozeScoringCorpusEntry(
+        uid=uid,
+        word=word,
+        lemma=lemma,
+        pos=pos,
+        sentence=sentence,
+        source_lang=source_lang,
+    )
+
+
 def save_corpus(entries: List[Any], corpus_type: str, source_lang: str, append: bool = True):
     """Save corpus entries to JSONL file."""
     output_dir = CORPUS_DIRS[corpus_type]
@@ -182,7 +220,7 @@ def main():
     parser.add_argument("--deck", help="Anki deck name to extract from")
     parser.add_argument("--source-lang", required=True, help="Source language code (e.g., pl)")
     parser.add_argument("--target-lang", default="en", help="Target language code (default: en)")
-    parser.add_argument("--corpus", choices=["wsd", "collocation", "hint", "all"], default="all",
+    parser.add_argument("--corpus", choices=["wsd", "collocation", "hint", "cloze_scoring", "all"], default="all",
                         help="Which corpus to generate")
     parser.add_argument("--limit", type=int, help="Max notes to process")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite instead of append")
@@ -212,6 +250,10 @@ def main():
     if args.corpus in ("hint", "all"):
         entries = [e for e in (note_to_hint_entry(n, args.source_lang, args.target_lang) for n in notes) if e]
         save_corpus(entries, "hint", args.source_lang, append=not args.overwrite)
+
+    if args.corpus in ("cloze_scoring", "all"):
+        entries = [e for e in (note_to_cloze_scoring_entry(n, args.source_lang) for n in notes) if e]
+        save_corpus(entries, "cloze_scoring", args.source_lang, append=not args.overwrite)
 
 
 if __name__ == "__main__":
