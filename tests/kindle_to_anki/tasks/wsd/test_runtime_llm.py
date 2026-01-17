@@ -22,7 +22,7 @@ bootstrap_all()
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 RESULTS_DIR = Path(__file__).parent / "eval_results"
 
-MODELS = ["gpt-5.1", "gpt-5-mini", "gemini-3-flash-preview"]
+MODELS = ["gpt-5.1", "gpt-5-mini", "gemini-2.5-flash"]
 
 
 @dataclass
@@ -199,10 +199,12 @@ def save_eval_run(eval_run: EvalRun, session_dir: Optional[Path] = None):
     print(f"Results saved to: {filepath}")
 
 
-def print_summary(eval_run: EvalRun):
+def print_summary(eval_run: EvalRun, compact: bool = False):
     """Print evaluation summary to console."""
+    config_label = f"{eval_run.model_id} | {eval_run.prompt_id or 'default'}"
+
     print("\n" + "=" * 80)
-    print("WSD EVALUATION SUMMARY")
+    print(f"WSD EVALUATION SUMMARY  [{config_label}]")
     print("=" * 80)
     print(f"Runtime:     {eval_run.runtime_id}")
     print(f"Model:       {eval_run.model_id}")
@@ -214,13 +216,14 @@ def print_summary(eval_run: EvalRun):
     print(f"SUCCESS:     {eval_run.successful}/{eval_run.total_cases} ({eval_run.success_rate:.1%}) {bar}")
     print("-" * 80)
 
-    # Show all results with definitions
-    print("\nRESULTS:")
-    for r in eval_run.results:
-        status = "✓" if r.has_output else "✗"
-        print(f"\n  {status} [{r.uid}] {r.word} ({r.lemma})")
-        print(f"    Sentence: \"{r.sentence[:60]}{'...' if len(r.sentence) > 60 else ''}\"")
-        print(f"    Definition: {r.definition if r.definition else '(empty)'}")
+    if not compact:
+        # Show all results with definitions
+        print("\nRESULTS:")
+        for r in eval_run.results:
+            status = "✓" if r.has_output else "✗"
+            print(f"\n  {status} [{r.uid}] {r.word} ({r.lemma})")
+            print(f"    Sentence: \"{r.sentence[:60]}{'...' if len(r.sentence) > 60 else ''}\"")
+            print(f"    Definition: {r.definition if r.definition else '(empty)'}")
 
     print("=" * 80 + "\n")
 
@@ -269,6 +272,7 @@ def run_matrix_evaluation(
 
     if len(all_runs) > 1:
         print_comparison_table(all_runs)
+        print_side_by_side_comparison(all_runs)
         save_comparison_summary(all_runs, session_dir)
 
     print(f"\nResults saved to: {session_dir}")
@@ -313,6 +317,73 @@ def save_comparison_summary(runs: List[EvalRun], session_dir: Path):
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     print(f"Summary saved to: {filepath}")
+
+
+def print_side_by_side_comparison(runs: List[EvalRun]):
+    """Print side-by-side comparison of results for each input across all configurations."""
+    if not runs:
+        return
+
+    # Group runs by (source_lang, target_lang) to compare same inputs
+    from collections import defaultdict
+    runs_by_lang = defaultdict(list)
+    for run in runs:
+        key = (run.source_lang, run.target_lang)
+        runs_by_lang[key].append(run)
+
+    print("\n" + "=" * 140)
+    print("SIDE-BY-SIDE COMPARISON (by input)")
+    print("=" * 140)
+
+    for (source_lang, target_lang), lang_runs in runs_by_lang.items():
+        if len(lang_runs) < 2:
+            continue
+
+        print(f"\n{'─' * 140}")
+        print(f"  {source_lang} → {target_lang}")
+        print(f"{'─' * 140}")
+
+        # Build config labels
+        config_labels = []
+        for run in lang_runs:
+            model_short = run.model_id.split("-")[0] if "-" in run.model_id else run.model_id[:8]
+            prompt_short = run.prompt_id or "default"
+            config_labels.append(f"{model_short}|{prompt_short}")
+
+        # Get all UIDs from first run (assuming same inputs across runs)
+        first_run = lang_runs[0]
+        results_by_uid = {r.uid: {} for r in first_run.results}
+
+        for run in lang_runs:
+            label = f"{run.model_id}|{run.prompt_id or 'default'}"
+            for r in run.results:
+                if r.uid in results_by_uid:
+                    results_by_uid[r.uid][label] = r
+
+        # Print each input with all its results
+        for result in first_run.results:
+            uid = result.uid
+            print(f"\n  ┌─ {result.word} ({result.lemma}) [{uid}]")
+            print(f"  │  \"{result.sentence[:100]}{'...' if len(result.sentence) > 100 else ''}\"")
+            print(f"  │")
+
+            for run in lang_runs:
+                label = f"{run.model_id}|{run.prompt_id or 'default'}"
+                r = results_by_uid[uid].get(label)
+                if r:
+                    definition = r.definition if r.definition else "(empty)"
+                    # Truncate long definitions for display
+                    if len(definition) > 80:
+                        definition = definition[:77] + "..."
+                    status = "✓" if r.has_output else "✗"
+                    model_short = run.model_id[:20]
+                    prompt_short = run.prompt_id or "default"
+                    config_label = f"{model_short}, {prompt_short}"
+                    print(f"  │  {status} ({config_label:30}): {definition}")
+
+            print(f"  └{'─' * 120}")
+
+    print("\n" + "=" * 140 + "\n")
 
 
 def prompt_selection(items: List[str], item_type: str, allow_all: bool = True) -> List[str]:
@@ -437,6 +508,7 @@ def interactive_evaluation():
 
     if len(all_runs) > 1:
         print_comparison_table(all_runs)
+        print_side_by_side_comparison(all_runs)
         # Save comparison table to session directory
         save_comparison_summary(all_runs, session_dir)
 

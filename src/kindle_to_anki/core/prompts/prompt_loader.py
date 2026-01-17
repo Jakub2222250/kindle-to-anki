@@ -57,7 +57,7 @@ class PromptLoader:
 
 # Default prompts per task
 DEFAULT_PROMPTS = {
-    "wsd": "wsd_v3",
+    "wsd": "wsd_v4",
     "usage_level": "usage_level_v1",
     "translation": "translation_v1",
     "collocation": "collocation_v1",

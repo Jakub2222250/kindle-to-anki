@@ -1,4 +1,60 @@
-{"uid": "pl_coll_001", "lemma": "dziecko", "pos": "noun", "source_lang": "pl"}
-{"uid": "pl_coll_002", "lemma": "książka", "pos": "noun", "source_lang": "pl"}
-{"uid": "pl_coll_003", "lemma": "biec", "pos": "verb", "source_lang": "pl"}
-{"uid": "pl_coll_004", "lemma": "piękny", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_d69d6d41", "lemma": "amorek", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_7489b553", "lemma": "banda", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_d44c4365", "lemma": "siostrzeniec", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_d992b399", "lemma": "złowróżbny", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_cfabf519", "lemma": "tęgi", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_fba1abf9", "lemma": "zwlec się", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_d60d0259", "lemma": "komórka", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_310027ff", "lemma": "donośny", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_e90fc450", "lemma": "oznajmiać", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_54c5d0f2", "lemma": "prosię", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_018f1908", "lemma": "peruka", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_01157c72", "lemma": "żmudnie", "pos": "adv", "source_lang": "pl"}
+{"uid": "pl_coll_dc5242c9", "lemma": "chwycić", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_e6726751", "lemma": "magnetowid", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_402f7737", "lemma": "rozwój", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_297f9b03", "lemma": "zastać", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_074f8a6c", "lemma": "wysadzić", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_0e0e0e5b", "lemma": "kościsty", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_7ccd7eaf", "lemma": "szczurzy", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_77468264", "lemma": "ofiara", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_e33f6bfc", "lemma": "żalić się", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_9a5ae3c4", "lemma": "użalać się", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_e26019bb", "lemma": "nadzorczy", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_8ebc6240", "lemma": "kreskówka", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_f8638849", "lemma": "gad", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_096a60ed", "lemma": "pełzać", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_ee5d6c43", "lemma": "jadowity", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_456f97dd", "lemma": "owinąć się", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_b6092c87", "lemma": "splot", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_f175ceb2", "lemma": "płaczliwy", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_b97d62bc", "lemma": "zatkać", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_f5957b26", "lemma": "krewny", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_8f3d587f", "lemma": "przywódca", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_394043a1", "lemma": "rozkosz", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_84e66814", "lemma": "promyk", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_6bad0759", "lemma": "muszla klozetowa", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_ea26c0c7", "lemma": "kredens", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_725cd357", "lemma": "kasztanowy", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_7aba442c", "lemma": "surdut", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_cbb05fd2", "lemma": "dostrzec", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_85e2675b", "lemma": "woskowy", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_ecbc48f8", "lemma": "pieczęć", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_17ee1bd5", "lemma": "owsianka", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_2cbd6a2c", "lemma": "wraz", "pos": "adv", "source_lang": "pl"}
+{"uid": "pl_coll_502ee0a8", "lemma": "smętnie", "pos": "adv", "source_lang": "pl"}
+{"uid": "pl_coll_9918ba43", "lemma": "pogrążony", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_a08bf21f", "lemma": "grzmocenie", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_7ccfbcc8", "lemma": "zawieść się", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_bc368dc6", "lemma": "powlec się", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_b9029cc9", "lemma": "szpara", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_1027313b", "lemma": "nucić", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_02dd329a", "lemma": "przeklęty", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_3e60f683", "lemma": "okap", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_40189a2d", "lemma": "unik", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_90cc1f8e", "lemma": "przedpokój", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_4cfa0b59", "lemma": "kępka", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_bf6be474", "lemma": "opuszczenie", "pos": "noun", "source_lang": "pl"}
+{"uid": "pl_coll_f558f36f", "lemma": "podły", "pos": "adj", "source_lang": "pl"}
+{"uid": "pl_coll_6beab387", "lemma": "wytrzeszczyć", "pos": "verb", "source_lang": "pl"}
+{"uid": "pl_coll_939e8eaf", "lemma": "zacny", "pos": "adj", "source_lang": "pl"}

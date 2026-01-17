@@ -72,7 +72,7 @@ def extract_notes_from_anki(deck_name: Optional[str] = None, limit: Optional[int
     else:
         query = f'"note:{NOTE_TYPE_NAME}"'
 
-    note_ids = anki.find_notes(query)
+    note_ids = anki._invoke("findNotes", {"query": query})
     if limit:
         note_ids = note_ids[:limit]
 
@@ -80,7 +80,7 @@ def extract_notes_from_anki(deck_name: Optional[str] = None, limit: Optional[int
         print(f"No notes found for query: {query}")
         return []
 
-    notes_info = anki.notes_info(note_ids)
+    notes_info = anki._invoke("notesInfo", {"notes": note_ids})
     return notes_info
 
 
@@ -91,7 +91,7 @@ def note_to_wsd_entry(note: Dict, source_lang: str, target_lang: str) -> Optiona
     word = fields.get("Raw_Lookup_String", {}).get("value", "").strip()
     lemma = fields.get("Expression", {}).get("value", "").strip()
     pos = fields.get("Part_Of_Speech", {}).get("value", "").strip().lower()
-    sentence = fields.get("Context_Sentence", {}).get("value", "").strip()
+    sentence = fields.get("Raw_Context_Text", {}).get("value", "").strip()
 
     if not all([word, lemma, sentence]):
         return None
