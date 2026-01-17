@@ -38,7 +38,7 @@ def run_usage_level_test(source_lang: str):
     if not test_cases:
         print(f"No test cases for {source_lang}")
         return
-    
+
     usage_inputs = [
         UsageLevelInput(
             uid=case['uid'],
@@ -50,28 +50,28 @@ def run_usage_level_test(source_lang: str):
         )
         for case in test_cases
     ]
-    
+
     print(f"\nTesting Usage Level runtime ({source_lang}) with {len(usage_inputs)} inputs...")
-    
+
     runtime = ChatCompletionUsageLevel()
     runtime_config = RuntimeConfig(model_id="gpt-5.1", batch_size=2, source_language_code=source_lang, target_language_code="en")
-    
+
     outputs = runtime.estimate(
         usage_inputs,
         runtime_config=runtime_config,
         use_test_cache=True,
-        ignore_cache=True
+        ignore_cache=False
     )
-    
+
     print(f"Usage Level completed. Got {len(outputs)} outputs.")
-    
+
     for i, (output_item, test_case) in enumerate(zip(outputs, test_cases)):
-        print(f"\nTest case {i+1}: {test_case['lemma']}")
+        print(f"\nTest case {i + 1}: {test_case['lemma']}")
         print(f"Definition: {test_case['definition']}")
         print(f"Usage level: {output_item.usage_level}")
-        
-        assert output_item.usage_level is None or (isinstance(output_item.usage_level, int) and 1 <= output_item.usage_level <= 5), f"Invalid usage level for test case {i+1}"
-    
+
+        assert output_item.usage_level is None or (isinstance(output_item.usage_level, int) and 1 <= output_item.usage_level <= 5), f"Invalid usage level for test case {i + 1}"
+
     print(f"\n✓ Usage Level runtime test ({source_lang}) completed successfully")
 
 

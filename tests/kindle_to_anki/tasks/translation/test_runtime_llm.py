@@ -14,7 +14,7 @@ bootstrap_all()
 
 def test_translation_runtime_llm():
     """Test LLM-based translation runtime."""
-    
+
     # Create test translation inputs
     translation_inputs = [
         TranslationInput(
@@ -26,33 +26,34 @@ def test_translation_runtime_llm():
             context="Kot śpi na kanapie w salonie."
         )
     ]
-    
+
     print(f"Testing translation runtime with {len(translation_inputs)} inputs...")
-    
+
     # Create runtime and config
     runtime = ChatCompletionTranslation()
     runtime_config = RuntimeConfig(model_id="gpt-5-mini", batch_size=2, source_language_code="pl", target_language_code="en")
-    
+
     # Test translation
     try:
         outputs = runtime.translate(
             translation_inputs,
             runtime_config=runtime_config,
-            use_test_cache=True
+            use_test_cache=True,
+            ignore_cache=False
         )
-        
+
         print(f"Translation completed. Got {len(outputs)} outputs.")
-        
+
         for i, (input_item, output_item) in enumerate(zip(translation_inputs, outputs)):
-            print(f"\nInput {i+1}: {input_item.context}")
-            print(f"Output {i+1}: {output_item.translation}")
-            
+            print(f"\nInput {i + 1}: {input_item.context}")
+            print(f"Output {i + 1}: {output_item.translation}")
+
             # Basic validation
-            assert output_item.translation, f"Empty translation for input {i+1}"
-            assert len(output_item.translation) > 0, f"No translation content for input {i+1}"
-            
+            assert output_item.translation, f"Empty translation for input {i + 1}"
+            assert len(output_item.translation) > 0, f"No translation content for input {i + 1}"
+
         print("\n✓ Translation runtime test completed successfully")
-        
+
     except Exception as e:
         print(f"✗ Translation runtime test failed: {e}")
         raise

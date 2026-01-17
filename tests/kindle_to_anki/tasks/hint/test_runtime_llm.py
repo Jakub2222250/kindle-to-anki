@@ -134,7 +134,7 @@ def run_evaluation(
     hint_outputs = runtime.generate(
         hint_inputs,
         runtime_config=runtime_config,
-        ignore_cache=True,
+        ignore_cache=False,
         use_test_cache=True,
     )
     duration = time.time() - start_time
@@ -269,6 +269,7 @@ def run_matrix_evaluation(
 
     if len(all_runs) > 1:
         print_comparison_table(all_runs)
+        print_side_by_side_comparison(all_runs)
         save_comparison_summary(all_runs, session_dir)
 
     print(f"\nResults saved to: {session_dir}")
@@ -313,6 +314,62 @@ def save_comparison_summary(runs: List[EvalRun], session_dir: Path):
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     print(f"Summary saved to: {filepath}")
+
+
+def print_side_by_side_comparison(runs: List[EvalRun]):
+    """Print side-by-side comparison of results for each input across all configurations."""
+    if not runs:
+        return
+
+    from collections import defaultdict
+    runs_by_lang = defaultdict(list)
+    for run in runs:
+        key = (run.source_lang, run.target_lang)
+        runs_by_lang[key].append(run)
+
+    print("\n" + "=" * 140)
+    print("SIDE-BY-SIDE COMPARISON (by input)")
+    print("=" * 140)
+
+    for (source_lang, target_lang), lang_runs in runs_by_lang.items():
+        if len(lang_runs) < 2:
+            continue
+
+        print(f"\n{'─' * 140}")
+        print(f"  {source_lang} → {target_lang}")
+        print(f"{'─' * 140}")
+
+        first_run = lang_runs[0]
+        results_by_uid = {r.uid: {} for r in first_run.results}
+
+        for run in lang_runs:
+            label = f"{run.model_id}|{run.prompt_id or 'default'}"
+            for r in run.results:
+                if r.uid in results_by_uid:
+                    results_by_uid[r.uid][label] = r
+
+        for result in first_run.results:
+            uid = result.uid
+            print(f"\n  ┌─ {result.word} ({result.lemma}) [{uid}]")
+            print(f"  │  \"{result.sentence[:100]}{'...' if len(result.sentence) > 100 else ''}\"")
+            print(f"  │")
+
+            for run in lang_runs:
+                label = f"{run.model_id}|{run.prompt_id or 'default'}"
+                r = results_by_uid[uid].get(label)
+                if r:
+                    hint = r.hint if r.hint else "(empty)"
+                    if len(hint) > 80:
+                        hint = hint[:77] + "..."
+                    status = "✓" if r.has_output else "✗"
+                    model_short = run.model_id[:20]
+                    prompt_short = run.prompt_id or "default"
+                    config_label = f"{model_short}, {prompt_short}"
+                    print(f"  │  {status} ({config_label:30}): {hint}")
+
+            print(f"  └{'─' * 120}")
+
+    print("\n" + "=" * 140 + "\n")
 
 
 def prompt_selection(items: List[str], item_type: str, allow_all: bool = True) -> List[str]:
@@ -437,6 +494,7 @@ def interactive_evaluation():
 
     if len(all_runs) > 1:
         print_comparison_table(all_runs)
+        print_side_by_side_comparison(all_runs)
         save_comparison_summary(all_runs, session_dir)
 
     print(f"\nCompleted {len(all_runs)} evaluation run(s).")
