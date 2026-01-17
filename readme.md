@@ -109,6 +109,24 @@ Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `dat
 py -m kindle_to_anki.main
 ```
 
+### Adjust Settings
+Run the setup wizard anytime to modify task settings, models, or deck configuration:
+```
+py -m kindle_to_anki.configuration.setup_wizard
+```
+
+### Update Existing Cards
+To retroactively update existing Anki cards by re-running specific tasks (e.g., regenerate definitions with a new prompt, recalculate usage levels):
+```
+py -m kindle_to_anki.update_anki_cards
+```
+
+This interactive script lets you:
+- Select which task(s) to run: WSD, hints, collocations, translations, usage levels, cloze scoring
+- Filter cards by deck, card state (new/learning/review), or custom Anki query
+- Preview changes before applying them
+- Update cards in batches
+
 ## Anki Usage
 
 ### Recommended Settings
