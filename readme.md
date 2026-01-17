@@ -51,6 +51,8 @@ With Gemini's free tier, you can process hundreds of words daily at no cost. For
 - [Python](https://www.python.org/downloads/)
 - [Anki Desktop](https://apps.ankiweb.net/)
 - [Google AI Studio account](https://aistudio.google.com/) — free tier available
+- Kindle eReader
+- Desire to learn foreign language words optimally
 
 ## Installation
 
@@ -81,22 +83,7 @@ Alternatively, copy the sample config and edit manually:
 copy data\config\config.sample.json data\config\config.json
 ```
 
-## Getting Vocabulary Data
-
-**Option A: Automatic (Windows)**
-Connect your Kindle via USB. The script will automatically find `vocab.db`.
-
-**Option B: Manual**
-Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `data/inputs/`.
-
-## Usage
-
-### Import Cards
-```
-py -m kindle_to_anki.main
-```
-
-### Manually validate Cards (Optional)
+### Deck Setup
 
 You may want to manually validate auto-generated notes before committing to learning them, or prioritize more relevant cards first. If so, set up a parent deck with subdecks:
 - `Language::Import` — where new cards land
@@ -107,23 +94,33 @@ In `config.json`, set `parent_deck_name` to your parent deck (e.g., `Polish Voca
 
 Install the **Advanced Browser** add-on (874215009) to sort by creation date and other useful fields.
 
-**Review workflow:**
-1. Open card browser, sort by creation date
-2. Select recent cards, tag as "batch"
-3. Filter `tag:batch`, review each:
-   - Useful → leave as-is
-   - Not worth studying → Ctrl+J to suspend
-4. Filter `tag:batch is:suspended` → move to `::Quarantine`
-5. Filter `tag:batch -is:suspended` → move to `::Ready`
-6. Remove "batch" tag
+## Getting Vocabulary Data
+
+**Option A: Automatic (Windows only)**
+Connect your Kindle via USB. The script will automatically find `vocab.db`.
+
+**Option B: Manual**
+Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `data/inputs/`.
+
+## Usage
+
+### Run Script to Create Anki Notes
+```
+py -m kindle_to_anki.main
+```
 
 ## Maintenance
 
-### Clear Vocabulary Builder (Optional)
+### Clear Vocabulary Builder
+Your Kindle can store a maximum of about 2000 vocabulary words.
+
 To reset Kindle's vocab.db:
-1. Delete `Internal Storage/vocabulary/vocab.db` and auxiliary files
-2. Disconnect and restart Kindle
-3. Look up a word quickly before cache recovers
+
+1. https://github.com/eichtml/Lexindle?tab=readme-ov-file#%EF%B8%8F-important-kindle-vocabulary-limit
+
+   If those instructions fail:
+   1. Save vocab.db to your PC first, then use it to overwrite vocab.db on the kindle
+   2. Click "sync" on kindle before restarting
 
 ## Running Tests
 ```
