@@ -109,6 +109,51 @@ Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `dat
 py -m kindle_to_anki.main
 ```
 
+## Anki Usage
+
+### Recommended Settings
+
+If you're new to Anki, these settings work well for vocabulary learning:
+
+1. **Enable FSRS** (modern spaced repetition algorithm):
+   - Go to deck options (gear icon next to deck) → FSRS section
+   - Enable "FSRS" toggle
+   - Click "Optimize" after you have 1000+ reviews for personalized intervals
+
+2. **Daily limits** (in deck options):
+   - New cards/day: **20** (adjust based on your time—each new card adds ~1 min/day of future reviews)
+   - Maximum reviews/day: **9999** (don't limit reviews; limiting creates a backlog)
+
+3. **Learning steps** (in deck options → New Cards):
+   - Learning steps: `1m 10m` (default is fine for most users)
+   - Graduating interval: `1` day
+
+4. **Display settings** (Tools → Preferences → Review):
+   - Show remaining card count: helpful for motivation
+   - Show next review time above buttons: helps you understand the algorithm
+
+### Filtering by Usage Level
+
+Each card is tagged with a `Usage_Level` from 1-5, where **5 = most common/useful words** and **1 = rare words**. Use this to prioritize high-value vocabulary.
+
+**Find cards by usage level:**
+- In the browser (Browse button), use the search filter:
+  - `Usage_Level:5` — most common words
+  - `Usage_Level:4 OR Usage_Level:5` — common words
+  - `Usage_Level:1 OR Usage_Level:2` — rare words (consider suspending)
+
+### Moving Cards Between Decks
+
+To move vetted cards from Import to Ready:
+
+1. Open the browser (Browse button or `B`)
+2. Search for cards in your import deck: `deck:"Polish Vocab Discovery::Import"`
+3. Optionally filter by usage level: `deck:"Polish Vocab Discovery::Import" Usage_Level:5`
+4. Select cards (`Ctrl+A` for all, or `Ctrl+Click` for specific cards)
+5. Right-click → Change Deck → select your Ready deck
+
+**Workflow tip:** Review new imports periodically. Move good cards to Ready, and cards you want to defer to Quarantine.
+
 ## Maintenance
 
 ### Clear Vocabulary Builder
