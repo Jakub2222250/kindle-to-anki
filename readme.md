@@ -94,6 +94,16 @@ In `config.json`, set `parent_deck_name` to your parent deck (e.g., `Polish Voca
 
 Install the **Advanced Browser** add-on (874215009) to sort by creation date and other useful fields.
 
+## Kindle Dictionary Setup
+
+For Vocabulary Builder to capture your lookups, you need a dictionary for your target language:
+
+1. **Built-in dictionaries**: Check if Kindle has a dictionary for your language. Go to Settings → Language & Dictionaries → Dictionaries to see available options and set a default.
+
+2. **Third-party dictionaries**: If no built-in option exists, [Reader Dict](https://www.reader-dict.com/) offers quality dictionaries for many languages.
+
+3. **Catch-all dictionary**: By default, Vocabulary Builder only captures words that exist in your dictionary. To capture *every* word you look up (even if undefined), install [catch-all-mobi](https://github.com/Jakub2222250/catch-all-mobi)—this ensures no lookup is missed.
+
 ## Getting Vocabulary Data
 
 **Option A: Automatic (Windows only)**
