@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from kindle_to_anki.ui.setup_wizard import SetupWizardFrame
 
 
 class KindleToAnkiApp(ctk.CTk):
@@ -8,17 +9,21 @@ class KindleToAnkiApp(ctk.CTk):
         super().__init__()
 
         self.title("Kindle to Anki")
-        self.geometry("600x400")
+        self.geometry("800x600")
 
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
 
-        self._create_widgets()
+        self.current_frame = None
+        self._show_main_view()
 
-    def _create_widgets(self):
-        # Main container
+    def _show_main_view(self):
+        if self.current_frame:
+            self.current_frame.destroy()
+
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self.current_frame = self.main_frame
 
         # Title label
         self.title_label = ctk.CTkLabel(
@@ -69,7 +74,12 @@ class KindleToAnkiApp(ctk.CTk):
         self.status_label.pack(side="bottom", pady=10)
 
     def _on_setup_wizard(self):
-        self.status_label.configure(text="Setup Wizard clicked - not yet implemented")
+        if self.current_frame:
+            self.current_frame.destroy()
+
+        self.wizard_frame = SetupWizardFrame(self, on_back=self._show_main_view)
+        self.wizard_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.current_frame = self.wizard_frame
 
     def _on_export(self):
         self.status_label.configure(text="Export clicked - not yet implemented")
