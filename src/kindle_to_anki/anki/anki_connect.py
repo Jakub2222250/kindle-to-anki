@@ -58,6 +58,16 @@ class AnkiConnect:
         """Get list of existing note type names"""
         return self._invoke("modelNames")
 
+    def get_deck_names(self) -> list[str]:
+        """Get list of existing deck names"""
+        result = self._invoke("deckNames")
+        return result if result else []
+
+    def create_deck(self, deck_name: str) -> bool:
+        """Create a new deck in Anki"""
+        result = self._invoke("createDeck", {"deck": deck_name})
+        return result is not None
+
     def create_model(self, model_name, fields, css, card_templates):
         """Create a new note type/model"""
         return self._invoke("createModel", {

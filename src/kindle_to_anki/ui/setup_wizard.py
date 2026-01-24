@@ -1,10 +1,10 @@
 import customtkinter as ctk
 from tkinter import messagebox
-import pycountry
+import threading
 import json
-import urllib.request
-import urllib.error
 from pathlib import Path
+
+from kindle_to_anki.anki.anki_connect import AnkiConnect
 
 
 # Common languages for vocabulary learning (subset of pycountry for usability)
@@ -68,40 +68,41 @@ def save_config(config: dict):
         json.dump(config, f, indent=2)
 
 
-class AnkiConnectHelper:
-    """Lightweight AnkiConnect helper for deck operations."""
+class AnkiConnectionManager:
+    """Manages AnkiConnect connection with lazy initialization."""
 
-    def __init__(self):
-        self.anki_url = "http://localhost:8765"
+    _instance = None
+    _anki_connect = None
+    _is_connected = None
 
-    def _invoke(self, action, params=None):
-        request_json = {"action": action, "version": 6}
-        if params:
-            request_json["params"] = params
-        try:
-            request_data = json.dumps(request_json).encode('utf-8')
-            request = urllib.request.Request(self.anki_url, request_data)
-            response = urllib.request.urlopen(request, timeout=5)
-            response_data = json.loads(response.read().decode('utf-8'))
-            if response_data.get('error'):
-                raise Exception(f"AnkiConnect error: {response_data['error']}")
-            return response_data.get('result')
-        except urllib.error.URLError:
-            return None
+    @classmethod
+    def get_connection(cls) -> tuple[AnkiConnect | None, bool]:
+        """Get or create AnkiConnect instance. Returns (instance, is_connected)."""
+        if cls._anki_connect is None:
+            try:
+                # Create without auto-exit on failure
+                cls._anki_connect = object.__new__(AnkiConnect)
+                cls._anki_connect.anki_url = "http://localhost:8765"
+                cls._anki_connect.note_type = "Polish Vocab Discovery"
+                cls._is_connected = cls._anki_connect.is_reachable()
+            except Exception:
+                cls._is_connected = False
+        return cls._anki_connect, cls._is_connected
 
-    def is_reachable(self) -> bool:
-        try:
-            return self._invoke("version") is not None
-        except Exception:
-            return False
+    @classmethod
+    def check_connection(cls) -> bool:
+        """Check if Anki is reachable (refreshes connection status)."""
+        if cls._anki_connect is None:
+            cls.get_connection()
+        else:
+            cls._is_connected = cls._anki_connect.is_reachable()
+        return cls._is_connected
 
-    def get_deck_names(self) -> list[str]:
-        result = self._invoke("deckNames")
-        return result if result else []
-
-    def create_deck(self, deck_name: str) -> bool:
-        result = self._invoke("createDeck", {"deck": deck_name})
-        return result is not None
+    @classmethod
+    def reset(cls):
+        """Reset connection state."""
+        cls._anki_connect = None
+        cls._is_connected = None
 
 
 class SetupWizardFrame(ctk.CTkFrame):
@@ -110,7 +111,8 @@ class SetupWizardFrame(ctk.CTkFrame):
     def __init__(self, parent, on_back=None):
         super().__init__(parent)
         self.on_back = on_back
-        self.anki_helper = AnkiConnectHelper()
+        self._anki_connected = False
+        self._checking_connection = False
 
         self._create_widgets()
         self._load_existing_decks()
@@ -337,8 +339,7 @@ class SetupWizardFrame(ctk.CTkFrame):
         self.status_label.configure(text=f"Added: {parent_deck}", text_color="green")
 
     def _create_decks_in_anki(self):
-        if not self.anki_helper.is_reachable():
-            messagebox.showerror("Error", "Cannot connect to Anki.\nMake sure Anki is running with AnkiConnect.")
+        if self._checking_connection:
             return
 
         parent_deck = self.parent_deck_var.get().strip()
@@ -348,16 +349,53 @@ class SetupWizardFrame(ctk.CTkFrame):
             messagebox.showerror("Error", "Please enter a parent deck name.")
             return
 
-        existing_decks = self.anki_helper.get_deck_names()
-        created = []
-        already_exist = []
+        # Show loading state
+        self._checking_connection = True
+        self.create_anki_btn.configure(state="disabled")
+        self.status_label.configure(text="⟳ Connecting to Anki...", text_color="gray")
 
-        for deck_name in [parent_deck, import_deck]:
-            if deck_name in existing_decks:
-                already_exist.append(deck_name)
-            else:
-                if self.anki_helper.create_deck(deck_name):
-                    created.append(deck_name)
+        def check_and_create():
+            # Reset cached connection to force fresh check
+            AnkiConnectionManager.reset()
+            anki, is_connected = AnkiConnectionManager.get_connection()
+
+            if not is_connected:
+                self.after(0, lambda: self._on_anki_connection_failed())
+                return
+
+            try:
+                existing_decks = anki.get_deck_names()
+                created = []
+                already_exist = []
+
+                for deck_name in [parent_deck, import_deck]:
+                    if deck_name in existing_decks:
+                        already_exist.append(deck_name)
+                    else:
+                        if anki.create_deck(deck_name):
+                            created.append(deck_name)
+
+                self.after(0, lambda: self._on_decks_created(created, already_exist))
+            except Exception as e:
+                self.after(0, lambda: self._on_anki_error(str(e)))
+
+        thread = threading.Thread(target=check_and_create, daemon=True)
+        thread.start()
+
+    def _on_anki_connection_failed(self):
+        self._checking_connection = False
+        self.create_anki_btn.configure(state="normal")
+        self.status_label.configure(text="", text_color="gray")
+        messagebox.showerror("Error", "Cannot connect to Anki.\nMake sure Anki is running with AnkiConnect.")
+
+    def _on_anki_error(self, error_msg: str):
+        self._checking_connection = False
+        self.create_anki_btn.configure(state="normal")
+        self.status_label.configure(text=f"Error: {error_msg}", text_color="red")
+
+    def _on_decks_created(self, created: list, already_exist: list):
+        self._checking_connection = False
+        self.create_anki_btn.configure(state="normal")
 
         msg_parts = []
         if created:
