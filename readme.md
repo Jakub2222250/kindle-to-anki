@@ -74,10 +74,16 @@ With Anki open, go to Tools → Add-ons → Get Add-ons and install:
 - AnkiConnect: 2055492159
 
 ### 4. Configuration
-Run the setup wizard to configure your decks and task settings (will also create the note type if missing):
+Launch the UI and use the Setup Wizard to configure your decks and task settings:
 ```
-py -m kindle_to_anki.configuration.setup_wizard
+py -m kindle_to_anki.ui.app
 ```
+Click **Setup Wizard** to:
+- Add/remove language decks
+- Configure source and target languages
+- Set task-specific settings (models, batch sizes) per deck
+- Create the Anki note type if missing
+
 Alternatively, copy the sample config and edit manually:
 ```
 copy data\config\config.sample.json data\config\config.json
@@ -114,16 +120,21 @@ Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `dat
 
 ## Usage
 
-### Run Script to Create Anki Notes
+### Launch the UI
 ```
-py -m kindle_to_anki.main
+py -m kindle_to_anki.ui.app
 ```
 
+### Export Vocabulary to Anki
+From the main screen, click **Export Vocabulary** to:
+- Read vocabulary from your Kindle
+- Process words through all configured tasks (disambiguation, translation, hints, etc.)
+- Create flashcards in Anki via AnkiConnect
+
+Progress and logs are displayed in real-time.
+
 ### Adjust Settings
-Run the setup wizard anytime to modify task settings, models, or deck configuration:
-```
-py -m kindle_to_anki.configuration.setup_wizard
-```
+Click **Setup Wizard** anytime to modify task settings, models, or deck configuration.
 
 ### Update Existing Cards
 To retroactively update existing Anki cards by re-running specific tasks (e.g., regenerate definitions with a new prompt, recalculate usage levels):
