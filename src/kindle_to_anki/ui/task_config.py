@@ -2,6 +2,10 @@ import customtkinter as ctk
 from typing import Callable
 import copy
 
+from kindle_to_anki.core.bootstrap import bootstrap_all
+from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
+from kindle_to_anki.core.models.registry import ModelRegistry
+
 # Task metadata: display names, descriptions, and whether they're optional
 TASK_METADATA = {
     "lui": {
@@ -41,35 +45,68 @@ TASK_METADATA = {
     }
 }
 
-# Available models (simplified list - in production would come from ModelRegistry)
-AVAILABLE_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gpt-5.1",
-    "gpt-5-mini",
-]
+# Language restrictions for certain runtimes (runtime_id -> list of supported source languages)
+RUNTIME_LANGUAGE_RESTRICTIONS = {
+    "polish_ma_llm_hybrid_lui": ["pl"],
+    "polish_local_translation": ["pl"],
+}
 
 TASK_ORDER = ["lui", "wsd", "translation", "hint", "cloze_scoring", "usage_level", "collocation"]
+
+
+def get_runtimes_for_task(task: str, source_language_code: str = None) -> list:
+    """Get available runtimes for a task, optionally filtered by language."""
+    bootstrap_all()
+    runtimes = RuntimeRegistry.find_by_task(task)
+
+    if source_language_code:
+        filtered = []
+        for rt in runtimes:
+            restrictions = RUNTIME_LANGUAGE_RESTRICTIONS.get(rt.id)
+            if restrictions is None or source_language_code in restrictions:
+                filtered.append(rt)
+        return filtered
+    return list(runtimes)
+
+
+def get_models_for_runtime(runtime) -> list[str]:
+    """Get available model IDs for a runtime based on its supported model families."""
+    if not runtime.supported_model_families:
+        return []
+
+    bootstrap_all()
+    models = []
+    for model in ModelRegistry.list():
+        if model.family in runtime.supported_model_families:
+            models.append(model.id)
+    return models
 
 
 class TaskConfigRow(ctk.CTkFrame):
     """A single row for configuring one task."""
 
-    def __init__(self, parent, task_key: str, task_settings: dict, on_change: Callable = None):
+    def __init__(self, parent, task_key: str, task_settings: dict, 
+                 source_language_code: str = None, on_change: Callable = None):
         super().__init__(parent, fg_color="transparent")
         self.task_key = task_key
         self.task_settings = task_settings
+        self.source_language_code = source_language_code
         self.on_change = on_change
         self.metadata = TASK_METADATA.get(task_key, {})
+
+        # Get available runtimes for this task
+        self.available_runtimes = get_runtimes_for_task(task_key, source_language_code)
+        self.runtime_map = {rt.id: rt for rt in self.available_runtimes}
 
         self._create_widgets()
 
     def _create_widgets(self):
-        # Configure grid
+        # Configure grid - add runtime column
         self.grid_columnconfigure(0, weight=0, minsize=30)   # Enable checkbox
-        self.grid_columnconfigure(1, weight=1, minsize=180)  # Task name
-        self.grid_columnconfigure(2, weight=0, minsize=160)  # Model dropdown
-        self.grid_columnconfigure(3, weight=0, minsize=80)   # Batch size
+        self.grid_columnconfigure(1, weight=1, minsize=160)  # Task name
+        self.grid_columnconfigure(2, weight=0, minsize=180)  # Runtime dropdown
+        self.grid_columnconfigure(3, weight=0, minsize=150)  # Model dropdown
+        self.grid_columnconfigure(4, weight=0, minsize=80)   # Batch size
 
         col = 0
 
@@ -112,14 +149,31 @@ class TaskConfigRow(ctk.CTkFrame):
 
         col += 1
 
-        # Model dropdown (readonly to prevent custom entries)
-        current_model = self.task_settings.get("model_id", AVAILABLE_MODELS[0])
-        self.model_var = ctk.StringVar(value=current_model)
+        # Runtime dropdown
+        runtime_ids = [rt.id for rt in self.available_runtimes]
+        current_runtime = self.task_settings.get("runtime", runtime_ids[0] if runtime_ids else "")
+        if current_runtime not in runtime_ids and runtime_ids:
+            current_runtime = runtime_ids[0]
+
+        self.runtime_var = ctk.StringVar(value=current_runtime)
+        self.runtime_dropdown = ctk.CTkOptionMenu(
+            self,
+            values=runtime_ids if runtime_ids else ["(none)"],
+            variable=self.runtime_var,
+            width=170,
+            command=self._on_runtime_change
+        )
+        self.runtime_dropdown.grid(row=0, column=col, padx=5, sticky="w")
+
+        col += 1
+
+        # Model dropdown (will be updated based on runtime)
+        self.model_var = ctk.StringVar(value=self.task_settings.get("model_id", ""))
         self.model_dropdown = ctk.CTkOptionMenu(
             self,
-            values=AVAILABLE_MODELS,
+            values=["(none)"],
             variable=self.model_var,
-            width=150,
+            width=140,
             command=self._on_model_change
         )
         self.model_dropdown.grid(row=0, column=col, padx=5, sticky="w")
@@ -127,21 +181,65 @@ class TaskConfigRow(ctk.CTkFrame):
         col += 1
 
         # Batch size
-        batch_frame = ctk.CTkFrame(self, fg_color="transparent")
-        batch_frame.grid(row=0, column=col, padx=5, sticky="w")
+        self.batch_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.batch_frame.grid(row=0, column=col, padx=5, sticky="w")
 
-        ctk.CTkLabel(batch_frame, text="Batch:", font=ctk.CTkFont(size=11)).pack(side="left")
+        self.batch_label = ctk.CTkLabel(self.batch_frame, text="Batch:", font=ctk.CTkFont(size=11))
+        self.batch_label.pack(side="left")
         self.batch_var = ctk.StringVar(value=str(self.task_settings.get("batch_size", 30)))
         self.batch_entry = ctk.CTkEntry(
-            batch_frame,
+            self.batch_frame,
             textvariable=self.batch_var,
             width=50
         )
         self.batch_entry.pack(side="left", padx=(3, 0))
         self.batch_var.trace_add("write", self._on_batch_change)
 
+        # Update model options based on current runtime
+        self._update_model_options()
         # Update visual state
         self._update_enabled_state()
+
+    def _on_runtime_change(self, _=None):
+        self._update_model_options()
+        self._notify_change()
+
+    def _update_model_options(self):
+        """Update model dropdown and batch visibility based on selected runtime."""
+        runtime_id = self.runtime_var.get()
+        runtime = self.runtime_map.get(runtime_id)
+
+        if not runtime:
+            self._set_model_state(False, [])
+            self._set_batch_state(False)
+            return
+
+        # Update model dropdown
+        models = get_models_for_runtime(runtime)
+        has_models = len(models) > 0
+        self._set_model_state(has_models, models)
+
+        # Update batch visibility
+        has_batching = getattr(runtime, 'supports_batching', True)
+        self._set_batch_state(has_batching)
+
+    def _set_model_state(self, enabled: bool, models: list):
+        """Enable/disable model dropdown and update options."""
+        if enabled and models:
+            self.model_dropdown.configure(state="normal", values=models)
+            current = self.model_var.get()
+            if current not in models:
+                self.model_var.set(models[0])
+        else:
+            self.model_dropdown.configure(state="disabled", values=["(n/a)"])
+            self.model_var.set("(n/a)")
+
+    def _set_batch_state(self, enabled: bool):
+        """Enable/disable batch size input."""
+        state = "normal" if enabled else "disabled"
+        self.batch_entry.configure(state=state)
+        color = ("gray10", "gray90") if enabled else "gray"
+        self.batch_label.configure(text_color=color)
 
     def _on_enabled_change(self):
         self._update_enabled_state()
@@ -155,15 +253,17 @@ class TaskConfigRow(ctk.CTkFrame):
 
     def _update_enabled_state(self):
         enabled = self.enabled_var.get()
-        state = "normal" if enabled else "disabled"
 
-        self.model_dropdown.configure(state=state)
-        self.batch_entry.configure(state=state)
-        # Use default color when enabled, gray when disabled
         if enabled:
             self.name_label.configure(text_color=("gray10", "gray90"))
+            self.runtime_dropdown.configure(state="normal")
+            # Re-apply model/batch state based on runtime
+            self._update_model_options()
         else:
             self.name_label.configure(text_color="gray")
+            self.runtime_dropdown.configure(state="disabled")
+            self.model_dropdown.configure(state="disabled")
+            self.batch_entry.configure(state="disabled")
 
     def _notify_change(self):
         if self.on_change:
@@ -171,9 +271,10 @@ class TaskConfigRow(ctk.CTkFrame):
 
     def get_settings(self) -> dict:
         """Get current settings for this task."""
+        model_val = self.model_var.get()
         settings = {
-            "runtime": f"chat_completion_{self.task_key}",
-            "model_id": self.model_var.get(),
+            "runtime": self.runtime_var.get(),
+            "model_id": model_val if model_val != "(n/a)" else None,
             "batch_size": int(self.batch_var.get()) if self.batch_var.get().isdigit() else 30
         }
         if self.metadata.get("optional", False):
@@ -188,6 +289,7 @@ class TaskConfigPanel(ctk.CTkFrame):
         super().__init__(parent)
         self.deck_config = deck_config
         self.task_settings = copy.deepcopy(deck_config.get("task_settings", {}))
+        self.source_language_code = deck_config.get("source_language_code")
         self.on_save = on_save
         self.on_cancel = on_cancel
         self.task_rows = {}
@@ -224,14 +326,16 @@ class TaskConfigPanel(ctk.CTkFrame):
         header_row = ctk.CTkFrame(self.tasks_scroll, fg_color="transparent")
         header_row.pack(fill="x", pady=(0, 10))
         header_row.grid_columnconfigure(0, weight=0, minsize=30)
-        header_row.grid_columnconfigure(1, weight=1, minsize=180)
-        header_row.grid_columnconfigure(2, weight=0, minsize=160)
-        header_row.grid_columnconfigure(3, weight=0, minsize=80)
+        header_row.grid_columnconfigure(1, weight=1, minsize=160)
+        header_row.grid_columnconfigure(2, weight=0, minsize=180)
+        header_row.grid_columnconfigure(3, weight=0, minsize=150)
+        header_row.grid_columnconfigure(4, weight=0, minsize=80)
 
         ctk.CTkLabel(header_row, text="", width=20).grid(row=0, column=0)
         ctk.CTkLabel(header_row, text="Task", font=ctk.CTkFont(weight="bold")).grid(row=0, column=1, sticky="w", padx=5)
-        ctk.CTkLabel(header_row, text="Model", font=ctk.CTkFont(weight="bold")).grid(row=0, column=2, sticky="w", padx=5)
-        ctk.CTkLabel(header_row, text="Batch", font=ctk.CTkFont(weight="bold")).grid(row=0, column=3, sticky="w", padx=5)
+        ctk.CTkLabel(header_row, text="Runtime", font=ctk.CTkFont(weight="bold")).grid(row=0, column=2, sticky="w", padx=5)
+        ctk.CTkLabel(header_row, text="Model", font=ctk.CTkFont(weight="bold")).grid(row=0, column=3, sticky="w", padx=5)
+        ctk.CTkLabel(header_row, text="Batch", font=ctk.CTkFont(weight="bold")).grid(row=0, column=4, sticky="w", padx=5)
 
         # Separator
         ctk.CTkFrame(self.tasks_scroll, height=2, fg_color="gray").pack(fill="x", pady=(0, 10))
@@ -243,6 +347,7 @@ class TaskConfigPanel(ctk.CTkFrame):
                 self.tasks_scroll,
                 task_key,
                 task_settings,
+                source_language_code=self.source_language_code,
                 on_change=self._on_task_change
             )
             row.pack(fill="x", pady=5)

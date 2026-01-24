@@ -9,7 +9,7 @@ class KindleToAnkiApp(ctk.CTk):
         super().__init__()
 
         self.title("Kindle to Anki")
-        self.geometry("950x700")
+        self.geometry("1050x700")
 
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
