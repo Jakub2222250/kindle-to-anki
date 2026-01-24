@@ -83,13 +83,13 @@ def export_kindle_vocab():
 
         # Show selected configuration with cost estimates
         task_settings = {
-            "lui": config_manager.get_task_setting("lui"),
-            "wsd": config_manager.get_task_setting("wsd"),
-            "hint": config_manager.get_task_setting("hint"),
-            "cloze_scoring": config_manager.get_task_setting("cloze_scoring"),
-            "usage_level": config_manager.get_task_setting("usage_level"),
-            "translation": config_manager.get_task_setting("translation"),
-            "collocation": config_manager.get_task_setting("collocation")
+            "lui": anki_deck.get_task_setting("lui"),
+            "wsd": anki_deck.get_task_setting("wsd"),
+            "hint": anki_deck.get_task_setting("hint"),
+            "cloze_scoring": anki_deck.get_task_setting("cloze_scoring"),
+            "usage_level": anki_deck.get_task_setting("usage_level"),
+            "translation": anki_deck.get_task_setting("translation"),
+            "collocation": anki_deck.get_task_setting("collocation")
         }
         show_selected_options(task_settings, source_language_code, target_language_code, len(notes))
 
@@ -102,7 +102,7 @@ def export_kindle_vocab():
                 exit()
 
         # Enrich notes with lexical unit identification
-        lui_setting = config_manager.get_task_setting("lui")
+        lui_setting = anki_deck.get_task_setting("lui")
         lui_prompt_id = lui_setting.get("prompt_id") or get_lui_default_prompt_id(source_language_code)
         lui_provider.identify(
             notes=notes,
@@ -123,7 +123,7 @@ def export_kindle_vocab():
             continue
 
         # Provide word sense disambiguation via LLM
-        wsd_setting = config_manager.get_task_setting("wsd")
+        wsd_setting = anki_deck.get_task_setting("wsd")
         wsd_prompt_id = wsd_setting.get("prompt_id") or get_default_prompt_id("wsd")
         wsd_provider.disambiguate(
             notes=notes,
@@ -151,7 +151,7 @@ def export_kindle_vocab():
             continue
 
         # Generate hints
-        hint_setting = config_manager.get_task_setting("hint")
+        hint_setting = anki_deck.get_task_setting("hint")
         if hint_setting.get("enabled", True):
             hint_prompt_id = hint_setting.get("prompt_id") or get_default_prompt_id("hint")
             hint_provider.generate(
@@ -169,7 +169,7 @@ def export_kindle_vocab():
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Score cloze deletion suitability
-        cloze_setting = config_manager.get_task_setting("cloze_scoring")
+        cloze_setting = anki_deck.get_task_setting("cloze_scoring")
         if cloze_setting.get("enabled", True):
             cloze_prompt_id = cloze_setting.get("prompt_id") or get_default_prompt_id("cloze_scoring")
             cloze_scoring_provider.score(
@@ -191,7 +191,7 @@ def export_kindle_vocab():
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Estimate usage level
-        usage_level_setting = config_manager.get_task_setting("usage_level")
+        usage_level_setting = anki_deck.get_task_setting("usage_level")
         if usage_level_setting.get("enabled", True):
             usage_level_prompt_id = usage_level_setting.get("prompt_id") or get_default_prompt_id("usage_level")
             usage_level_provider.estimate(
@@ -209,7 +209,7 @@ def export_kindle_vocab():
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Provide translations
-        translation_setting = config_manager.get_task_setting("translation")
+        translation_setting = anki_deck.get_task_setting("translation")
         translation_prompt_id = translation_setting.get("prompt_id") or get_default_prompt_id("translation")
         translation_provider.translate(
             notes=notes,
@@ -227,7 +227,7 @@ def export_kindle_vocab():
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         # Provide collocations
-        collocation_setting = config_manager.get_task_setting("collocation")
+        collocation_setting = anki_deck.get_task_setting("collocation")
         if collocation_setting.get("enabled", True):
             collocation_prompt_id = collocation_setting.get("prompt_id") or get_default_prompt_id("collocation")
             collocation_provider.generate_collocations(

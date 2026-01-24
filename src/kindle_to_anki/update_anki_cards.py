@@ -480,8 +480,8 @@ def main():
     task_info = AVAILABLE_TASKS[task_key]
     print(f"Selected: {task_info['name']}")
 
-    # Get task settings from config
-    task_settings = config_manager.get_task_setting(task_key)
+    # Get task settings from deck config
+    task_settings = deck.get_task_setting(task_key)
     default_runtime_id = task_settings.get("runtime", f"chat_completion_{task_key}")
     default_model_id = task_settings.get("model_id", "gpt-5.1")
     default_batch_size = task_settings.get("batch_size", 30)
