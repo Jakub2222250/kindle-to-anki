@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from kindle_to_anki.ui.setup_wizard import SetupWizardFrame
+from kindle_to_anki.ui.export_view import ExportView
 
 
 class KindleToAnkiApp(ctk.CTk):
@@ -82,7 +83,12 @@ class KindleToAnkiApp(ctk.CTk):
         self.current_frame = self.wizard_frame
 
     def _on_export(self):
-        self.status_label.configure(text="Export clicked - not yet implemented")
+        if self.current_frame:
+            self.current_frame.destroy()
+
+        self.export_frame = ExportView(self, on_back=self._show_main_view)
+        self.export_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.current_frame = self.export_frame
 
 
 def main():
