@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from kindle_to_anki.anki.anki_connect import AnkiConnect
+from kindle_to_anki.ui.task_config import TaskConfigPanel
 
 
 # Common languages for vocabulary learning (subset of pycountry for usability)
@@ -113,6 +114,7 @@ class SetupWizardFrame(ctk.CTkFrame):
         self.on_back = on_back
         self._anki_connected = False
         self._checking_connection = False
+        self._editing_deck_index = None
 
         self._create_widgets()
         self._load_existing_decks()
@@ -261,21 +263,35 @@ class SetupWizardFrame(ctk.CTkFrame):
         ).pack(pady=(10, 15))
 
         # Scrollable frame for deck list
-        self.decks_scroll = ctk.CTkScrollableFrame(list_frame, height=250)
+        self.decks_scroll = ctk.CTkScrollableFrame(list_frame, height=200)
         self.decks_scroll.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        # Buttons frame
+        buttons_frame = ctk.CTkFrame(list_frame, fg_color="transparent")
+        buttons_frame.pack(fill="x", padx=10, pady=(0, 15))
+
+        # Configure Tasks button
+        self.config_tasks_btn = ctk.CTkButton(
+            buttons_frame,
+            text="Configure Tasks",
+            width=130,
+            command=self._configure_selected_deck
+        )
+        self.config_tasks_btn.pack(side="left", padx=(0, 10))
 
         # Remove selected button
         self.remove_btn = ctk.CTkButton(
-            list_frame,
-            text="Remove Selected",
-            width=150,
+            buttons_frame,
+            text="Remove",
+            width=80,
             fg_color="darkred",
             hover_color="red",
             command=self._remove_selected_deck
         )
-        self.remove_btn.pack(pady=(0, 15))
+        self.remove_btn.pack(side="left")
 
-        self.deck_checkboxes = []
+        self.deck_widgets = []  # Store (frame, radio_var) tuples
+        self.selected_deck_var = ctk.IntVar(value=-1)
 
     def _on_language_change(self, _=None):
         source = self.language_codes.get(self.source_lang_var.get(), "")
@@ -409,10 +425,11 @@ class SetupWizardFrame(ctk.CTkFrame):
             self.status_label.configure(text="No decks created", text_color="orange")
 
     def _load_existing_decks(self):
-        # Clear existing checkboxes
-        for cb, var in self.deck_checkboxes:
-            cb.destroy()
-        self.deck_checkboxes.clear()
+        # Clear existing widgets
+        for widget in self.deck_widgets:
+            widget.destroy()
+        self.deck_widgets.clear()
+        self.selected_deck_var.set(-1)
 
         config = load_config()
         decks = config.get("anki_decks", [])
@@ -424,43 +441,87 @@ class SetupWizardFrame(ctk.CTkFrame):
                 text_color="gray"
             )
             no_decks_label.pack(pady=20)
-            self.deck_checkboxes.append((no_decks_label, None))
+            self.deck_widgets.append(no_decks_label)
             return
 
-        for deck in decks:
-            var = ctk.BooleanVar(value=False)
-            text = f"{deck['source_language_code']} → {deck['target_language_code']}\n{deck['parent_deck_name']}"
-            cb = ctk.CTkCheckBox(
+        for i, deck in enumerate(decks):
+            text = f"{deck['source_language_code']} → {deck['target_language_code']}  |  {deck['parent_deck_name']}"
+            rb = ctk.CTkRadioButton(
                 self.decks_scroll,
                 text=text,
-                variable=var,
+                variable=self.selected_deck_var,
+                value=i,
                 font=ctk.CTkFont(size=12)
             )
-            cb.pack(anchor="w", pady=5, padx=5)
-            self.deck_checkboxes.append((cb, var))
+            rb.pack(anchor="w", pady=5, padx=5)
+            self.deck_widgets.append(rb)
 
     def _remove_selected_deck(self):
+        selected_idx = self.selected_deck_var.get()
+        if selected_idx < 0:
+            messagebox.showinfo("Info", "No deck selected.")
+            return
+
         config = load_config()
         decks = config.get("anki_decks", [])
 
-        indices_to_remove = []
-        for i, (cb, var) in enumerate(self.deck_checkboxes):
-            if var and var.get():
-                indices_to_remove.append(i)
+        if selected_idx < len(decks):
+            removed = decks.pop(selected_idx)
+            config["anki_decks"] = decks
+            save_config(config)
+            self._load_existing_decks()
+            self.status_label.configure(
+                text=f"Removed: {removed['parent_deck_name']}",
+                text_color="orange"
+            )
 
-        if not indices_to_remove:
-            messagebox.showinfo("Info", "No decks selected.")
+    def _configure_selected_deck(self):
+        selected_idx = self.selected_deck_var.get()
+        if selected_idx < 0:
+            messagebox.showinfo("Info", "Please select a deck to configure.")
             return
 
-        # Remove in reverse order to maintain indices
-        for i in reversed(indices_to_remove):
-            if i < len(decks):
-                decks.pop(i)
+        config = load_config()
+        decks = config.get("anki_decks", [])
 
-        config["anki_decks"] = decks
-        save_config(config)
+        if selected_idx >= len(decks):
+            return
+
+        self._editing_deck_index = selected_idx
+        deck_config = decks[selected_idx]
+
+        # Hide the main content and show task config panel
+        self.scroll_container.pack_forget()
+
+        self.task_config_panel = TaskConfigPanel(
+            self,
+            deck_config,
+            on_save=self._on_task_config_save,
+            on_cancel=self._on_task_config_cancel
+        )
+        self.task_config_panel.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+    def _on_task_config_save(self, new_settings: dict):
+        if self._editing_deck_index is not None:
+            config = load_config()
+            decks = config.get("anki_decks", [])
+
+            if self._editing_deck_index < len(decks):
+                decks[self._editing_deck_index]["task_settings"] = new_settings
+                save_config(config)
+                self.status_label.configure(text="Task settings saved", text_color="green")
+
+        self._close_task_config_panel()
+
+    def _on_task_config_cancel(self):
+        self._close_task_config_panel()
+
+    def _close_task_config_panel(self):
+        self._editing_deck_index = None
+        if hasattr(self, 'task_config_panel'):
+            self.task_config_panel.destroy()
+        self.scroll_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         self._load_existing_decks()
-        self.status_label.configure(text="Deck(s) removed", text_color="orange")
 
     def _on_back(self):
         if self.on_back:
