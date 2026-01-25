@@ -10,11 +10,21 @@ class GeminiPlatform(ChatCompletionPlatform):
     name = "Gemini"
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
-        self.client = None
-        if self.api_key:
-            self.client = genai.Client(api_key=self.api_key)
+        self._api_key = api_key
+        self._client = None
         self._credentials_valid = None
+
+    @property
+    def api_key(self):
+        if self._api_key is None:
+            self._api_key = os.environ.get("GEMINI_API_KEY")
+        return self._api_key
+
+    @property
+    def client(self):
+        if self._client is None and self.api_key:
+            self._client = genai.Client(api_key=self.api_key)
+        return self._client
 
     def call_api(self, model: str, prompt: str, **kwargs) -> str:
         """

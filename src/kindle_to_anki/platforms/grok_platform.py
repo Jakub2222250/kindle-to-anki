@@ -4,16 +4,27 @@ from openai import OpenAI
 
 from .chat_completion_platform import ChatCompletionPlatform
 
+
 class GrokPlatform(ChatCompletionPlatform):
     id = "grok"
     name = "Grok"
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.environ.get("XAI_API_KEY")
-        self.client = None
-        if self.api_key:
-            self.client = OpenAI(api_key=self.api_key, base_url="https://api.x.ai/v1")
+        self._api_key = api_key
+        self._client = None
         self._credentials_valid = None
+
+    @property
+    def api_key(self):
+        if self._api_key is None:
+            self._api_key = os.environ.get("XAI_API_KEY")
+        return self._api_key
+
+    @property
+    def client(self):
+        if self._client is None and self.api_key:
+            self._client = OpenAI(api_key=self.api_key, base_url="https://api.x.ai/v1")
+        return self._client
 
     def call_api(self, model: str, prompt: str, **kwargs) -> str:
         """
@@ -22,7 +33,7 @@ class GrokPlatform(ChatCompletionPlatform):
         if not self.client:
             raise RuntimeError("Grok client not initialized - API key missing")
         messages = [{"role": "user", "content": prompt}]
-        
+
         response = self.client.chat.completions.create(
             model=model, 
             messages=messages, 

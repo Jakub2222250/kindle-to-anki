@@ -8,15 +8,25 @@ class DeepLPlatform:
     name = "DeepL"
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.environ.get("DEEPL_API_KEY")
-        self.base_url = None
-        if self.api_key:
+        self._api_key = api_key
+        self._base_url = None
+        self._credentials_valid = None
+
+    @property
+    def api_key(self):
+        if self._api_key is None:
+            self._api_key = os.environ.get("DEEPL_API_KEY")
+        return self._api_key
+
+    @property
+    def base_url(self):
+        if self._base_url is None and self.api_key:
             # Use free API if key ends with :fx
             if self.api_key.endswith(":fx"):
-                self.base_url = "https://api-free.deepl.com/v2"
+                self._base_url = "https://api-free.deepl.com/v2"
             else:
-                self.base_url = "https://api.deepl.com/v2"
-        self._credentials_valid = None
+                self._base_url = "https://api.deepl.com/v2"
+        return self._base_url
 
     def translate(self, texts: list[str], target_lang: str, source_lang: str = None) -> list[str]:
         """
