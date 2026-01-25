@@ -2,6 +2,7 @@
 from typing import List, Dict, Tuple
 from datetime import datetime
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from .schema import CandidateOutput
 
@@ -40,7 +41,7 @@ class CollectCandidatesProvider:
         candidate_outputs: List[CandidateOutput] = runtime.collect_candidates()
 
         if not candidate_outputs:
-            print("No candidate data collected")
+            get_logger().info("No candidate data collected")
             return {}, 0
 
         # Convert CandidateOutput objects to AnkiNote objects and group by language

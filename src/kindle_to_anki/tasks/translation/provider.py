@@ -1,6 +1,7 @@
 # tasks/translation/provider.py
 from typing import List
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
@@ -52,7 +53,7 @@ class TranslationProvider:
                 translation_inputs.append(translation_input)
 
         if not translation_inputs:
-            print("No notes with context to translate")
+            get_logger().info("No notes with context to translate")
             return notes
 
         # Translate using the runtime

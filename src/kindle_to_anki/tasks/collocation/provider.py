@@ -1,6 +1,7 @@
 # tasks/collocation/provider.py
 from typing import List
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.tasks.collocation.schema import CollocationInput, CollocationOutput
@@ -53,7 +54,7 @@ class CollocationProvider:
                 collocation_inputs.append(collocation_input)
 
         if not collocation_inputs:
-            print("No notes with required fields for collocation generation")
+            get_logger().info("No notes with required fields for collocation generation")
             return notes
 
         # Generate collocations using the runtime

@@ -1,5 +1,6 @@
 from typing import List
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from .schema import UsageLevelInput, UsageLevelOutput
@@ -43,7 +44,7 @@ class UsageLevelProvider:
                 usage_inputs.append(usage_input)
 
         if not usage_inputs:
-            print("No notes with required fields for usage level estimation")
+            get_logger().info("No notes with required fields for usage level estimation")
             return notes
 
         usage_outputs: List[UsageLevelOutput] = runtime.estimate(

@@ -1,5 +1,6 @@
 from typing import List
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from .schema import ClozeScoringInput, ClozeScoringOutput
@@ -42,7 +43,7 @@ class ClozeScoringProvider:
                 scoring_inputs.append(scoring_input)
 
         if not scoring_inputs:
-            print("No notes with required fields for cloze scoring")
+            get_logger().info("No notes with required fields for cloze scoring")
             return notes
 
         scoring_outputs: List[ClozeScoringOutput] = runtime.score(

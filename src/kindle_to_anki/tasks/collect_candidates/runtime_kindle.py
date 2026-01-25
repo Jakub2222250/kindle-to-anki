@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 
@@ -38,7 +39,8 @@ class KindleCandidateRuntime:
         """
         Collect candidate data from Kindle database.
         """
-        print("\nStarting Kindle candidate collection...")
+        logger = get_logger()
+        logger.info("Starting Kindle candidate collection...")
 
         # Ensure we have the vocab database
         db_path = self.INPUTS_DIR / "vocab.db"
@@ -56,11 +58,11 @@ class KindleCandidateRuntime:
             vocab_data = self._handle_incremental_import(db_path, last_timestamp)
         else:
             _, total_count = self._get_kindle_vocab_count(db_path)
-            print(f"No previous import found, collecting all {total_count} candidates...")
+            logger.info(f"No previous import found, collecting all {total_count} candidates...")
             vocab_data = self._read_vocab_from_db(db_path)
 
         if not vocab_data:
-            print("No new candidates to collect.")
+            logger.info("No new candidates to collect.")
             return []
 
         # Convert raw data to CandidateOutput objects
@@ -90,7 +92,7 @@ class KindleCandidateRuntime:
                 )
                 candidate_outputs.append(candidate_output)
 
-        print(f"Kindle candidate collection completed. Collected {len(candidate_outputs)} candidates.")
+        logger.info(f"Kindle candidate collection completed. Collected {len(candidate_outputs)} candidates.")
         return candidate_outputs
 
     def _generate_uid(self, word: str, book_title: str, position: str) -> str:
@@ -133,10 +135,11 @@ class KindleCandidateRuntime:
 
     def _ensure_vocab_db(self, provided_db_path: str) -> Path:
         """Ensure vocab.db is available, copying from Kindle device if needed"""
+        logger = get_logger()
         db_path = Path(provided_db_path)
 
         # Attempt to copy vocab.db via batch script call
-        print("\nAttempting to copy vocab.db from Kindle device...")
+        logger.info("Attempting to copy vocab.db from Kindle device...")
 
         try:
             copy_vocab_script = Path(__file__).parent.parent.parent / "copy_vocab.bat"
@@ -145,7 +148,7 @@ class KindleCandidateRuntime:
             retcode = 1
 
         if retcode != 0:
-            print(f"Error: Failed to copy vocab.db from Kindle device. Continuing.")
+            logger.warning(f"Failed to copy vocab.db from Kindle device. Continuing.")
         else:
             # Overwrite vocab.db in inputs/ with vocab_powershell_copy.db
             self.INPUTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -153,13 +156,13 @@ class KindleCandidateRuntime:
             dest_db = self.INPUTS_DIR / "vocab.db"
             if src_db.exists():
                 src_db.replace(dest_db)
-                print(f'vocab.db copied from Kindle device successfully.')
+                logger.info(f'vocab.db copied from Kindle device successfully.')
                 db_path = dest_db
 
         # Final check for database existence
         if not db_path.exists():
-            print(f"Error: vocab.db not found at {db_path}")
-            print("Please place your Kindle vocab.db file in the 'data/inputs' folder at the project root.")
+            logger.error(f"vocab.db not found at {db_path}")
+            logger.error("Please place your Kindle vocab.db file in the 'data/inputs' folder at the project root.")
             sys.exit(1)
 
         return db_path
@@ -193,14 +196,15 @@ class KindleCandidateRuntime:
 
     def _handle_incremental_import(self, db_path, last_timestamp: datetime):
         """Handle incremental import based on timestamp"""
+        logger = get_logger()
         timestamp_ms = int(last_timestamp.timestamp() * 1000)
         new_count, total_count = self._get_kindle_vocab_count(db_path, last_timestamp)
 
-        print(f"\nFound previous import timestamp: {last_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"New kindle vocab builder entries since last import: {new_count}")
-        print(f"Total kindle vocab builder entries available: {total_count}")
+        logger.info(f"Found previous import timestamp: {last_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"New kindle vocab builder entries since last import: {new_count}")
+        logger.trace(f"Total kindle vocab builder entries available: {total_count}")
 
-        print("Collecting only new kindle vocab builder entries...")
+        logger.info("Collecting only new kindle vocab builder entries...")
         return self._read_vocab_from_db(db_path, timestamp_ms)
 
     def _read_vocab_from_db(self, db_path, timestamp=None):
