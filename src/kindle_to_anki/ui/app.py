@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from kindle_to_anki import __version__
 from kindle_to_anki.ui.setup_wizard import SetupWizardFrame
 from kindle_to_anki.ui.export_view import ExportView
 from kindle_to_anki.ui.update_notes_view import UpdateNotesView
@@ -10,7 +11,7 @@ class KindleToAnkiApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Kindle to Anki")
+        self.title(f"Kindle to Anki v{__version__}")
         self.geometry("1050x700")
 
         ctk.set_appearance_mode("system")
