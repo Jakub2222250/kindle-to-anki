@@ -5,6 +5,7 @@ import copy
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.core.models.registry import ModelRegistry
+from kindle_to_anki.core.prompts import list_prompts, get_default_prompt_id, get_lui_default_prompt_id
 
 # Task metadata: display names, descriptions, and whether they're optional
 TASK_METADATA = {
@@ -82,6 +83,19 @@ def get_models_for_runtime(runtime) -> list[str]:
     return models
 
 
+def get_prompts_for_task(task_key: str, source_language_code: str = None) -> list[str]:
+    """Get available prompt IDs for a task."""
+    prompts = list_prompts(task_key)
+    return prompts if prompts else []
+
+
+def get_default_prompt_for_task(task_key: str, source_language_code: str = None) -> str | None:
+    """Get the default prompt ID for a task."""
+    if task_key == "lui" and source_language_code:
+        return get_lui_default_prompt_id(source_language_code)
+    return get_default_prompt_id(task_key)
+
+
 class TaskConfigRow(ctk.CTkFrame):
     """A single row for configuring one task."""
 
@@ -101,12 +115,13 @@ class TaskConfigRow(ctk.CTkFrame):
         self._create_widgets()
 
     def _create_widgets(self):
-        # Configure grid - add runtime column
+        # Configure grid columns
         self.grid_columnconfigure(0, weight=0, minsize=30)   # Enable checkbox
         self.grid_columnconfigure(1, weight=1, minsize=160)  # Task name
         self.grid_columnconfigure(2, weight=0, minsize=180)  # Runtime dropdown
         self.grid_columnconfigure(3, weight=0, minsize=150)  # Model dropdown
-        self.grid_columnconfigure(4, weight=0, minsize=80)   # Batch size
+        self.grid_columnconfigure(4, weight=0, minsize=140)  # Prompt dropdown
+        self.grid_columnconfigure(5, weight=0, minsize=80)   # Batch size
 
         col = 0
 
@@ -180,6 +195,27 @@ class TaskConfigRow(ctk.CTkFrame):
 
         col += 1
 
+        # Prompt dropdown
+        available_prompts = get_prompts_for_task(self.task_key, self.source_language_code)
+        default_prompt = get_default_prompt_for_task(self.task_key, self.source_language_code)
+        current_prompt = self.task_settings.get("prompt_id") or default_prompt or ""
+        if available_prompts and current_prompt not in available_prompts:
+            current_prompt = available_prompts[0] if available_prompts else ""
+
+        self.prompt_var = ctk.StringVar(value=current_prompt)
+        self.prompt_dropdown = ctk.CTkOptionMenu(
+            self,
+            values=available_prompts if available_prompts else ["(none)"],
+            variable=self.prompt_var,
+            width=130,
+            command=self._on_prompt_change
+        )
+        self.prompt_dropdown.grid(row=0, column=col, padx=5, sticky="w")
+        if not available_prompts:
+            self.prompt_dropdown.configure(state="disabled")
+
+        col += 1
+
         # Batch size
         self.batch_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.batch_frame.grid(row=0, column=col, padx=5, sticky="w")
@@ -211,6 +247,7 @@ class TaskConfigRow(ctk.CTkFrame):
 
         if not runtime:
             self._set_model_state(False, [])
+            self._set_prompt_state(False)
             self._set_batch_state(False)
             return
 
@@ -218,6 +255,10 @@ class TaskConfigRow(ctk.CTkFrame):
         models = get_models_for_runtime(runtime)
         has_models = len(models) > 0
         self._set_model_state(has_models, models)
+
+        # Update prompt dropdown - only enable if runtime uses models (LLM-based)
+        has_prompts = has_models and len(get_prompts_for_task(self.task_key, self.source_language_code)) > 0
+        self._set_prompt_state(has_prompts)
 
         # Update batch visibility
         has_batching = getattr(runtime, 'supports_batching', True)
@@ -241,11 +282,27 @@ class TaskConfigRow(ctk.CTkFrame):
         color = ("gray10", "gray90") if enabled else "gray"
         self.batch_label.configure(text_color=color)
 
+    def _set_prompt_state(self, enabled: bool):
+        """Enable/disable prompt dropdown."""
+        if enabled:
+            prompts = get_prompts_for_task(self.task_key, self.source_language_code)
+            self.prompt_dropdown.configure(state="normal", values=prompts if prompts else ["(n/a)"])
+            current = self.prompt_var.get()
+            if current == "(n/a)" or (prompts and current not in prompts):
+                default_prompt = get_default_prompt_for_task(self.task_key, self.source_language_code)
+                self.prompt_var.set(default_prompt if default_prompt in prompts else (prompts[0] if prompts else "(n/a)"))
+        else:
+            self.prompt_dropdown.configure(state="disabled", values=["(n/a)"])
+            self.prompt_var.set("(n/a)")
+
     def _on_enabled_change(self):
         self._update_enabled_state()
         self._notify_change()
 
     def _on_model_change(self, _=None):
+        self._notify_change()
+
+    def _on_prompt_change(self, _=None):
         self._notify_change()
 
     def _on_batch_change(self, *args):
@@ -257,12 +314,13 @@ class TaskConfigRow(ctk.CTkFrame):
         if enabled:
             self.name_label.configure(text_color=("gray10", "gray90"))
             self.runtime_dropdown.configure(state="normal")
-            # Re-apply model/batch state based on runtime
+            # Re-apply model/batch/prompt state based on runtime
             self._update_model_options()
         else:
             self.name_label.configure(text_color="gray")
             self.runtime_dropdown.configure(state="disabled")
             self.model_dropdown.configure(state="disabled")
+            self.prompt_dropdown.configure(state="disabled")
             self.batch_entry.configure(state="disabled")
 
     def _notify_change(self):
@@ -272,11 +330,17 @@ class TaskConfigRow(ctk.CTkFrame):
     def get_settings(self) -> dict:
         """Get current settings for this task."""
         model_val = self.model_var.get()
+        prompt_val = self.prompt_var.get()
+        # Only save prompt_id if it differs from the default
+        default_prompt = get_default_prompt_for_task(self.task_key, self.source_language_code)
         settings = {
             "runtime": self.runtime_var.get(),
             "model_id": model_val if model_val != "(n/a)" else None,
             "batch_size": int(self.batch_var.get()) if self.batch_var.get().isdigit() else 30
         }
+        # Only include prompt_id if non-default
+        if prompt_val and prompt_val != "(none)" and prompt_val != default_prompt:
+            settings["prompt_id"] = prompt_val
         if self.metadata.get("optional", False):
             settings["enabled"] = self.enabled_var.get()
         return settings
@@ -329,13 +393,15 @@ class TaskConfigPanel(ctk.CTkFrame):
         header_row.grid_columnconfigure(1, weight=1, minsize=160)
         header_row.grid_columnconfigure(2, weight=0, minsize=180)
         header_row.grid_columnconfigure(3, weight=0, minsize=150)
-        header_row.grid_columnconfigure(4, weight=0, minsize=80)
+        header_row.grid_columnconfigure(4, weight=0, minsize=140)
+        header_row.grid_columnconfigure(5, weight=0, minsize=80)
 
         ctk.CTkLabel(header_row, text="", width=20).grid(row=0, column=0)
         ctk.CTkLabel(header_row, text="Task", font=ctk.CTkFont(weight="bold")).grid(row=0, column=1, sticky="w", padx=5)
         ctk.CTkLabel(header_row, text="Runtime", font=ctk.CTkFont(weight="bold")).grid(row=0, column=2, sticky="w", padx=5)
         ctk.CTkLabel(header_row, text="Model", font=ctk.CTkFont(weight="bold")).grid(row=0, column=3, sticky="w", padx=5)
-        ctk.CTkLabel(header_row, text="Batch", font=ctk.CTkFont(weight="bold")).grid(row=0, column=4, sticky="w", padx=5)
+        ctk.CTkLabel(header_row, text="Prompt", font=ctk.CTkFont(weight="bold")).grid(row=0, column=4, sticky="w", padx=5)
+        ctk.CTkLabel(header_row, text="Batch", font=ctk.CTkFont(weight="bold")).grid(row=0, column=5, sticky="w", padx=5)
 
         # Separator
         ctk.CTkFrame(self.tasks_scroll, height=2, fg_color="gray").pack(fill="x", pady=(0, 10))

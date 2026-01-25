@@ -3,7 +3,7 @@ from typing import Callable
 
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 from kindle_to_anki.configuration.config_manager import ConfigManager
-from kindle_to_anki.ui.task_config import TASK_ORDER, TASK_METADATA, get_runtimes_for_task, get_models_for_runtime, RUNTIME_LANGUAGE_RESTRICTIONS
+from kindle_to_anki.ui.task_config import TASK_ORDER, TASK_METADATA, get_runtimes_for_task, get_models_for_runtime, get_prompts_for_task, get_default_prompt_for_task
 from kindle_to_anki.core.bootstrap import bootstrap_all
 
 
@@ -28,7 +28,8 @@ class UpdateTaskRow(ctk.CTkFrame):
         self.grid_columnconfigure(1, weight=1, minsize=160)
         self.grid_columnconfigure(2, weight=0, minsize=180)
         self.grid_columnconfigure(3, weight=0, minsize=150)
-        self.grid_columnconfigure(4, weight=0, minsize=80)
+        self.grid_columnconfigure(4, weight=0, minsize=140)
+        self.grid_columnconfigure(5, weight=0, minsize=80)
 
         col = 0
 
@@ -95,6 +96,24 @@ class UpdateTaskRow(ctk.CTkFrame):
         self.model_dropdown.grid(row=0, column=col, padx=5, sticky="w")
         col += 1
 
+        # Prompt dropdown
+        self.available_prompts = get_prompts_for_task(self.task_key, self.source_language_code)
+        default_prompt = get_default_prompt_for_task(self.task_key, self.source_language_code)
+        current_prompt = self.task_settings.get("prompt_id") or default_prompt or ""
+        if self.available_prompts and current_prompt not in self.available_prompts:
+            current_prompt = self.available_prompts[0] if self.available_prompts else ""
+
+        self.prompt_var = ctk.StringVar(value=current_prompt)
+        self.prompt_dropdown = ctk.CTkOptionMenu(
+            self,
+            values=self.available_prompts if self.available_prompts else ["(none)"],
+            variable=self.prompt_var,
+            width=130,
+            state="disabled"
+        )
+        self.prompt_dropdown.grid(row=0, column=col, padx=5, sticky="w")
+        col += 1
+
         # Batch size
         self.batch_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.batch_frame.grid(row=0, column=col, padx=5, sticky="w")
@@ -153,10 +172,15 @@ class UpdateTaskRow(ctk.CTkFrame):
 
             # Enable model if runtime supports it
             models = get_models_for_runtime(runtime) if runtime else []
-            if models:
+            has_models = len(models) > 0
+            if has_models:
                 self.model_dropdown.configure(state="normal")
             else:
                 self.model_dropdown.configure(state="disabled")
+
+            # Enable prompt dropdown only if runtime uses models (LLM-based) and prompts exist
+            has_prompts = has_models and len(self.available_prompts) > 0
+            self.prompt_dropdown.configure(state="normal" if has_prompts else "disabled")
 
             # Enable batch if runtime supports it
             has_batching = getattr(runtime, 'supports_batching', True) if runtime else True
@@ -166,6 +190,7 @@ class UpdateTaskRow(ctk.CTkFrame):
             self.name_label.configure(text_color="gray")
             self.runtime_dropdown.configure(state="disabled")
             self.model_dropdown.configure(state="disabled")
+            self.prompt_dropdown.configure(state="disabled")
             self.batch_entry.configure(state="disabled")
             self.batch_label.configure(text_color="gray")
 
@@ -175,10 +200,12 @@ class UpdateTaskRow(ctk.CTkFrame):
     def get_settings(self) -> dict:
         """Get current settings for this task."""
         model_val = self.model_var.get()
+        prompt_val = self.prompt_var.get()
         return {
             "enabled": self.enabled_var.get(),
             "runtime": self.runtime_var.get(),
             "model_id": model_val if model_val != "(n/a)" else None,
+            "prompt_id": prompt_val if prompt_val and prompt_val != "(none)" else None,
             "batch_size": int(self.batch_var.get()) if self.batch_var.get().isdigit() else 30
         }
 
@@ -391,13 +418,15 @@ class UpdateNotesView(ctk.CTkFrame):
         header_frame.grid_columnconfigure(1, weight=1, minsize=160)
         header_frame.grid_columnconfigure(2, weight=0, minsize=180)
         header_frame.grid_columnconfigure(3, weight=0, minsize=150)
-        header_frame.grid_columnconfigure(4, weight=0, minsize=80)
+        header_frame.grid_columnconfigure(4, weight=0, minsize=140)
+        header_frame.grid_columnconfigure(5, weight=0, minsize=80)
 
         ctk.CTkLabel(header_frame, text="", width=30).grid(row=0, column=0)
         ctk.CTkLabel(header_frame, text="Task", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=1, sticky="w", padx=5)
         ctk.CTkLabel(header_frame, text="Runtime", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=2, sticky="w", padx=5)
         ctk.CTkLabel(header_frame, text="Model", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=3, sticky="w", padx=5)
-        ctk.CTkLabel(header_frame, text="Batch", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=4, sticky="w", padx=5)
+        ctk.CTkLabel(header_frame, text="Prompt", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=4, sticky="w", padx=5)
+        ctk.CTkLabel(header_frame, text="Batch", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=5, sticky="w", padx=5)
 
         # Task rows container
         self.task_rows_frame = ctk.CTkFrame(self.task_section, fg_color="transparent")
