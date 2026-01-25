@@ -1,7 +1,10 @@
 import customtkinter as ctk
 from typing import Callable
+import json
+import threading
 
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
+from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.ui.task_config import TASK_ORDER, TASK_METADATA, get_runtimes_for_task, get_models_for_runtime, get_prompts_for_task, get_default_prompt_for_task
 from kindle_to_anki.core.bootstrap import bootstrap_all
@@ -457,8 +460,64 @@ class UpdateNotesView(ctk.CTkFrame):
         )
         self.skip_matching_metadata_cb.pack(anchor="w")
 
-        # Placeholder for run button (not functional yet)
-        run_frame = ctk.CTkFrame(options_section, fg_color="transparent")
+        # Query Preview Section
+        query_section = ctk.CTkFrame(content_frame)
+        query_section.pack(fill="x", pady=(0, 15))
+
+        query_title = ctk.CTkLabel(
+            query_section,
+            text="Query Preview",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        query_title.pack(anchor="w", padx=15, pady=(15, 10))
+
+        query_btn_frame = ctk.CTkFrame(query_section, fg_color="transparent")
+        query_btn_frame.pack(fill="x", padx=15, pady=(0, 10))
+
+        self.query_btn = ctk.CTkButton(
+            query_btn_frame,
+            text="Query Cards",
+            width=150,
+            command=self._on_query_cards
+        )
+        self.query_btn.pack(side="left")
+
+        self.query_status_label = ctk.CTkLabel(
+            query_btn_frame,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color=("gray50", "gray60")
+        )
+        self.query_status_label.pack(side="left", padx=(15, 0))
+
+        # Statistics display
+        stats_frame = ctk.CTkFrame(query_section, fg_color=("gray90", "gray17"))
+        stats_frame.pack(fill="x", padx=15, pady=(0, 15))
+
+        self.stats_total_label = ctk.CTkLabel(
+            stats_frame,
+            text="Total matching cards: —",
+            font=ctk.CTkFont(size=12)
+        )
+        self.stats_total_label.pack(anchor="w", padx=15, pady=(10, 5))
+
+        self.stats_to_process_label = ctk.CTkLabel(
+            stats_frame,
+            text="Cards to process: —",
+            font=ctk.CTkFont(size=12)
+        )
+        self.stats_to_process_label.pack(anchor="w", padx=15, pady=(0, 5))
+
+        self.stats_skipped_label = ctk.CTkLabel(
+            stats_frame,
+            text="Cards to skip (matching metadata): —",
+            font=ctk.CTkFont(size=12),
+            text_color=("gray50", "gray60")
+        )
+        self.stats_skipped_label.pack(anchor="w", padx=15, pady=(0, 10))
+
+        # Run button
+        run_frame = ctk.CTkFrame(query_section, fg_color="transparent")
         run_frame.pack(fill="x", padx=15, pady=(0, 15))
 
         self.run_btn = ctk.CTkButton(
@@ -472,11 +531,13 @@ class UpdateNotesView(ctk.CTkFrame):
     def _on_filter_change(self, *args):
         """Called when any filter option changes."""
         self._update_filter_preview()
+        self._reset_query_stats()
 
     def _on_deck_change(self, *args):
         """Called when deck selection changes - rebuild task rows."""
         self._update_filter_preview()
         self._build_task_rows()
+        self._reset_query_stats()
 
     def _build_task_rows(self):
         """Build task configuration rows based on selected deck."""
@@ -565,3 +626,99 @@ class UpdateNotesView(ctk.CTkFrame):
     def get_skip_matching_metadata(self) -> bool:
         """Get whether to skip cards with matching task metadata."""
         return self.skip_matching_metadata_var.get()
+
+    def _reset_query_stats(self):
+        """Reset the query statistics display."""
+        self.stats_total_label.configure(text="Total matching cards: —")
+        self.stats_to_process_label.configure(text="Cards to process: —")
+        self.stats_skipped_label.configure(text="Cards to skip (matching metadata): —")
+        self.query_status_label.configure(text="")
+
+    def _on_query_cards(self):
+        """Query Anki for cards matching the filter and compute statistics."""
+        selected_tasks = self.get_selected_tasks()
+        if not selected_tasks:
+            self.query_status_label.configure(text="No tasks selected", text_color="orange")
+            return
+
+        self.query_btn.configure(state="disabled")
+        self.query_status_label.configure(text="Querying...", text_color=("gray50", "gray60"))
+
+        # Run query in background thread
+        thread = threading.Thread(target=self._run_query_thread, daemon=True)
+        thread.start()
+
+    def _run_query_thread(self):
+        """Background thread to query Anki and compute statistics."""
+        try:
+            anki = AnkiConnect()
+            query = self.get_current_filter()
+
+            # Find matching notes
+            note_ids = anki._invoke("findNotes", {"query": query})
+            total_count = len(note_ids)
+
+            if total_count == 0:
+                self.after(0, lambda: self._update_query_stats(0, 0, 0, "No cards found"))
+                return
+
+            # Get note info for metadata checking
+            notes_info = anki._invoke("notesInfo", {"notes": note_ids})
+
+            # Compute statistics based on selected tasks and skip option
+            task_settings = self.get_task_settings()
+            skip_matching = self.get_skip_matching_metadata()
+
+            if skip_matching and task_settings:
+                # Count how many notes would be skipped per task
+                to_process = 0
+                for note in notes_info:
+                    note_needs_processing = False
+                    for task_key, settings in task_settings.items():
+                        if not self._metadata_matches(note, task_key, settings):
+                            note_needs_processing = True
+                            break
+                    if note_needs_processing:
+                        to_process += 1
+                skipped = total_count - to_process
+            else:
+                to_process = total_count
+                skipped = 0
+
+            self.after(0, lambda: self._update_query_stats(total_count, to_process, skipped, "Query complete"))
+
+        except Exception as e:
+            self.after(0, lambda: self._update_query_stats(0, 0, 0, f"Error: {str(e)[:50]}"))
+
+    def _metadata_matches(self, note: dict, task_key: str, settings: dict) -> bool:
+        """Check if note's metadata matches the task settings."""
+        fields = note.get('fields', {})
+        metadata_str = fields.get('Generation_Metadata', {}).get('value', '').strip()
+        if not metadata_str:
+            return False
+        try:
+            metadata = json.loads(metadata_str)
+            task_meta = metadata.get(task_key)
+            if not task_meta:
+                return False
+            stored_prompt = task_meta.get("prompt")
+            return (
+                task_meta.get("runtime") == settings.get("runtime")
+                and task_meta.get("model") == settings.get("model_id")
+                and stored_prompt == settings.get("prompt_id")
+            )
+        except json.JSONDecodeError:
+            return False
+
+    def _update_query_stats(self, total: int, to_process: int, skipped: int, status: str):
+        """Update the query statistics display (called from main thread)."""
+        self.stats_total_label.configure(text=f"Total matching cards: {total}")
+        self.stats_to_process_label.configure(text=f"Cards to process: {to_process}")
+        self.stats_skipped_label.configure(text=f"Cards to skip (matching metadata): {skipped}")
+
+        if "Error" in status:
+            self.query_status_label.configure(text=status, text_color="red")
+        else:
+            self.query_status_label.configure(text=status, text_color=("gray50", "gray60"))
+
+        self.query_btn.configure(state="normal")
