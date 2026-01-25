@@ -84,8 +84,8 @@ def get_models_for_runtime(runtime) -> list[str]:
 
 
 def get_prompts_for_task(task_key: str, source_language_code: str = None) -> list[str]:
-    """Get available prompt IDs for a task."""
-    prompts = list_prompts(task_key)
+    """Get available prompt IDs for a task, filtered by language compatibility."""
+    prompts = list_prompts(task_key, source_language_code)
     return prompts if prompts else []
 
 

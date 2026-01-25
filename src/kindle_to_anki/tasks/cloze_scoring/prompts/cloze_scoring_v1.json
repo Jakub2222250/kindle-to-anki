@@ -1,7 +1,7 @@
 {
   "id": "cloze_scoring_v1",
   "task": "cloze_scoring",
-  "flavor": "stable",
+  "supported_source_language": "all",
   "version": "1.0",
   "input_schema": {
     "items_json": "string",

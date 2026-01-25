@@ -1,7 +1,7 @@
 {
   "id": "wsd_v2",
   "task": "wsd",
-  "flavor": "anki_optimized",
+  "supported_source_language": "all",
   "version": "2.0",
   "input_schema": {
     "items_json": "string",

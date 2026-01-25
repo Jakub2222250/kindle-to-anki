@@ -1,7 +1,7 @@
 {
   "id": "lui_es_v1",
   "task": "lui",
-  "flavor": "spanish",
+  "supported_source_language": "es",
   "version": "1.0",
   "input_schema": {
     "items_json": "string"

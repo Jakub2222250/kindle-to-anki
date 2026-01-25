@@ -16,6 +16,11 @@ class PromptSpec:
         self.template = template
         self.id = spec.get("id", "unknown")
         self.version = spec.get("version", "0.0")
+        self.supported_source_language = spec.get("supported_source_language", "all")
+
+    def supports_language(self, language_code: str) -> bool:
+        """Check if this prompt supports the given source language."""
+        return self.supported_source_language == "all" or self.supported_source_language == language_code
 
     def build(self, **kwargs) -> str:
         return self.template.format(**kwargs)
@@ -27,12 +32,16 @@ class PromptLoader:
     _cache: Dict[str, PromptSpec] = {}
 
     @classmethod
-    def list_prompts(cls, task: str) -> List[str]:
-        """Return all available prompt IDs for a task."""
+    def list_prompts(cls, task: str, source_language_code: str = None) -> List[str]:
+        """Return available prompt IDs for a task, optionally filtered by language."""
         prompts_dir = TASKS_DIR / task / "prompts"
         if not prompts_dir.exists():
             return []
-        return [p.stem for p in prompts_dir.glob("*.json")]
+        all_ids = [p.stem for p in prompts_dir.glob("*.json")]
+        if source_language_code is None:
+            return all_ids
+        # Filter by language compatibility
+        return [pid for pid in all_ids if cls.load(task, pid).supports_language(source_language_code)]
 
     @classmethod
     def load(cls, task: str, prompt_id: str) -> PromptSpec:

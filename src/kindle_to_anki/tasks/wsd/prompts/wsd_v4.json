@@ -1,7 +1,7 @@
 {
   "id": "wsd_v4",
   "task": "wsd",
-  "flavor": "lemma_with_nuance",
+  "supported_source_language": "all",
   "version": "4.0",
   "input_schema": {
     "items_json": "string",
