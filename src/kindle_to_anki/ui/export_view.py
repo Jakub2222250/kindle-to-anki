@@ -173,7 +173,9 @@ class ExportView(ctk.CTkFrame):
         self.is_running = False
         self.start_btn.configure(state="normal")
         self.cancel_btn.configure(state="disabled")
-        self._update_progress(1, 1, "Export completed", "")
+        self.progress_bar.set(1)
+        self.status_label.configure(text="Export completed")
+        self.step_label.configure(text="")
 
     def _export_pipeline(self):
         """Main export pipeline - mirrors main.py structure."""
