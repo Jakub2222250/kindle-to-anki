@@ -435,8 +435,30 @@ class UpdateNotesView(ctk.CTkFrame):
         self.task_rows = {}
         self._build_task_rows()
 
+        # Processing Options Section
+        options_section = ctk.CTkFrame(content_frame)
+        options_section.pack(fill="x", pady=(0, 15))
+
+        options_title = ctk.CTkLabel(
+            options_section,
+            text="Processing Options",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        options_title.pack(anchor="w", padx=15, pady=(15, 10))
+
+        options_frame = ctk.CTkFrame(options_section, fg_color="transparent")
+        options_frame.pack(fill="x", padx=15, pady=(0, 15))
+
+        self.skip_matching_metadata_var = ctk.BooleanVar(value=True)
+        self.skip_matching_metadata_cb = ctk.CTkCheckBox(
+            options_frame,
+            text="Skip cards with matching task metadata (already processed with same config)",
+            variable=self.skip_matching_metadata_var
+        )
+        self.skip_matching_metadata_cb.pack(anchor="w")
+
         # Placeholder for run button (not functional yet)
-        run_frame = ctk.CTkFrame(self.task_section, fg_color="transparent")
+        run_frame = ctk.CTkFrame(options_section, fg_color="transparent")
         run_frame.pack(fill="x", padx=15, pady=(0, 15))
 
         self.run_btn = ctk.CTkButton(
@@ -539,3 +561,7 @@ class UpdateNotesView(ctk.CTkFrame):
     def get_task_settings(self) -> dict[str, dict]:
         """Get settings for all enabled tasks."""
         return {key: row.get_settings() for key, row in self.task_rows.items() if row.is_enabled()}
+
+    def get_skip_matching_metadata(self) -> bool:
+        """Get whether to skip cards with matching task metadata."""
+        return self.skip_matching_metadata_var.get()
