@@ -14,6 +14,7 @@ from typing import List, Dict, Any, Optional
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.core.prompts import list_prompts
+from kindle_to_anki.core.models.registry import ModelRegistry
 from kindle_to_anki.tasks.lui.runtime_chat_completion import ChatCompletionLUI
 from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
 
@@ -29,7 +30,6 @@ class TestCase:
     word: str
     sentence: str
     language: str
-    expected: Dict[str, str]
 
 
 @dataclass
@@ -38,10 +38,7 @@ class EvalResult:
     word: str
     sentence: str
     language: str
-    expected: Dict[str, str]
     actual: Dict[str, str]
-    field_matches: Dict[str, bool]
-    overall_match: bool
 
 
 @dataclass
@@ -52,10 +49,6 @@ class EvalRun:
     prompt_id: Optional[str]
     language: str
     total_cases: int
-    passed: int
-    failed: int
-    accuracy: float
-    field_accuracy: Dict[str, float]
     duration_seconds: float
     results: List[EvalResult]
 
@@ -71,23 +64,13 @@ def load_test_corpus(language: Optional[str] = None) -> List[TestCase]:
                 continue
             data = json.loads(line)
             if language is None or data["language"] == language:
-                cases.append(TestCase(**data))
+                cases.append(TestCase(
+                    uid=data["uid"],
+                    word=data["word"],
+                    sentence=data["sentence"],
+                    language=data["language"],
+                ))
     return cases
-
-
-def compare_output(expected: Dict[str, str], actual: LUIOutput) -> Dict[str, bool]:
-    """Compare expected vs actual output field by field."""
-    actual_dict = {
-        "lemma": actual.lemma,
-        "part_of_speech": actual.part_of_speech,
-        "aspect": actual.aspect,
-        "surface_lexical_unit": actual.surface_lexical_unit,
-        "unit_type": actual.unit_type,
-    }
-    return {
-        field: expected.get(field, "").lower().strip() == actual_dict.get(field, "").lower().strip()
-        for field in ["lemma", "part_of_speech", "aspect", "surface_lexical_unit", "unit_type"]
-    }
 
 
 def run_evaluation(
@@ -96,6 +79,7 @@ def run_evaluation(
     prompt_id: Optional[str] = None,
     language: str = "pl",
     save_results: bool = True,
+    session_dir: Optional[Path] = None,
 ) -> EvalRun:
     """Run evaluation for a specific configuration."""
 
@@ -125,16 +109,13 @@ def run_evaluation(
     lui_outputs = runtime.identify(
         lui_inputs,
         runtime_config=runtime_config,
-        ignore_cache=True,  # Always fresh for evaluation
-        use_test_cache=False,
+        ignore_cache=False,
+        use_test_cache=True,
     )
     duration = time.time() - start_time
 
-    # Evaluate results
+    # Collect results
     eval_results = []
-    field_correct = {"lemma": 0, "part_of_speech": 0, "aspect": 0, "surface_lexical_unit": 0, "unit_type": 0}
-    passed = 0
-
     for tc, output in zip(test_cases, lui_outputs):
         actual_dict = {
             "lemma": output.lemma,
@@ -143,29 +124,13 @@ def run_evaluation(
             "surface_lexical_unit": output.surface_lexical_unit,
             "unit_type": output.unit_type,
         }
-        field_matches = compare_output(tc.expected, output)
-        overall_match = all(field_matches.values())
-
-        if overall_match:
-            passed += 1
-
-        for field, matched in field_matches.items():
-            if matched:
-                field_correct[field] += 1
-
         eval_results.append(EvalResult(
             uid=tc.uid,
             word=tc.word,
             sentence=tc.sentence,
             language=tc.language,
-            expected=tc.expected,
             actual=actual_dict,
-            field_matches=field_matches,
-            overall_match=overall_match,
         ))
-
-    total = len(test_cases)
-    field_accuracy = {field: count / total for field, count in field_correct.items()}
 
     eval_run = EvalRun(
         timestamp=datetime.now().isoformat(),
@@ -173,31 +138,26 @@ def run_evaluation(
         model_id=model_id,
         prompt_id=prompt_id,
         language=language,
-        total_cases=total,
-        passed=passed,
-        failed=total - passed,
-        accuracy=passed / total,
-        field_accuracy=field_accuracy,
+        total_cases=len(test_cases),
         duration_seconds=duration,
         results=eval_results,
     )
 
     if save_results:
-        save_eval_run(eval_run)
+        save_eval_run(eval_run, session_dir)
 
     return eval_run
 
 
-def save_eval_run(eval_run: EvalRun):
+def save_eval_run(eval_run: EvalRun, session_dir: Optional[Path] = None):
     """Save evaluation run to JSON file."""
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir = session_dir if session_dir else RESULTS_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create filename with key identifiers
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     prompt_suffix = f"_{eval_run.prompt_id}" if eval_run.prompt_id else ""
-    filename = f"lui_{eval_run.language}_{eval_run.model_id}{prompt_suffix}_{ts}.json"
+    filename = f"lui_{eval_run.language}_{eval_run.model_id}{prompt_suffix}.json"
 
-    filepath = RESULTS_DIR / filename
+    filepath = output_dir / filename
 
     # Convert to serializable dict
     data = asdict(eval_run)
@@ -217,28 +177,20 @@ def print_summary(eval_run: EvalRun):
     print(f"Model:     {eval_run.model_id}")
     print(f"Prompt:    {eval_run.prompt_id or '(default)'}")
     print(f"Language:  {eval_run.language}")
+    print(f"Cases:     {eval_run.total_cases}")
     print(f"Duration:  {eval_run.duration_seconds:.2f}s")
     print("-" * 70)
-    print(f"OVERALL:   {eval_run.passed}/{eval_run.total_cases} passed ({eval_run.accuracy:.1%})")
-    print("-" * 70)
-    print("Field Accuracy:")
-    for field, acc in eval_run.field_accuracy.items():
-        bar = "█" * int(acc * 20) + "░" * (20 - int(acc * 20))
-        print(f"  {field:15} {bar} {acc:.1%}")
-    print("-" * 70)
 
-    # Show failures
-    failures = [r for r in eval_run.results if not r.overall_match]
-    if failures:
-        print(f"\nFAILED CASES ({len(failures)}):")
-        for r in failures:
-            print(f"\n  [{r.uid}] {r.word} in: \"{r.sentence}\"")
-            for field in ["lemma", "part_of_speech", "aspect", "surface_lexical_unit", "unit_type"]:
-                exp = r.expected.get(field, "")
-                act = r.actual.get(field, "")
-                mark = "✓" if r.field_matches[field] else "✗"
-                if not r.field_matches[field]:
-                    print(f"    {mark} {field}: expected '{exp}' got '{act}'")
+    # Show all results
+    print("\nRESULTS:")
+    for r in eval_run.results:
+        print(f"\n  [{r.uid}] {r.word}")
+        print(f"    Sentence: \"{r.sentence[:80]}{'...' if len(r.sentence) > 80 else ''}\"")
+        print(f"    Lemma: {r.actual.get('lemma', '')}")
+        print(f"    POS: {r.actual.get('part_of_speech', '')}")
+        print(f"    Aspect: {r.actual.get('aspect', '')}")
+        print(f"    Form: {r.actual.get('surface_lexical_unit', '')}")
+        print(f"    Type: {r.actual.get('unit_type', '')}")
     print("=" * 70 + "\n")
 
 
@@ -249,6 +201,12 @@ def run_matrix_evaluation(
 ):
     """Run evaluation across multiple models, languages, and prompts."""
     prompt_ids = prompt_ids or [None]  # Default prompt
+
+    # Create session directory for this evaluation run
+    session_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_dir = RESULTS_DIR / f"session_{session_ts}"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    print(f"\nResults will be saved to: {session_dir}")
 
     all_runs = []
 
@@ -261,6 +219,7 @@ def run_matrix_evaluation(
                         model_id=model_id,
                         language=language,
                         prompt_id=prompt_id,
+                        session_dir=session_dir,
                     )
                     all_runs.append(eval_run)
                     print_summary(eval_run)
@@ -270,31 +229,239 @@ def run_matrix_evaluation(
     # Print comparison table
     if len(all_runs) > 1:
         print_comparison_table(all_runs)
+        print_side_by_side_comparison(all_runs)
+        save_comparison_summary(all_runs, session_dir)
 
+    print(f"\nResults saved to: {session_dir}")
     return all_runs
 
 
 def print_comparison_table(runs: List[EvalRun]):
     """Print comparison table of all runs."""
-    print("\n" + "=" * 90)
+    print("\n" + "=" * 70)
     print("COMPARISON TABLE")
-    print("=" * 90)
-    print(f"{'Model':<20} {'Lang':<6} {'Prompt':<15} {'Accuracy':<10} {'Lemma':<8} {'POS':<8} {'Form':<8}")
-    print("-" * 90)
+    print("=" * 70)
+    print(f"{'Model':<25} {'Lang':<6} {'Prompt':<20} {'Cases':<8} {'Time':<8}")
+    print("-" * 70)
     for r in runs:
         prompt = r.prompt_id or "(default)"
-        print(f"{r.model_id:<20} {r.language:<6} {prompt:<15} {r.accuracy:>7.1%}   "
-              f"{r.field_accuracy['lemma']:>6.1%}  {r.field_accuracy['part_of_speech']:>6.1%}  "
-              f"{r.field_accuracy['surface_lexical_unit']:>6.1%}")
-    print("=" * 90 + "\n")
+        print(f"{r.model_id:<25} {r.language:<6} {prompt:<20} {r.total_cases:<8} {r.duration_seconds:>6.2f}s")
+    print("=" * 70 + "\n")
+
+
+def print_side_by_side_comparison(runs: List[EvalRun]):
+    """Print side-by-side comparison of results for each input across all configurations."""
+    if not runs:
+        return
+
+    # Group runs by language to compare same inputs
+    from collections import defaultdict
+    runs_by_lang = defaultdict(list)
+    for run in runs:
+        runs_by_lang[run.language].append(run)
+
+    print("\n" + "=" * 140)
+    print("SIDE-BY-SIDE COMPARISON (by input)")
+    print("=" * 140)
+
+    for language, lang_runs in runs_by_lang.items():
+        if len(lang_runs) < 2:
+            continue
+
+        print(f"\n{'─' * 140}")
+        print(f"  Language: {language}")
+        print(f"{'─' * 140}")
+
+        # Get all UIDs from first run (assuming same inputs across runs)
+        first_run = lang_runs[0]
+        results_by_uid = {r.uid: {} for r in first_run.results}
+
+        for run in lang_runs:
+            label = f"{run.model_id}|{run.prompt_id or 'default'}"
+            for r in run.results:
+                if r.uid in results_by_uid:
+                    results_by_uid[r.uid][label] = r
+
+        # Print each input with all its results
+        for result in first_run.results:
+            uid = result.uid
+            print(f"\n  ┌─ {result.word} [{uid}]")
+            print(f"  │  \"{result.sentence[:100]}{'...' if len(result.sentence) > 100 else ''}\"")
+            print(f"  │")
+
+            for run in lang_runs:
+                label = f"{run.model_id}|{run.prompt_id or 'default'}"
+                r = results_by_uid[uid].get(label)
+                if r:
+                    model_short = run.model_id[:20]
+                    prompt_short = run.prompt_id or "default"
+                    config_label = f"{model_short}, {prompt_short}"
+                    actual = r.actual
+                    print(f"  │  ({config_label:30}): lemma={actual.get('lemma', '')[:20]} | pos={actual.get('part_of_speech', '')} | form={actual.get('surface_lexical_unit', '')[:25]}")
+
+            print(f"  └{'─' * 120}")
+
+    print("\n" + "=" * 140 + "\n")
+
+
+def save_comparison_summary(runs: List[EvalRun], session_dir: Path):
+    """Save comparison summary to session directory."""
+    summary = {
+        "timestamp": datetime.now().isoformat(),
+        "total_runs": len(runs),
+        "runs": [
+            {
+                "model_id": r.model_id,
+                "language": r.language,
+                "prompt_id": r.prompt_id,
+                "total_cases": r.total_cases,
+                "duration_seconds": r.duration_seconds,
+            }
+            for r in runs
+        ],
+    }
+
+    filepath = session_dir / "_summary.json"
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2, ensure_ascii=False)
+    print(f"Summary saved to: {filepath}")
+
+
+def discover_languages() -> List[str]:
+    """Discover available languages from corpus file."""
+    corpus_path = FIXTURES_DIR / "lui_test_corpus.jsonl"
+    if not corpus_path.exists():
+        return []
+
+    languages = set()
+    with open(corpus_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            data = json.loads(line)
+            languages.add(data["language"])
+    return sorted(languages)
+
+
+def prompt_selection(items: List[str], item_type: str, allow_all: bool = True) -> List[str]:
+    """Interactive selection of items from a list."""
+    print(f"\n{'=' * 60}")
+    print(f"Available {item_type}:")
+    print(f"{'=' * 60}")
+    for i, item in enumerate(items, 1):
+        print(f"  {i}. {item}")
+    if allow_all:
+        print(f"  a. All")
+    print(f"  q. Quit")
+
+    while True:
+        choice = input(f"\nSelect {item_type} (comma-separated numbers, 'a' for all, 'q' to quit): ").strip().lower()
+        if choice == 'q':
+            return []
+        if choice == 'a' and allow_all:
+            return items
+        try:
+            indices = [int(x.strip()) - 1 for x in choice.split(',')]
+            selected = [items[i] for i in indices if 0 <= i < len(items)]
+            if selected:
+                return selected
+            print("Invalid selection, try again.")
+        except (ValueError, IndexError):
+            print("Invalid input, try again.")
+
+
+def interactive_evaluation():
+    """Run evaluation with interactive configuration selection."""
+    print("\n" + "=" * 60)
+    print("LUI EVALUATION HARNESS - Interactive Mode")
+    print("=" * 60)
+
+    # Step 1: Select language
+    available_langs = discover_languages()
+    if not available_langs:
+        print("No corpus files found in fixtures/")
+        return
+
+    languages = prompt_selection(available_langs, "languages")
+    if not languages:
+        print("Cancelled.")
+        return
+
+    # Step 2: Select models
+    models = ModelRegistry.list(family="chat_completion")
+    model_ids = [m.id for m in models]
+    selected_models = prompt_selection(model_ids, "models")
+    if not selected_models:
+        print("Cancelled.")
+        return
+
+    # Step 3: Select prompts
+    lui_prompts = list_prompts("lui")
+    all_prompts = ["(default)"] + lui_prompts
+    selected_prompt_names = prompt_selection(all_prompts, "prompts")
+    if not selected_prompt_names:
+        print("Cancelled.")
+        return
+
+    # Convert "(default)" back to None
+    selected_prompts = [None if p == "(default)" else p for p in selected_prompt_names]
+
+    # Confirm selection
+    print("\n" + "=" * 60)
+    print("CONFIGURATION SUMMARY")
+    print("=" * 60)
+    print(f"Languages: {', '.join(languages)}")
+    print(f"Models: {', '.join(selected_models)}")
+    print(f"Prompts: {', '.join(selected_prompt_names)}")
+
+    confirm = input("\nProceed with evaluation? (y/n): ").strip().lower()
+    if confirm != 'y':
+        print("Cancelled.")
+        return
+
+    # Create session directory for this evaluation run
+    session_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_dir = RESULTS_DIR / f"session_{session_ts}"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    print(f"\nResults will be saved to: {session_dir}")
+
+    # Run evaluations
+    all_runs = []
+    for model_id in selected_models:
+        for language in languages:
+            for prompt_id in selected_prompts:
+                prompt_name = prompt_id or "default"
+                print(f"\n>>> Evaluating: model={model_id}, lang={language}, prompt={prompt_name}")
+                try:
+                    eval_run = run_evaluation(
+                        model_id=model_id,
+                        language=language,
+                        prompt_id=prompt_id,
+                        session_dir=session_dir,
+                    )
+                    all_runs.append(eval_run)
+                    print_summary(eval_run)
+                except Exception as e:
+                    print(f"  ERROR: {e}")
+
+    if len(all_runs) > 1:
+        print_comparison_table(all_runs)
+        print_side_by_side_comparison(all_runs)
+        save_comparison_summary(all_runs, session_dir)
+
+    print(f"\nCompleted {len(all_runs)} evaluation run(s).")
+    print(f"Results saved to: {session_dir}")
 
 
 # === CLI Entry Points ===
 
 def test_single_evaluation():
     """Quick test with default settings."""
+    models = ModelRegistry.list(family="chat_completion")
+    model_id = models[0].id if models else "gemini-2.5-flash"
     eval_run = run_evaluation(
-        model_id="gpt-4o",
+        model_id=model_id,
         language="pl",
     )
     print_summary(eval_run)
@@ -306,8 +473,13 @@ def test_matrix_evaluation():
     lui_prompts = list_prompts("lui")
     print(f"Available LUI prompts: {lui_prompts}")
 
+    # Get models from registry
+    models = ModelRegistry.list(family="chat_completion")
+    model_ids = [m.id for m in models]
+    print(f"Available models: {model_ids}")
+
     run_matrix_evaluation(
-        models=["gpt-4o", "gpt-4o-mini"],
+        models=model_ids,
         languages=["pl"],
         prompt_ids=[None] + [p for p in lui_prompts if "pl" in p],  # Default + Polish-specific
     )
@@ -318,4 +490,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "matrix":
         test_matrix_evaluation()
     else:
-        test_single_evaluation()
+        interactive_evaluation()
