@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from typing import Callable
+from typing import Callable, Optional
 import json
 import threading
 
@@ -8,6 +8,62 @@ from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.ui.task_config import TASK_ORDER, TASK_METADATA, get_runtimes_for_task, get_models_for_runtime, get_prompts_for_task, get_default_prompt_for_task
 from kindle_to_anki.core.bootstrap import bootstrap_all
+from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
+from kindle_to_anki.tasks.wsd.schema import WSDInput
+from kindle_to_anki.tasks.hint.schema import HintInput
+from kindle_to_anki.tasks.lui.schema import LUIInput
+from kindle_to_anki.tasks.collocation.schema import CollocationInput
+from kindle_to_anki.tasks.translation.schema import TranslationInput
+from kindle_to_anki.tasks.cloze_scoring.schema import ClozeScoringInput
+from kindle_to_anki.tasks.usage_level.schema import UsageLevelInput
+
+
+# Task configuration for building inputs and processing outputs
+TASK_CONFIG = {
+    "wsd": {
+        "input_class": WSDInput,
+        "output_field": "Definition",
+        "output_attr": "definition",
+        "runtime_method": "disambiguate",
+    },
+    "hint": {
+        "input_class": HintInput,
+        "output_field": "Hint",
+        "output_attr": "hint",
+        "runtime_method": "generate",
+    },
+    "lui": {
+        "input_class": LUIInput,
+        "output_fields": ["Expression", "Part_Of_Speech", "Aspect", "Surface_Lexical_Unit", "Unit_Type"],
+        "output_attrs": ["lemma", "part_of_speech", "aspect", "surface_lexical_unit", "unit_type"],
+        "runtime_method": "identify",
+    },
+    "collocation": {
+        "input_class": CollocationInput,
+        "output_field": "Collocations",
+        "output_attr": "collocations",
+        "runtime_method": "generate_collocations",
+    },
+    "translation": {
+        "input_class": TranslationInput,
+        "output_field": "Context_Translation",
+        "output_attr": "translation",
+        "runtime_method": "translate",
+    },
+    "cloze_scoring": {
+        "input_class": ClozeScoringInput,
+        "output_fields": ["Cloze_Score", "Cloze_Enabled"],
+        "output_attrs": ["cloze_deletion_score", "cloze_deletion_score"],
+        "runtime_method": "score",
+    },
+    "usage_level": {
+        "input_class": UsageLevelInput,
+        "output_field": "Usage_Level",
+        "output_attr": "usage_level",
+        "runtime_method": "estimate",
+    },
+}
 
 
 class UpdateTaskRow(ctk.CTkFrame):
@@ -516,17 +572,72 @@ class UpdateNotesView(ctk.CTkFrame):
         )
         self.stats_skipped_label.pack(anchor="w", padx=15, pady=(0, 10))
 
-        # Run button
+        # Run controls
         run_frame = ctk.CTkFrame(query_section, fg_color="transparent")
-        run_frame.pack(fill="x", padx=15, pady=(0, 15))
+        run_frame.pack(fill="x", padx=15, pady=(0, 10))
 
         self.run_btn = ctk.CTkButton(
             run_frame,
             text="Run Selected Tasks",
             width=180,
-            state="disabled"
+            command=self._on_run_tasks
         )
         self.run_btn.pack(side="left")
+
+        self.cancel_btn = ctk.CTkButton(
+            run_frame,
+            text="Cancel",
+            width=100,
+            state="disabled",
+            command=self._on_cancel_tasks
+        )
+        self.cancel_btn.pack(side="left", padx=(10, 0))
+
+        # Progress section
+        progress_frame = ctk.CTkFrame(query_section, fg_color="transparent")
+        progress_frame.pack(fill="x", padx=15, pady=(0, 10))
+
+        self.run_status_label = ctk.CTkLabel(
+            progress_frame,
+            text="",
+            font=ctk.CTkFont(size=12)
+        )
+        self.run_status_label.pack(anchor="w", pady=(0, 5))
+
+        self.progress_bar = ctk.CTkProgressBar(progress_frame, width=600)
+        self.progress_bar.pack(anchor="w", pady=(0, 5))
+        self.progress_bar.set(0)
+
+        self.progress_detail_label = ctk.CTkLabel(
+            progress_frame,
+            text="",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray50", "gray60")
+        )
+        self.progress_detail_label.pack(anchor="w")
+
+        # Output log
+        log_frame = ctk.CTkFrame(query_section)
+        log_frame.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+
+        log_header = ctk.CTkLabel(
+            log_frame,
+            text="Output Log",
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        log_header.pack(anchor="w", padx=10, pady=(10, 5))
+
+        self.log_textbox = ctk.CTkTextbox(
+            log_frame,
+            font=ctk.CTkFont(family="Consolas", size=11),
+            height=200,
+            state="disabled"
+        )
+        self.log_textbox.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        # Track running state
+        self.is_running = False
+        self.run_thread: Optional[threading.Thread] = None
 
     def _on_filter_change(self, *args):
         """Called when any filter option changes."""
@@ -722,3 +833,332 @@ class UpdateNotesView(ctk.CTkFrame):
             self.query_status_label.configure(text=status, text_color=("gray50", "gray60"))
 
         self.query_btn.configure(state="normal")
+
+    def _log(self, message: str):
+        """Append message to the log textbox."""
+        self.log_textbox.configure(state="normal")
+        self.log_textbox.insert("end", message + "\n")
+        self.log_textbox.see("end")
+        self.log_textbox.configure(state="disabled")
+
+    def _update_progress(self, current: int, total: int, status: str, detail: str = ""):
+        """Update progress bar and status labels."""
+        self.progress_bar.set(current / total if total > 0 else 0)
+        self.run_status_label.configure(text=status)
+        self.progress_detail_label.configure(text=detail)
+
+    def _on_run_tasks(self):
+        """Start running selected tasks."""
+        selected_tasks = self.get_selected_tasks()
+        if not selected_tasks:
+            self._log("No tasks selected")
+            return
+
+        self.is_running = True
+        self.run_btn.configure(state="disabled")
+        self.cancel_btn.configure(state="normal")
+        self.query_btn.configure(state="disabled")
+
+        # Clear log
+        self.log_textbox.configure(state="normal")
+        self.log_textbox.delete("1.0", "end")
+        self.log_textbox.configure(state="disabled")
+
+        self.run_thread = threading.Thread(target=self._run_tasks_thread, daemon=True)
+        self.run_thread.start()
+
+    def _on_cancel_tasks(self):
+        """Request cancellation of running tasks."""
+        self.is_running = False
+        self.after(0, lambda: self._log("Cancellation requested..."))
+
+    def _run_tasks_thread(self):
+        """Background thread to run selected tasks."""
+        try:
+            self._execute_tasks()
+        except Exception as e:
+            self.after(0, lambda: self._log(f"Error: {str(e)}"))
+        finally:
+            self.after(0, self._tasks_finished)
+
+    def _tasks_finished(self):
+        """Called when task execution completes."""
+        self.is_running = False
+        self.run_btn.configure(state="normal")
+        self.cancel_btn.configure(state="disabled")
+        self.query_btn.configure(state="normal")
+        self._update_progress(1, 1, "Completed", "")
+
+    def _execute_tasks(self):
+        """Execute selected tasks on matching notes."""
+        deck = self.get_selected_deck()
+        if not deck:
+            self.after(0, lambda: self._log("No deck selected"))
+            return
+
+        task_settings = self.get_task_settings()
+        skip_matching = self.get_skip_matching_metadata()
+        query = self.get_current_filter()
+
+        self.after(0, lambda: self._update_progress(0, 1, "Connecting to Anki...", ""))
+        self.after(0, lambda: self._log(f"Query: {query}"))
+
+        anki = AnkiConnect()
+
+        # Find matching notes
+        self.after(0, lambda: self._update_progress(0, 1, "Finding notes...", ""))
+        note_ids = anki._invoke("findNotes", {"query": query})
+
+        if not note_ids:
+            self.after(0, lambda: self._log("No notes found matching query"))
+            return
+
+        self.after(0, lambda: self._log(f"Found {len(note_ids)} notes matching query"))
+
+        # Get note info
+        notes_info = anki._invoke("notesInfo", {"notes": note_ids})
+
+        # Process each task
+        task_keys = list(task_settings.keys())
+        total_tasks = len(task_keys)
+
+        for task_idx, task_key in enumerate(task_keys):
+            if not self.is_running:
+                self.after(0, lambda: self._log("Cancelled"))
+                return
+
+            settings = task_settings[task_key]
+            task_name = TASK_METADATA.get(task_key, {}).get("name", task_key)
+
+            self.after(0, lambda tn=task_name, ti=task_idx, tt=total_tasks:
+                       self._update_progress(ti, tt, f"Running {tn}...", ""))
+            self.after(0, lambda tn=task_name: self._log(f"\n--- {tn} ---"))
+
+            # Filter notes if skip_matching is enabled
+            if skip_matching:
+                notes_to_process = [
+                    note for note in notes_info
+                    if not self._metadata_matches(note, task_key, settings)
+                ]
+                skipped = len(notes_info) - len(notes_to_process)
+                if skipped > 0:
+                    self.after(0, lambda s=skipped: self._log(f"Skipping {s} notes with matching metadata"))
+            else:
+                notes_to_process = notes_info
+
+            if not notes_to_process:
+                self.after(0, lambda: self._log("No notes to process for this task"))
+                continue
+
+            self.after(0, lambda n=len(notes_to_process): self._log(f"Processing {n} notes"))
+
+            # Get runtime
+            runtime_id = settings.get("runtime")
+            runtimes = RuntimeRegistry.find_by_task_as_dict(task_key)
+            runtime = runtimes.get(runtime_id)
+
+            if not runtime:
+                self.after(0, lambda rid=runtime_id: self._log(f"Runtime '{rid}' not found"))
+                continue
+
+            runtime_config = RuntimeConfig(
+                model_id=settings.get("model_id"),
+                batch_size=settings.get("batch_size", 30),
+                source_language_code=deck.source_language_code,
+                target_language_code=deck.target_language_code,
+                prompt_id=settings.get("prompt_id"),
+            )
+
+            # Run task
+            self._run_single_task(
+                task_key=task_key,
+                notes_info=notes_to_process,
+                runtime=runtime,
+                runtime_config=runtime_config,
+                anki=anki,
+                runtime_id=runtime_id,
+                batch_size=settings.get("batch_size", 30),
+                task_idx=task_idx,
+                total_tasks=total_tasks,
+            )
+
+        self.after(0, lambda: self._log("\n=== All tasks completed ==="))
+
+    def _run_single_task(
+        self,
+        task_key: str,
+        notes_info: list,
+        runtime,
+        runtime_config: RuntimeConfig,
+        anki: AnkiConnect,
+        runtime_id: str,
+        batch_size: int,
+        task_idx: int,
+        total_tasks: int,
+    ):
+        """Run a single task on the provided notes."""
+        task_config = TASK_CONFIG.get(task_key)
+        if not task_config:
+            self.after(0, lambda: self._log(f"Unknown task: {task_key}"))
+            return
+
+        runtime_method = task_config["runtime_method"]
+        output_fields = task_config.get("output_fields", [task_config.get("output_field")])
+        output_attrs = task_config.get("output_attrs", [task_config.get("output_attr")])
+        input_class = task_config["input_class"]
+
+        # Build inputs
+        task_inputs = []
+        note_id_map = {}
+        note_metadata_map = {}
+
+        for note in notes_info:
+            task_input = self._build_task_input(task_key, note, input_class)
+            if task_input:
+                task_inputs.append(task_input)
+                note_id_map[task_input.uid] = note.get('noteId')
+                fields = note.get('fields', {})
+                note_metadata_map[task_input.uid] = fields.get('Generation_Metadata', {}).get('value', '')
+
+        if not task_inputs:
+            self.after(0, lambda: self._log("No valid inputs for task"))
+            return
+
+        # Process in batches
+        total_updated = 0
+        total_batches = (len(task_inputs) + batch_size - 1) // batch_size
+
+        for batch_idx in range(0, len(task_inputs), batch_size):
+            if not self.is_running:
+                return
+
+            batch_inputs = task_inputs[batch_idx:batch_idx + batch_size]
+            batch_num = (batch_idx // batch_size) + 1
+
+            self.after(0, lambda bn=batch_num, tb=total_batches, bs=len(batch_inputs):
+                       self._log(f"Batch {bn}/{tb}: Processing {bs} cards"))
+
+            # Update progress
+            progress = task_idx / total_tasks + (batch_num / total_batches) / total_tasks
+            self.after(0, lambda p=progress, bn=batch_num, tb=total_batches:
+                       self._update_progress(int(p * 100), 100, f"Batch {bn}/{tb}", ""))
+
+            # Run task
+            method = getattr(runtime, runtime_method)
+            outputs = method(batch_inputs, runtime_config, ignore_cache=False)
+
+            # Build batch update actions
+            actions = []
+            for task_input, output in zip(batch_inputs, outputs):
+                note_id = note_id_map[task_input.uid]
+                existing_meta = note_metadata_map.get(task_input.uid, '')
+                new_meta = self._build_generation_metadata(
+                    existing_meta, task_key, runtime_id,
+                    runtime_config.model_id, runtime_config.prompt_id
+                )
+
+                fields_update = {"Generation_Metadata": new_meta}
+
+                for field, attr in zip(output_fields, output_attrs):
+                    value = getattr(output, attr, None)
+                    if value is not None:
+                        if task_key == "cloze_scoring" and attr == "cloze_deletion_score":
+                            score = value
+                            if field == "Cloze_Score":
+                                value = str(score)
+                            elif field == "Cloze_Enabled":
+                                value = "True" if score >= 7 else ""
+                        elif isinstance(value, list):
+                            value = ", ".join(str(v) for v in value)
+                        else:
+                            value = str(value)
+                        fields_update[field] = value
+
+                if len(fields_update) > 1:
+                    actions.append({
+                        "action": "updateNoteFields",
+                        "params": {
+                            "note": {
+                                "id": note_id,
+                                "fields": fields_update
+                            }
+                        }
+                    })
+
+            # Update cards
+            if actions:
+                try:
+                    successful, errors = anki.update_notes_by_id(actions)
+                    total_updated += successful
+                    if errors:
+                        for err in errors:
+                            self.after(0, lambda e=err: self._log(f"  Error: Note {e['note_id']}: {e['error']}"))
+                except Exception as e:
+                    self.after(0, lambda ex=e: self._log(f"  Batch update failed: {ex}"))
+
+        self.after(0, lambda tu=total_updated: self._log(f"Updated {tu} notes"))
+
+    def _build_task_input(self, task_key: str, note: dict, input_class):
+        """Build task input from note fields."""
+        fields = note.get('fields', {})
+        uid = fields.get('UID', {}).get('value', '').strip()
+        expression = fields.get('Expression', {}).get('value', '').strip()
+        surface_lexical_unit = fields.get('Surface_Lexical_Unit', {}).get('value', '').strip()
+        context = fields.get('Context_Sentence', {}).get('value', '').strip()
+        pos = fields.get('Part_Of_Speech', {}).get('value', '').strip() or 'unknown'
+        raw_lookup = fields.get('Raw_Lookup_String', {}).get('value', '').strip()
+        raw_context = fields.get('Raw_Context_Text', {}).get('value', '').strip()
+        definition = fields.get('Definition', {}).get('value', '').strip()
+
+        if task_key == "lui":
+            word = raw_lookup or surface_lexical_unit or expression
+            sentence = raw_context or context
+            if not (uid and word and sentence):
+                return None
+            return input_class(uid=uid, word=word, sentence=sentence)
+
+        elif task_key == "collocation":
+            if not (uid and expression):
+                return None
+            return input_class(uid=uid, lemma=expression, pos=pos)
+
+        elif task_key == "translation":
+            if not (uid and context):
+                return None
+            return input_class(uid=uid, context=context)
+
+        elif task_key == "usage_level":
+            if not (uid and expression and context and definition):
+                return None
+            return input_class(
+                uid=uid,
+                word=surface_lexical_unit or expression,
+                lemma=expression,
+                pos=pos,
+                sentence=context,
+                definition=definition,
+            )
+
+        else:
+            # WSD, hint, cloze_scoring
+            if not (uid and expression and context):
+                return None
+            return input_class(
+                uid=uid,
+                word=surface_lexical_unit or expression,
+                lemma=expression,
+                pos=pos,
+                sentence=context,
+            )
+
+    def _build_generation_metadata(self, existing_str: str, task_key: str, runtime_id: str, model_id: str, prompt_id: str | None) -> str:
+        """Build updated Generation_Metadata JSON string."""
+        try:
+            metadata = json.loads(existing_str) if existing_str else {}
+        except json.JSONDecodeError:
+            metadata = {}
+        task_meta = {"runtime": runtime_id, "model": model_id}
+        if prompt_id:
+            task_meta["prompt"] = prompt_id
+        metadata[task_key] = task_meta
+        return json.dumps(metadata)
