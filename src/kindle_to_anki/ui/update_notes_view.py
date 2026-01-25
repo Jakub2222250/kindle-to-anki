@@ -877,7 +877,7 @@ class UpdateNotesView(ctk.CTkFrame):
             self.after(0, lambda: self._update_query_stats(total_count, to_process, skipped, "Query complete"))
 
         except Exception as e:
-            self.after(0, lambda: self._update_query_stats(0, 0, 0, f"Error: {str(e)[:50]}"))
+            self.after(0, lambda err=e: self._update_query_stats(0, 0, 0, f"Error: {str(err)[:50]}"))
 
     def _metadata_matches(self, note: dict, task_key: str, settings: dict) -> bool:
         """Check if note's metadata matches the task settings."""
@@ -963,7 +963,7 @@ class UpdateNotesView(ctk.CTkFrame):
         try:
             self._execute_tasks()
         except Exception as e:
-            self.after(0, lambda: self._log(f"Error: {str(e)}"))
+            self.after(0, lambda err=e: self._log(f"Error: {str(err)}"))
         finally:
             self.after(0, self._tasks_finished)
 
