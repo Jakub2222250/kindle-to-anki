@@ -1,5 +1,6 @@
 from typing import List
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from .schema import HintInput, HintOutput
@@ -42,7 +43,7 @@ class HintProvider:
                 hint_inputs.append(hint_input)
 
         if not hint_inputs:
-            print("No notes with required fields for hint")
+            get_logger().info("No notes with required fields for hint")
             return notes
 
         hint_outputs: List[HintOutput] = runtime.generate(

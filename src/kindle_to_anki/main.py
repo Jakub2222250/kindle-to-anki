@@ -1,3 +1,6 @@
+import argparse
+
+from kindle_to_anki.logging import LogLevel, ConsoleLogger, LoggerRegistry, get_logger
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.configuration.options_display import show_selected_options
@@ -23,11 +26,15 @@ from kindle_to_anki.pruning.pruning import prune_existing_notes_automatically, p
 from time import sleep
 
 
-def export_kindle_vocab():
+def export_kindle_vocab(log_level: LogLevel = LogLevel.INFO):
 
     SLEEP_TIME = 0
 
-    print("Starting Kindle to Anki export process.")
+    # Set up console logger
+    LoggerRegistry.set(ConsoleLogger(level=log_level, show_timestamp=True))
+    logger = get_logger()
+
+    logger.info("Starting Kindle to Anki export process.")
 
     bootstrap_all()
 
@@ -53,7 +60,7 @@ def export_kindle_vocab():
     )
 
     if not notes_by_language or len(notes_by_language) == 0:
-        print("No candidate notes collected. Exiting process.")
+        logger.info("No candidate notes collected. Exiting process.")
         return
 
     # Connect to AnkiConnect
@@ -72,13 +79,13 @@ def export_kindle_vocab():
         # Prune existing notes by UID
         notes = prune_existing_notes_by_UID(notes, existing_notes)
         if len(notes) == 0:
-            print(f"No new notes to add to Anki after UID pruning for language: {source_language_code}")
+            logger.info(f"No new notes to add to Anki after UID pruning for language: {source_language_code}")
             continue
 
         # Prune notes previously identified as redundant
         notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
         if len(notes) == 0:
-            print(f"No new notes to add to Anki after redundancy pruning for language: {source_language_code}")
+            logger.info(f"No new notes to add to Anki after redundancy pruning for language: {source_language_code}")
             continue
 
         # Show selected configuration with cost estimates
@@ -119,7 +126,7 @@ def export_kindle_vocab():
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         if not notes:
-            print(f"No new notes to process for language: {source_language_code}")
+            logger.info(f"No new notes to process for language: {source_language_code}")
             continue
 
         # Provide word sense disambiguation via LLM
@@ -147,7 +154,7 @@ def export_kindle_vocab():
         sleep(SLEEP_TIME)  # Opportunity to read output
 
         if len(notes) == 0:
-            print(f"No new notes to add to Anki after pruning for language: {source_language_code}")
+            logger.info(f"No new notes to add to Anki after pruning for language: {source_language_code}")
             continue
 
         # Generate hints
@@ -255,8 +262,18 @@ def export_kindle_vocab():
         metadata = metadata_manager.load_metadata()
         metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_candidate_timestamp, metadata)
 
-    print("\nKindle to Anki export process completed successfully.")
+    logger.info("Kindle to Anki export process completed successfully.")
 
 
 if __name__ == "__main__":
-    export_kindle_vocab()
+    parser = argparse.ArgumentParser(description="Export Kindle vocabulary to Anki")
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=[level.name for level in LogLevel],
+        default="INFO",
+        help="Set the logging level (default: INFO)"
+    )
+    args = parser.parse_args()
+
+    export_kindle_vocab(log_level=LogLevel[args.log_level])

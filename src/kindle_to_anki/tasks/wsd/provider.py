@@ -1,6 +1,7 @@
 # tasks/wsd/provider.py
 from typing import List
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from .schema import WSDInput, WSDOutput
@@ -55,7 +56,7 @@ class WSDProvider:
                 wsd_inputs.append(wsd_input)
 
         if not wsd_inputs:
-            print("No notes with required fields for WSD")
+            get_logger().info("No notes with required fields for WSD")
             return notes
 
         # Process WSD using the runtime

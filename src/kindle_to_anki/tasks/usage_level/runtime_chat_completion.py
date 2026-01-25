@@ -2,6 +2,7 @@ import json
 import time
 from typing import List, Dict, Any, Optional
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
 from kindle_to_anki.core.runtimes.batch_call_result import BatchCallResult
 from kindle_to_anki.core.pricing.usage_scope import UsageScope
@@ -69,8 +70,9 @@ class ChatCompletionUsageLevel:
 
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
+        logger = get_logger()
 
-        print("\nStarting Usage Level estimation via LLM...")
+        logger.info("Starting Usage Level estimation via LLM...")
 
         source_language_name = get_language_name_in_english(source_lang)
 
@@ -94,13 +96,13 @@ class ChatCompletionUsageLevel:
                 else:
                     inputs_needing_estimation.append(usage_input)
                     outputs.append(None)
-            print(f"Found {cached_count} cached results, {len(inputs_needing_estimation)} inputs need LLM calls")
+            logger.info(f"Found {cached_count} cached results, {len(inputs_needing_estimation)} inputs need LLM calls")
         else:
             inputs_needing_estimation = usage_inputs
             outputs = [None] * len(usage_inputs)
 
         if not inputs_needing_estimation:
-            print(f"Usage Level estimation completed (all from cache).")
+            logger.info(f"Usage Level estimation completed (all from cache).")
             return [output for output in outputs if output is not None]
 
         MAX_RETRIES = 1
@@ -125,10 +127,11 @@ class ChatCompletionUsageLevel:
             else:
                 usage_outputs.append(output)
 
-        print(f"Usage Level estimation completed.")
+        logger.info(f"Usage Level estimation completed.")
         return usage_outputs
 
     def _make_batch_call(self, batch_inputs: List[UsageLevelInput], processing_timestamp: str, source_language_name: str, runtime_config: RuntimeConfig) -> BatchCallResult:
+        logger = get_logger()
         items_list = []
         for input_item in batch_inputs:
             items_list.append(f'{{"uid": "{input_item.uid}", "lemma": "{input_item.lemma}", "pos": "{input_item.pos}", "definition": "{input_item.definition}"}}')
@@ -145,33 +148,36 @@ class ChatCompletionUsageLevel:
         cost_reporter = RealtimeCostReporter(model)
         estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))
 
-        print(f"  Making batch usage level API call for {len(batch_inputs)} inputs (est. cost: {estimated_cost_str})...")
+        logger.info(f"Making batch usage level API call for {len(batch_inputs)} inputs (est. cost: {estimated_cost_str})...")
+        logger.debug(f"Full prompt:\n{prompt}")
 
         start_time = time.time()
 
         try:
             response_text = platform.call_api(runtime_config.model_id, prompt)
         except Exception as e:
-            print(f"  API call failed: {e}")
+            logger.error(f"API call failed: {e}")
             return BatchCallResult(success=False, error=str(e))
 
         elapsed = time.time() - start_time
 
         output_tokens = count_tokens(response_text, model)
         actual_cost_str = cost_reporter.actual_cost(input_tokens, output_tokens, len(batch_inputs))
-        print(f"  Batch call completed in {elapsed:.2f}s (actual cost: {actual_cost_str})")
+        logger.info(f"Batch call completed in {elapsed:.2f}s (cost: {actual_cost_str})")
+        logger.debug(f"Full response:\n{response_text}")
 
         try:
             parsed_results = json.loads(strip_markdown_code_block(response_text))
         except json.JSONDecodeError as e:
             preview = response_text[:500] if response_text else "(empty response)"
-            print(f"  Failed to parse API response as JSON: {e}")
-            print(f"  Raw response preview: {preview}")
+            logger.error(f"Failed to parse API response as JSON: {e}")
+            logger.debug(f"Raw response preview: {preview}")
             return BatchCallResult(success=False, error=f"JSON parse error: {e}")
 
         return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
 
     def _process_batches(self, inputs_needing_estimation: List[UsageLevelInput], cache: UsageLevelCache, source_language_name: str, runtime_config: RuntimeConfig) -> List[UsageLevelInput]:
+        logger = get_logger()
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         total_batches = (len(inputs_needing_estimation) + runtime_config.batch_size - 1) // runtime_config.batch_size
         failing_inputs = []
@@ -179,21 +185,21 @@ class ChatCompletionUsageLevel:
         for i in range(0, len(inputs_needing_estimation), runtime_config.batch_size):
             batch = inputs_needing_estimation[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
-            print(f"\nProcessing usage level batch {batch_num}/{total_batches} ({len(batch)} inputs)")
+            logger.info(f"Processing usage level batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             result = self._make_batch_call(batch, processing_timestamp, source_language_name, runtime_config)
 
             if not result.success:
-                print(f"  BATCH FAILED - {result.error}")
+                logger.error(f"BATCH FAILED - {result.error}")
                 failing_inputs.extend(batch)
                 continue
 
             for input_item in batch:
                 if input_item.uid in result.results:
                     cache.set(input_item.uid, self.id, result.model_id, runtime_config.prompt_id, result.results[input_item.uid], result.timestamp)
-                    print(f"  SUCCESS - estimated {input_item.lemma}")
+                    logger.trace(f"estimated {input_item.lemma}")
                 else:
-                    print(f"  FAILED - no result for {input_item.lemma}")
+                    logger.warning(f"no result for {input_item.lemma}")
                     failing_inputs.append(input_item)
 
         return failing_inputs

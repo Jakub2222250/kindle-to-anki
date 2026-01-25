@@ -2,6 +2,7 @@
 from typing import List
 
 from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.tasks.lui.schema import LUIInput, LUIOutput
 
@@ -53,7 +54,7 @@ class LUIProvider:
                 lui_inputs.append(lui_input)
 
         if not lui_inputs:
-            print("No notes with required fields for lexical unit identification")
+            get_logger().info("No notes with required fields for lexical unit identification")
             return notes
 
         # Identify using the runtime

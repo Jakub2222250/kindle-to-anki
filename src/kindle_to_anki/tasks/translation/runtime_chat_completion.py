@@ -2,6 +2,7 @@ import json
 import time
 from typing import List, Dict, Any
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
 from kindle_to_anki.core.runtimes.batch_call_result import BatchCallResult
 from kindle_to_anki.core.pricing.usage_scope import UsageScope
@@ -80,8 +81,9 @@ class ChatCompletionTranslation:
 
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
+        logger = get_logger()
 
-        print("\nStarting context translation (LLM)...")
+        logger.info("Starting context translation (LLM)...")
 
         # Get language names from the first input (assuming all have same language pair)
         source_language_name = get_language_name_in_english(source_lang)
@@ -114,14 +116,14 @@ class ChatCompletionTranslation:
                     inputs_needing_translation.append(translation_input)
                     outputs.append(None)  # Placeholder
 
-            print(f"Found {cached_count} cached translations, {len(inputs_needing_translation)} inputs need LLM translation")
+            logger.info(f"Found {cached_count} cached translations, {len(inputs_needing_translation)} inputs need LLM translation")
         else:
             inputs_needing_translation = translation_inputs
             outputs = [None] * len(translation_inputs)
-            print("Ignoring cache as per user request. Fresh translations will be generated.")
+            logger.info("Ignoring cache as per user request. Fresh translations will be generated.")
 
         if not inputs_needing_translation:
-            print(f"{source_language_name} context translation (LLM) completed (all from cache).")
+            logger.info(f"{source_language_name} context translation (LLM) completed (all from cache).")
             return [output for output in outputs if output is not None]
 
         # Process inputs in batches with retry logic
@@ -130,15 +132,15 @@ class ChatCompletionTranslation:
         failing_inputs = self._process_translation_batches(inputs_needing_translation, cache, source_language_name, target_language_name, runtime_config)
 
         while len(failing_inputs) > 0:
-            print(f"{len(failing_inputs)} inputs failed LLM translation.")
+            logger.warning(f"{len(failing_inputs)} inputs failed LLM translation.")
 
             if retries >= MAX_RETRIES:
-                print("All successful translation results already saved to cache. Running script again usually fixes the issue. Exiting.")
+                logger.error("All successful translation results already saved to cache. Running script again usually fixes the issue. Exiting.")
                 raise RuntimeError("Translation failed after retries")
 
             if retries < MAX_RETRIES:
                 retries += 1
-                print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
+                logger.info(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
                 failing_inputs = self._process_translation_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config)
 
         # Fill in the translated results
@@ -160,11 +162,12 @@ class ChatCompletionTranslation:
             else:
                 translated_outputs.append(output)
 
-        print(f"{source_language_name} context translation (LLM) completed.")
+        logger.info(f"{source_language_name} context translation (LLM) completed.")
         return translated_outputs
 
     def _make_batch_translation_call(self, batch_inputs: List[TranslationInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> BatchCallResult:
         """Make batch LLM API call for translation. Returns BatchCallResult with success/failure state."""
+        logger = get_logger()
         items_list = [{"uid": input_item.uid, "sentence": input_item.context} for input_item in batch_inputs]
         items_json = json.dumps(items_list, ensure_ascii=False, indent=2)
 
@@ -182,15 +185,16 @@ class ChatCompletionTranslation:
         estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))
 
         items_json_tokens = count_tokens(items_json, model)
-        print(f"    (Prompt contains {input_chars} chars / {input_tokens} tokens; items JSON part contains {items_json_tokens} tokens)")
-        print(f"  Making batch translation API call for {len(batch_inputs)} inputs (in: {input_chars} chars / {input_tokens} tokens, out: ~{estimated_output_tokens} tokens, estimated cost: {estimated_cost_str})...")
+        logger.trace(f"Prompt contains {input_chars} chars / {input_tokens} tokens; items JSON part contains {items_json_tokens} tokens")
+        logger.info(f"Making batch translation API call for {len(batch_inputs)} inputs (in: {input_tokens} tokens, out: ~{estimated_output_tokens} tokens, est. cost: {estimated_cost_str})...")
+        logger.debug(f"Full prompt:\n{prompt}")
 
         start_time = time.time()
 
         try:
             response_text = platform.call_api(runtime_config.model_id, prompt)
         except Exception as e:
-            print(f"  API call failed: {e}")
+            logger.error(f"API call failed: {e}")
             return BatchCallResult(success=False, error=str(e))
 
         elapsed = time.time() - start_time
@@ -198,20 +202,22 @@ class ChatCompletionTranslation:
         output_tokens = count_tokens(response_text, model)
 
         actual_cost_str = cost_reporter.actual_cost(input_tokens, output_tokens, len(batch_inputs))
-        print(f"  Batch translation API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
+        logger.info(f"Batch translation API call completed in {elapsed:.2f}s (in: {input_tokens} tokens, out: {output_tokens} tokens, cost: {actual_cost_str})")
+        logger.debug(f"Full response:\n{response_text}")
 
         try:
             parsed_results = json.loads(strip_markdown_code_block(response_text))
         except json.JSONDecodeError as e:
             preview = response_text[:500] if response_text else "(empty response)"
-            print(f"  Failed to parse API response as JSON: {e}")
-            print(f"  Raw response preview: {preview}")
+            logger.error(f"Failed to parse API response as JSON: {e}")
+            logger.debug(f"Raw response preview: {preview}")
             return BatchCallResult(success=False, error=f"JSON parse error: {e}")
 
         return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
 
     def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[TranslationInput]:
         """Process inputs in batches for translation"""
+        logger = get_logger()
 
         # Capture timestamp at the start of translation processing
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -223,12 +229,12 @@ class ChatCompletionTranslation:
             batch = inputs_needing_translation[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
 
-            print(f"\nProcessing translation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
+            logger.info(f"Processing translation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             result = self._make_batch_translation_call(batch, processing_timestamp, source_language_name, target_language_name, runtime_config)
 
             if not result.success:
-                print(f"  BATCH FAILED - {result.error}")
+                logger.error(f"BATCH FAILED - {result.error}")
                 failing_inputs.extend(batch)
                 continue
 
@@ -244,9 +250,9 @@ class ChatCompletionTranslation:
                     # Save to cache
                     cache.set(input_item.uid, self.id, result.model_id, runtime_config.prompt_id, translation_result, result.timestamp)
 
-                    print(f"  SUCCESS - translated sentence for UID {input_item.uid}")
+                    logger.trace(f"translated sentence for UID {input_item.uid}")
                 else:
-                    print(f"  FAILED - no translation result for UID {input_item.uid}")
+                    logger.warning(f"no translation result for UID {input_item.uid}")
                     failing_inputs.append(input_item)
 
         return failing_inputs

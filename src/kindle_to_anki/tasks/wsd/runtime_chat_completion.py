@@ -2,6 +2,7 @@ import json
 import time
 from typing import List, Dict, Any
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
 from kindle_to_anki.core.runtimes.batch_call_result import BatchCallResult
 from kindle_to_anki.core.pricing.usage_scope import UsageScope
@@ -80,8 +81,9 @@ class ChatCompletionWSD:
 
         source_lang = runtime_config.source_language_code
         target_lang = runtime_config.target_language_code
+        logger = get_logger()
 
-        print("\nStarting Word Sense Disambiguation via LLM process...")
+        logger.info("Starting Word Sense Disambiguation via LLM...")
 
         # Get language names from the inputs
         source_language_name = get_language_name_in_english(source_lang)
@@ -114,14 +116,14 @@ class ChatCompletionWSD:
                     inputs_needing_wsd.append(wsd_input)
                     outputs.append(None)  # Placeholder
 
-            print(f"Found {cached_count} cached results, {len(inputs_needing_wsd)} inputs need LLM calls")
+            logger.info(f"Found {cached_count} cached results, {len(inputs_needing_wsd)} inputs need LLM calls")
         else:
             inputs_needing_wsd = wsd_inputs
             outputs = [None] * len(wsd_inputs)
-            print("Ignoring cache as per user request. Fresh results will be generated.")
+            logger.info("Ignoring cache as per user request. Fresh results will be generated.")
 
         if not inputs_needing_wsd:
-            print(f"{source_language_name} Word Sense Disambiguation (LLM) completed (all from cache).")
+            logger.info(f"{source_language_name} Word Sense Disambiguation (LLM) completed (all from cache).")
             return [output for output in outputs if output is not None]
 
         # Process inputs in batches with retry logic
@@ -130,15 +132,15 @@ class ChatCompletionWSD:
         failing_inputs = self._process_wsd_batches(inputs_needing_wsd, cache, source_language_name, target_language_name, runtime_config)
 
         while len(failing_inputs) > 0:
-            print(f"{len(failing_inputs)} inputs failed LLM Word Sense Disambiguation.")
+            logger.warning(f"{len(failing_inputs)} inputs failed LLM Word Sense Disambiguation.")
 
             if retries >= MAX_RETRIES:
-                print("All successful WSD results already saved to cache. Running script again usually fixes the issue. Exiting.")
+                logger.error("All successful WSD results already saved to cache. Running script again usually fixes the issue. Exiting.")
                 raise RuntimeError("WSD failed after retries")
 
             if retries < MAX_RETRIES:
                 retries += 1
-                print(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
+                logger.info(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
                 failing_inputs = self._process_wsd_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config)
 
         # Fill in the WSD results
@@ -159,11 +161,12 @@ class ChatCompletionWSD:
             else:
                 wsd_outputs.append(output)
 
-        print(f"{source_language_name} Word Sense Disambiguation (LLM) completed.")
+        logger.info(f"{source_language_name} Word Sense Disambiguation (LLM) completed.")
         return wsd_outputs
 
     def _make_batch_wsd_call(self, batch_inputs: List[WSDInput], processing_timestamp: str, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> BatchCallResult:
         """Make batch LLM API call for WSD. Returns BatchCallResult with success/failure state."""
+        logger = get_logger()
         items_list = []
         for input_item in batch_inputs:
             items_list.append(f'{{"uid": "{input_item.uid}", "word": "{input_item.word}", "lemma": "{input_item.lemma}", "pos": "{input_item.pos}", "sentence": "{input_item.sentence}"}}')
@@ -184,15 +187,16 @@ class ChatCompletionWSD:
         estimated_cost_str = cost_reporter.estimate_cost(input_tokens, estimated_output_tokens, len(batch_inputs))
 
         items_json_tokens = count_tokens(items_json, model)
-        print(f"    (Prompt contains {input_chars} chars / {input_tokens} tokens; items JSON part contains {items_json_tokens} tokens)")
-        print(f"  Making batch WSD API call for {len(batch_inputs)} inputs (in: {input_chars} chars / {input_tokens} tokens, out: ~{estimated_output_tokens} tokens, estimated cost: {estimated_cost_str})...")
+        logger.trace(f"Prompt contains {input_chars} chars / {input_tokens} tokens; items JSON part contains {items_json_tokens} tokens")
+        logger.info(f"Making batch WSD API call for {len(batch_inputs)} inputs (in: {input_tokens} tokens, out: ~{estimated_output_tokens} tokens, est. cost: {estimated_cost_str})...")
+        logger.debug(f"Full prompt:\n{prompt}")
 
         start_time = time.time()
 
         try:
             response_text = platform.call_api(runtime_config.model_id, prompt)
         except Exception as e:
-            print(f"  API call failed: {e}")
+            logger.error(f"API call failed: {e}")
             return BatchCallResult(success=False, error=str(e))
 
         elapsed = time.time() - start_time
@@ -200,20 +204,22 @@ class ChatCompletionWSD:
         output_tokens = count_tokens(response_text, model)
 
         actual_cost_str = cost_reporter.actual_cost(input_tokens, output_tokens, len(batch_inputs))
-        print(f"  Batch WSD API call completed in {elapsed:.2f}s (in: {input_chars} chars / {input_tokens} tokens, out: {output_chars} chars / {output_tokens} tokens, actual cost: {actual_cost_str})")
+        logger.info(f"Batch WSD API call completed in {elapsed:.2f}s (in: {input_tokens} tokens, out: {output_tokens} tokens, cost: {actual_cost_str})")
+        logger.debug(f"Full response:\n{response_text}")
 
         try:
             parsed_results = json.loads(strip_markdown_code_block(response_text))
         except json.JSONDecodeError as e:
             preview = response_text[:500] if response_text else "(empty response)"
-            print(f"  Failed to parse API response as JSON: {e}")
-            print(f"  Raw response preview: {preview}")
+            logger.error(f"Failed to parse API response as JSON: {e}")
+            logger.debug(f"Raw response preview: {preview}")
             return BatchCallResult(success=False, error=f"JSON parse error: {e}")
 
         return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
 
     def _process_wsd_batches(self, inputs_needing_wsd: List[WSDInput], cache: WSDCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[WSDInput]:
         """Process inputs in batches for WSD"""
+        logger = get_logger()
 
         # Capture timestamp at the start of WSD processing
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -225,12 +231,12 @@ class ChatCompletionWSD:
             batch = inputs_needing_wsd[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
 
-            print(f"\nProcessing WSD batch {batch_num}/{total_batches} ({len(batch)} inputs)")
+            logger.info(f"Processing WSD batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             result = self._make_batch_wsd_call(batch, processing_timestamp, source_language_name, target_language_name, runtime_config)
 
             if not result.success:
-                print(f"  BATCH FAILED - {result.error}")
+                logger.error(f"BATCH FAILED - {result.error}")
                 failing_inputs.extend(batch)
                 continue
 
@@ -241,9 +247,9 @@ class ChatCompletionWSD:
                     # Save to cache
                     cache.set(input_item.uid, self.id, result.model_id, runtime_config.prompt_id, wsd_data, result.timestamp)
 
-                    print(f"  SUCCESS - enriched {input_item.word}")
+                    logger.trace(f"enriched {input_item.word}")
                 else:
-                    print(f"  FAILED - no result for {input_item.word}")
+                    logger.warning(f"no result for {input_item.word}")
                     failing_inputs.append(input_item)
 
         return failing_inputs
