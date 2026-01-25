@@ -3,6 +3,7 @@ from typing import Callable, Optional
 import json
 import threading
 
+from kindle_to_anki.logging import LogLevel, UILogger, LoggerRegistry
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
@@ -645,6 +646,24 @@ class UpdateNotesView(ctk.CTkFrame):
         )
         self.cancel_btn.pack(side="left", padx=(10, 0))
 
+        # Log level dropdown
+        log_level_label = ctk.CTkLabel(run_frame, text="Log Level:", font=ctk.CTkFont(size=12))
+        log_level_label.pack(side="left", padx=(20, 5))
+
+        self.log_level_var = ctk.StringVar(value="INFO")
+        self.log_level_dropdown = ctk.CTkOptionMenu(
+            run_frame,
+            variable=self.log_level_var,
+            values=[level.name for level in LogLevel],
+            width=100,
+            command=self._on_log_level_change
+        )
+        self.log_level_dropdown.pack(side="left")
+
+        # Setup UI logger with callback
+        self._ui_logger = UILogger(level=LogLevel.INFO, callback=self._on_log_message)
+        LoggerRegistry.set(self._ui_logger)
+
         # Progress section
         progress_frame = ctk.CTkFrame(query_section, fg_color="transparent")
         progress_frame.pack(fill="x", padx=15, pady=(0, 10))
@@ -892,6 +911,14 @@ class UpdateNotesView(ctk.CTkFrame):
             self.query_status_label.configure(text=status, text_color=("gray50", "gray60"))
 
         self.query_btn.configure(state="normal")
+
+    def _on_log_level_change(self, value: str):
+        """Update the UI logger's level when dropdown changes."""
+        self._ui_logger.level = LogLevel[value]
+
+    def _on_log_message(self, level: LogLevel, message: str):
+        """Callback for UILogger - append to log textbox from any thread."""
+        self.after(0, lambda: self._log(f"[{level.name}] {message}"))
 
     def _log(self, message: str):
         """Append message to the log textbox."""
