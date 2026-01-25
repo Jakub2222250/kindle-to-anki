@@ -3,6 +3,184 @@ from typing import Callable
 
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 from kindle_to_anki.configuration.config_manager import ConfigManager
+from kindle_to_anki.ui.task_config import TASK_ORDER, TASK_METADATA, get_runtimes_for_task, get_models_for_runtime, RUNTIME_LANGUAGE_RESTRICTIONS
+from kindle_to_anki.core.bootstrap import bootstrap_all
+
+
+class UpdateTaskRow(ctk.CTkFrame):
+    """A task row for Update Notes view - with enable checkbox and config options."""
+
+    def __init__(self, parent, task_key: str, task_settings: dict, source_language_code: str = None):
+        super().__init__(parent, fg_color="transparent")
+        self.task_key = task_key
+        self.task_settings = task_settings
+        self.source_language_code = source_language_code
+        self.metadata = TASK_METADATA.get(task_key, {})
+
+        # Get available runtimes for this task
+        self.available_runtimes = get_runtimes_for_task(task_key, source_language_code)
+        self.runtime_map = {rt.id: rt for rt in self.available_runtimes}
+
+        self._create_widgets()
+
+    def _create_widgets(self):
+        self.grid_columnconfigure(0, weight=0, minsize=30)
+        self.grid_columnconfigure(1, weight=1, minsize=160)
+        self.grid_columnconfigure(2, weight=0, minsize=180)
+        self.grid_columnconfigure(3, weight=0, minsize=150)
+        self.grid_columnconfigure(4, weight=0, minsize=80)
+
+        col = 0
+
+        # Enable checkbox - all tasks start disabled
+        self.enabled_var = ctk.BooleanVar(value=False)
+        self.enabled_cb = ctk.CTkCheckBox(
+            self,
+            text="",
+            variable=self.enabled_var,
+            width=20,
+            command=self._on_enabled_change
+        )
+        self.enabled_cb.grid(row=0, column=col, padx=(5, 0), sticky="w")
+        col += 1
+
+        # Task name and description
+        name_frame = ctk.CTkFrame(self, fg_color="transparent")
+        name_frame.grid(row=0, column=col, padx=5, sticky="w")
+
+        self.name_label = ctk.CTkLabel(
+            name_frame,
+            text=self.metadata.get("name", self.task_key),
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="gray"
+        )
+        self.name_label.pack(anchor="w")
+
+        self.desc_label = ctk.CTkLabel(
+            name_frame,
+            text=self.metadata.get("description", ""),
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        )
+        self.desc_label.pack(anchor="w")
+        col += 1
+
+        # Runtime dropdown
+        runtime_ids = [rt.id for rt in self.available_runtimes]
+        current_runtime = self.task_settings.get("runtime", runtime_ids[0] if runtime_ids else "")
+        if current_runtime not in runtime_ids and runtime_ids:
+            current_runtime = runtime_ids[0]
+
+        self.runtime_var = ctk.StringVar(value=current_runtime)
+        self.runtime_dropdown = ctk.CTkOptionMenu(
+            self,
+            values=runtime_ids if runtime_ids else ["(none)"],
+            variable=self.runtime_var,
+            width=170,
+            command=self._on_runtime_change,
+            state="disabled"
+        )
+        self.runtime_dropdown.grid(row=0, column=col, padx=5, sticky="w")
+        col += 1
+
+        # Model dropdown
+        self.model_var = ctk.StringVar(value=self.task_settings.get("model_id", ""))
+        self.model_dropdown = ctk.CTkOptionMenu(
+            self,
+            values=["(none)"],
+            variable=self.model_var,
+            width=140,
+            state="disabled"
+        )
+        self.model_dropdown.grid(row=0, column=col, padx=5, sticky="w")
+        col += 1
+
+        # Batch size
+        self.batch_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.batch_frame.grid(row=0, column=col, padx=5, sticky="w")
+
+        self.batch_label = ctk.CTkLabel(self.batch_frame, text="Batch:", font=ctk.CTkFont(size=11), text_color="gray")
+        self.batch_label.pack(side="left")
+        self.batch_var = ctk.StringVar(value=str(self.task_settings.get("batch_size", 30)))
+        self.batch_entry = ctk.CTkEntry(
+            self.batch_frame,
+            textvariable=self.batch_var,
+            width=50,
+            state="disabled"
+        )
+        self.batch_entry.pack(side="left", padx=(3, 0))
+
+        # Initialize model options (but keep disabled)
+        self._update_model_options(update_state=False)
+
+    def _on_runtime_change(self, _=None):
+        self._update_model_options()
+
+    def _update_model_options(self, update_state=True):
+        """Update model dropdown based on selected runtime."""
+        runtime_id = self.runtime_var.get()
+        runtime = self.runtime_map.get(runtime_id)
+
+        if not runtime:
+            self.model_dropdown.configure(values=["(n/a)"])
+            self.model_var.set("(n/a)")
+            return
+
+        models = get_models_for_runtime(runtime)
+        if models:
+            self.model_dropdown.configure(values=models)
+            current = self.model_var.get()
+            if current not in models:
+                self.model_var.set(models[0])
+        else:
+            self.model_dropdown.configure(values=["(n/a)"])
+            self.model_var.set("(n/a)")
+
+        if update_state:
+            self._update_enabled_state()
+
+    def _on_enabled_change(self):
+        self._update_enabled_state()
+
+    def _update_enabled_state(self):
+        enabled = self.enabled_var.get()
+        runtime_id = self.runtime_var.get()
+        runtime = self.runtime_map.get(runtime_id)
+
+        if enabled:
+            self.name_label.configure(text_color=("gray10", "gray90"))
+            self.runtime_dropdown.configure(state="normal")
+
+            # Enable model if runtime supports it
+            models = get_models_for_runtime(runtime) if runtime else []
+            if models:
+                self.model_dropdown.configure(state="normal")
+            else:
+                self.model_dropdown.configure(state="disabled")
+
+            # Enable batch if runtime supports it
+            has_batching = getattr(runtime, 'supports_batching', True) if runtime else True
+            self.batch_entry.configure(state="normal" if has_batching else "disabled")
+            self.batch_label.configure(text_color=("gray10", "gray90") if has_batching else "gray")
+        else:
+            self.name_label.configure(text_color="gray")
+            self.runtime_dropdown.configure(state="disabled")
+            self.model_dropdown.configure(state="disabled")
+            self.batch_entry.configure(state="disabled")
+            self.batch_label.configure(text_color="gray")
+
+    def is_enabled(self) -> bool:
+        return self.enabled_var.get()
+
+    def get_settings(self) -> dict:
+        """Get current settings for this task."""
+        model_val = self.model_var.get()
+        return {
+            "enabled": self.enabled_var.get(),
+            "runtime": self.runtime_var.get(),
+            "model_id": model_val if model_val != "(n/a)" else None,
+            "batch_size": int(self.batch_var.get()) if self.batch_var.get().isdigit() else 30
+        }
 
 
 class UpdateNotesView(ctk.CTkFrame):
@@ -73,7 +251,7 @@ class UpdateNotesView(ctk.CTkFrame):
             variable=self.deck_var,
             values=deck_display_names,
             width=400,
-            command=self._on_filter_change
+            command=self._on_deck_change
         )
         self.deck_dropdown.pack(side="left", padx=(10, 0))
 
@@ -195,28 +373,83 @@ class UpdateNotesView(ctk.CTkFrame):
         )
         self.filter_preview_label.pack(padx=15, pady=15, anchor="w")
 
-        # Task Options Section (placeholder)
-        task_section = ctk.CTkFrame(content_frame)
-        task_section.pack(fill="x", pady=(0, 15))
+        # Task Options Section
+        self.task_section = ctk.CTkFrame(content_frame)
+        self.task_section.pack(fill="x", pady=(0, 15))
 
         task_title = ctk.CTkLabel(
-            task_section,
+            self.task_section,
             text="Task Options",
             font=ctk.CTkFont(size=16, weight="bold")
         )
         task_title.pack(anchor="w", padx=15, pady=(15, 10))
 
-        placeholder_label = ctk.CTkLabel(
-            task_section,
-            text="Task selection and execution options will be implemented here.",
-            font=ctk.CTkFont(size=12),
-            text_color=("gray50", "gray60")
+        # Header row for task config
+        header_frame = ctk.CTkFrame(self.task_section, fg_color="transparent")
+        header_frame.pack(fill="x", padx=15, pady=(0, 5))
+        header_frame.grid_columnconfigure(0, weight=0, minsize=30)
+        header_frame.grid_columnconfigure(1, weight=1, minsize=160)
+        header_frame.grid_columnconfigure(2, weight=0, minsize=180)
+        header_frame.grid_columnconfigure(3, weight=0, minsize=150)
+        header_frame.grid_columnconfigure(4, weight=0, minsize=80)
+
+        ctk.CTkLabel(header_frame, text="", width=30).grid(row=0, column=0)
+        ctk.CTkLabel(header_frame, text="Task", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=1, sticky="w", padx=5)
+        ctk.CTkLabel(header_frame, text="Runtime", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=2, sticky="w", padx=5)
+        ctk.CTkLabel(header_frame, text="Model", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=3, sticky="w", padx=5)
+        ctk.CTkLabel(header_frame, text="Batch", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=4, sticky="w", padx=5)
+
+        # Task rows container
+        self.task_rows_frame = ctk.CTkFrame(self.task_section, fg_color="transparent")
+        self.task_rows_frame.pack(fill="x", padx=15, pady=(0, 15))
+
+        self.task_rows = {}
+        self._build_task_rows()
+
+        # Placeholder for run button (not functional yet)
+        run_frame = ctk.CTkFrame(self.task_section, fg_color="transparent")
+        run_frame.pack(fill="x", padx=15, pady=(0, 15))
+
+        self.run_btn = ctk.CTkButton(
+            run_frame,
+            text="Run Selected Tasks",
+            width=180,
+            state="disabled"
         )
-        placeholder_label.pack(padx=15, pady=(0, 15))
+        self.run_btn.pack(side="left")
 
     def _on_filter_change(self, *args):
         """Called when any filter option changes."""
         self._update_filter_preview()
+
+    def _on_deck_change(self, *args):
+        """Called when deck selection changes - rebuild task rows."""
+        self._update_filter_preview()
+        self._build_task_rows()
+
+    def _build_task_rows(self):
+        """Build task configuration rows based on selected deck."""
+        # Clear existing rows
+        for widget in self.task_rows_frame.winfo_children():
+            widget.destroy()
+        self.task_rows.clear()
+
+        # Get current deck for task settings
+        deck = self.get_selected_deck()
+        source_lang = deck.source_language_code if deck else None
+
+        bootstrap_all()
+
+        for task_key in TASK_ORDER:
+            task_settings = deck.get_task_setting(task_key) if deck else {}
+            row = UpdateTaskRow(
+                self.task_rows_frame,
+                task_key=task_key,
+                task_settings=task_settings,
+                source_language_code=source_lang
+            )
+            row.pack(fill="x", pady=2)
+            self.task_rows[task_key] = row
 
     def _build_filter_query(self) -> str:
         """Build the Anki search query based on current filter selections."""
@@ -269,3 +502,11 @@ class UpdateNotesView(ctk.CTkFrame):
         selected_display = self.deck_var.get()
         selected_lang = self.deck_display_to_lang.get(selected_display)
         return self.anki_decks.get(selected_lang) if selected_lang else None
+
+    def get_selected_tasks(self) -> list[str]:
+        """Get list of task keys that are currently enabled."""
+        return [key for key, row in self.task_rows.items() if row.is_enabled()]
+
+    def get_task_settings(self) -> dict[str, dict]:
+        """Get settings for all enabled tasks."""
+        return {key: row.get_settings() for key, row in self.task_rows.items() if row.is_enabled()}
