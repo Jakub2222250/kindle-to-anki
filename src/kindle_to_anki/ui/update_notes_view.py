@@ -419,6 +419,45 @@ class UpdateNotesView(ctk.CTkFrame):
         )
         not_new_radio.pack(side="left")
 
+        # Suspension state filter
+        suspend_frame = ctk.CTkFrame(filter_section, fg_color="transparent")
+        suspend_frame.pack(fill="x", padx=15, pady=10)
+
+        suspend_label = ctk.CTkLabel(suspend_frame, text="Suspension:", width=120, anchor="w")
+        suspend_label.pack(side="left")
+
+        self.suspend_var = ctk.StringVar(value="any")
+
+        suspend_container = ctk.CTkFrame(suspend_frame, fg_color="transparent")
+        suspend_container.pack(side="left", padx=(10, 0))
+
+        suspend_any_radio = ctk.CTkRadioButton(
+            suspend_container,
+            text="Any",
+            variable=self.suspend_var,
+            value="any",
+            command=self._on_filter_change
+        )
+        suspend_any_radio.pack(side="left", padx=(0, 15))
+
+        suspend_yes_radio = ctk.CTkRadioButton(
+            suspend_container,
+            text="Suspended",
+            variable=self.suspend_var,
+            value="suspended",
+            command=self._on_filter_change
+        )
+        suspend_yes_radio.pack(side="left", padx=(0, 15))
+
+        suspend_no_radio = ctk.CTkRadioButton(
+            suspend_container,
+            text="Not Suspended",
+            variable=self.suspend_var,
+            value="not_suspended",
+            command=self._on_filter_change
+        )
+        suspend_no_radio.pack(side="left")
+
         # Additional filter text box
         additional_frame = ctk.CTkFrame(filter_section, fg_color="transparent")
         additional_frame.pack(fill="x", padx=15, pady=10)
@@ -703,6 +742,13 @@ class UpdateNotesView(ctk.CTkFrame):
             parts.append("is:new")
         elif card_state == "not_new":
             parts.append("-is:new")
+
+        # Suspension filter
+        suspend_state = self.suspend_var.get()
+        if suspend_state == "suspended":
+            parts.append("is:suspended")
+        elif suspend_state == "not_suspended":
+            parts.append("-is:suspended")
 
         # Additional filter
         additional = self.additional_filter_var.get().strip()
