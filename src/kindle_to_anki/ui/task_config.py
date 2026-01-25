@@ -335,11 +335,11 @@ class TaskConfigRow(ctk.CTkFrame):
         default_prompt = get_default_prompt_for_task(self.task_key, self.source_language_code)
         settings = {
             "runtime": self.runtime_var.get(),
-            "model_id": model_val if model_val != "(n/a)" else None,
+            "model_id": model_val if model_val not in ("(n/a)", "(none)") else None,
             "batch_size": int(self.batch_var.get()) if self.batch_var.get().isdigit() else 30
         }
-        # Only include prompt_id if non-default
-        if prompt_val and prompt_val != "(none)" and prompt_val != default_prompt:
+        # Only include prompt_id if non-default and not a placeholder
+        if prompt_val and prompt_val not in ("(n/a)", "(none)", "") and prompt_val != default_prompt:
             settings["prompt_id"] = prompt_val
         if self.metadata.get("optional", False):
             settings["enabled"] = self.enabled_var.get()

@@ -202,6 +202,8 @@ class UpdateTaskRow(ctk.CTkFrame):
         if not runtime:
             self.model_dropdown.configure(values=["(n/a)"])
             self.model_var.set("(n/a)")
+            self.prompt_dropdown.configure(values=["(n/a)"])
+            self.prompt_var.set("(n/a)")
             return
 
         models = get_models_for_runtime(runtime)
@@ -210,9 +212,20 @@ class UpdateTaskRow(ctk.CTkFrame):
             current = self.model_var.get()
             if current not in models:
                 self.model_var.set(models[0])
+            # Restore prompt dropdown to available prompts
+            if self.available_prompts:
+                self.prompt_dropdown.configure(values=self.available_prompts)
+                if self.prompt_var.get() not in self.available_prompts:
+                    default_prompt = get_default_prompt_for_task(self.task_key, self.source_language_code)
+                    self.prompt_var.set(default_prompt or self.available_prompts[0])
+            else:
+                self.prompt_dropdown.configure(values=["(none)"])
+                self.prompt_var.set("(none)")
         else:
             self.model_dropdown.configure(values=["(n/a)"])
             self.model_var.set("(n/a)")
+            self.prompt_dropdown.configure(values=["(n/a)"])
+            self.prompt_var.set("(n/a)")
 
         if update_state:
             self._update_enabled_state()
@@ -263,8 +276,8 @@ class UpdateTaskRow(ctk.CTkFrame):
         return {
             "enabled": self.enabled_var.get(),
             "runtime": self.runtime_var.get(),
-            "model_id": model_val if model_val != "(n/a)" else None,
-            "prompt_id": prompt_val if prompt_val and prompt_val != "(none)" else None,
+            "model_id": model_val if model_val not in ("(n/a)", "(none)") else None,
+            "prompt_id": prompt_val if prompt_val not in ("(n/a)", "(none)", "") else None,
             "batch_size": int(self.batch_var.get()) if self.batch_var.get().isdigit() else 30
         }
 
@@ -1055,8 +1068,9 @@ class UpdateNotesView(ctk.CTkFrame):
 
         # Build inputs
         task_inputs = []
-        note_id_map = {}
-        note_metadata_map = {}
+        note_id_map = {}  # uid -> note_id
+        note_metadata_map = {}  # uid -> Generation_Metadata value
+        note_raw_context_map = {}  # uid -> Raw_Context_Text (for LUI context regeneration)
 
         for note in notes_info:
             task_input = self._build_task_input(task_key, note, input_class)
@@ -1065,6 +1079,7 @@ class UpdateNotesView(ctk.CTkFrame):
                 note_id_map[task_input.uid] = note.get('noteId')
                 fields = note.get('fields', {})
                 note_metadata_map[task_input.uid] = fields.get('Generation_Metadata', {}).get('value', '')
+                note_raw_context_map[task_input.uid] = fields.get('Raw_Context_Text', {}).get('value', '')
 
         if not task_inputs:
             self.after(0, lambda: self._log("No valid inputs for task"))
@@ -1119,6 +1134,19 @@ class UpdateNotesView(ctk.CTkFrame):
                         else:
                             value = str(value)
                         fields_update[field] = value
+
+                # LUI: Also update Context_Sentence and Context_Sentence_Cloze with new surface_lexical_unit
+                if task_key == "lui":
+                    surface_unit = getattr(output, "surface_lexical_unit", None)
+                    if surface_unit:
+                        raw_context = note_raw_context_map.get(task_input.uid, '')
+                        if raw_context and surface_unit in raw_context:
+                            fields_update["Context_Sentence"] = raw_context.replace(
+                                surface_unit, f"<b>{surface_unit}</b>", 1
+                            )
+                            fields_update["Context_Sentence_Cloze"] = raw_context.replace(
+                                surface_unit, "<b>[...]</b>", 1
+                            )
 
                 if len(fields_update) > 1:
                     actions.append({
