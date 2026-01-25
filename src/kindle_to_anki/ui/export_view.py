@@ -2,6 +2,7 @@ import customtkinter as ctk
 from typing import Callable, Optional
 import threading
 
+from kindle_to_anki.logging import LogLevel, UILogger, LoggerRegistry
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.core.bootstrap import bootstrap_all
@@ -120,11 +121,37 @@ class ExportView(ctk.CTkFrame):
         )
         self.cancel_btn.pack(side="left", padx=5)
 
+        # Log level dropdown
+        log_level_label = ctk.CTkLabel(buttons_frame, text="Log Level:", font=ctk.CTkFont(size=12))
+        log_level_label.pack(side="left", padx=(20, 5))
+
+        self.log_level_var = ctk.StringVar(value="INFO")
+        self.log_level_dropdown = ctk.CTkOptionMenu(
+            buttons_frame,
+            variable=self.log_level_var,
+            values=[level.name for level in LogLevel],
+            width=100,
+            command=self._on_log_level_change
+        )
+        self.log_level_dropdown.pack(side="left")
+
+        # Setup UI logger with callback
+        self._ui_logger = UILogger(level=LogLevel.INFO, callback=self._on_log_message)
+        LoggerRegistry.set(self._ui_logger)
+
     def _on_back_clicked(self):
         if self.is_running:
             # Could add confirmation dialog here
             pass
         self.on_back()
+
+    def _on_log_level_change(self, value: str):
+        """Update the UI logger's level when dropdown changes."""
+        self._ui_logger.level = LogLevel[value]
+
+    def _on_log_message(self, level: LogLevel, message: str):
+        """Callback for UILogger - append to log textbox from any thread."""
+        self.after(0, lambda: self._log(f"[{level.name}] {message}"))
 
     def _log(self, message: str):
         """Append message to the log textbox."""
