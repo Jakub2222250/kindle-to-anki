@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from kindle_to_anki.ui.setup_wizard import SetupWizardFrame
 from kindle_to_anki.ui.export_view import ExportView
+from kindle_to_anki.ui.update_notes_view import UpdateNotesView
 
 
 class KindleToAnkiApp(ctk.CTk):
@@ -66,6 +67,16 @@ class KindleToAnkiApp(ctk.CTk):
         )
         self.export_btn.pack(pady=10)
 
+        # Update Notes button
+        self.update_btn = ctk.CTkButton(
+            self.buttons_frame,
+            text="Update Notes",
+            width=200,
+            height=40,
+            command=self._on_update_notes
+        )
+        self.update_btn.pack(pady=10)
+
         # Status label
         self.status_label = ctk.CTkLabel(
             self.main_frame,
@@ -89,6 +100,14 @@ class KindleToAnkiApp(ctk.CTk):
         self.export_frame = ExportView(self, on_back=self._show_main_view)
         self.export_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.current_frame = self.export_frame
+
+    def _on_update_notes(self):
+        if self.current_frame:
+            self.current_frame.destroy()
+
+        self.update_notes_frame = UpdateNotesView(self, on_back=self._show_main_view)
+        self.update_notes_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.current_frame = self.update_notes_frame
 
 
 def main():
