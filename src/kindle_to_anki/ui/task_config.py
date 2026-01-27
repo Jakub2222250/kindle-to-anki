@@ -349,13 +349,11 @@ class TaskConfigRow(ctk.CTkFrame):
 class TaskConfigPanel(ctk.CTkFrame):
     """Panel for configuring all tasks for a deck."""
 
-    def __init__(self, parent, deck_config: dict, on_save: Callable = None, on_cancel: Callable = None):
+    def __init__(self, parent, deck_config: dict):
         super().__init__(parent)
         self.deck_config = deck_config
         self.task_settings = copy.deepcopy(deck_config.get("task_settings", {}))
         self.source_language_code = deck_config.get("source_language_code")
-        self.on_save = on_save
-        self.on_cancel = on_cancel
         self.task_rows = {}
 
         self._create_widgets()
@@ -382,12 +380,12 @@ class TaskConfigPanel(ctk.CTkFrame):
             text_color="gray"
         ).pack(anchor="w")
 
-        # Scrollable task list
-        self.tasks_scroll = ctk.CTkScrollableFrame(self)
-        self.tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
+        # Task list container (non-scrollable - outer container handles scrolling)
+        self.tasks_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.tasks_container.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Column headers
-        header_row = ctk.CTkFrame(self.tasks_scroll, fg_color="transparent")
+        header_row = ctk.CTkFrame(self.tasks_container, fg_color="transparent")
         header_row.pack(fill="x", pady=(0, 10))
         header_row.grid_columnconfigure(0, weight=0, minsize=30)
         header_row.grid_columnconfigure(1, weight=1, minsize=160)
@@ -404,13 +402,13 @@ class TaskConfigPanel(ctk.CTkFrame):
         ctk.CTkLabel(header_row, text="Batch", font=ctk.CTkFont(weight="bold")).grid(row=0, column=5, sticky="w", padx=5)
 
         # Separator
-        ctk.CTkFrame(self.tasks_scroll, height=2, fg_color="gray").pack(fill="x", pady=(0, 10))
+        ctk.CTkFrame(self.tasks_container, height=2, fg_color="gray").pack(fill="x", pady=(0, 10))
 
         # Task rows
         for task_key in TASK_ORDER:
             task_settings = self.task_settings.get(task_key, {})
             row = TaskConfigRow(
-                self.tasks_scroll,
+                self.tasks_container,
                 task_key,
                 task_settings,
                 source_language_code=self.source_language_code,
@@ -419,43 +417,9 @@ class TaskConfigPanel(ctk.CTkFrame):
             row.pack(fill="x", pady=5)
             self.task_rows[task_key] = row
 
-        # Bottom buttons
-        button_frame = ctk.CTkFrame(self, fg_color="transparent")
-        button_frame.pack(fill="x", padx=15, pady=15)
-
-        self.cancel_btn = ctk.CTkButton(
-            button_frame,
-            text="Cancel",
-            width=100,
-            fg_color="gray",
-            command=self._on_cancel
-        )
-        self.cancel_btn.pack(side="left")
-
-        self.save_btn = ctk.CTkButton(
-            button_frame,
-            text="Save",
-            width=100,
-            command=self._on_save
-        )
-        self.save_btn.pack(side="right")
-
     def _on_task_change(self):
         # Could add validation or preview here
         pass
-
-    def _on_save(self):
-        # Collect all task settings
-        new_settings = {}
-        for task_key, row in self.task_rows.items():
-            new_settings[task_key] = row.get_settings()
-
-        if self.on_save:
-            self.on_save(new_settings)
-
-    def _on_cancel(self):
-        if self.on_cancel:
-            self.on_cancel()
 
     def get_all_settings(self) -> dict:
         """Get all current task settings."""

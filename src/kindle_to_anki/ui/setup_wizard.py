@@ -180,6 +180,40 @@ class SetupWizardFrame(ctk.CTkFrame):
         # Decks card (main container will be inside this)
         self._create_decks_card()
 
+        # Bottom button bar (fixed at bottom, outside scroll)
+        self._create_bottom_buttons()
+
+    def _create_bottom_buttons(self):
+        """Create the global save/cancel buttons at the bottom."""
+        button_frame = ctk.CTkFrame(self, fg_color="transparent")
+        button_frame.pack(fill="x", padx=15, pady=(0, 10))
+
+        self.cancel_btn = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            width=100,
+            fg_color="gray",
+            command=self._on_back
+        )
+        self.cancel_btn.pack(side="left")
+
+        self.save_btn = ctk.CTkButton(
+            button_frame,
+            text="Save",
+            width=100,
+            command=self._save_all
+        )
+        self.save_btn.pack(side="right")
+
+        # Global status label
+        self.global_save_status = ctk.CTkLabel(
+            button_frame,
+            text="",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        )
+        self.global_save_status.pack(side="right", padx=20)
+
     def _create_anki_connect_card(self):
         """Create the AnkiConnect configuration card."""
         config = load_config()
@@ -519,9 +553,7 @@ class SetupWizardFrame(ctk.CTkFrame):
         deck_config = decks[self._current_deck_index]
         self.task_config_panel = TaskConfigPanel(
             self.main_container,
-            deck_config,
-            on_save=self._on_task_config_save,
-            on_cancel=None  # No cancel in this view
+            deck_config
         )
         self.task_config_panel.pack(fill="both", expand=True)
 
@@ -671,15 +703,24 @@ class SetupWizardFrame(ctk.CTkFrame):
                     text_color="orange"
                 )
 
-    def _on_task_config_save(self, new_settings: dict):
+    def _save_all(self):
+        """Save all settings from all sections."""
         config = load_config()
-        decks = config.get("anki_decks", [])
 
-        if self._current_deck_index < len(decks):
-            decks[self._current_deck_index]["task_settings"] = new_settings
-            save_config(config)
-            if hasattr(self, 'status_label'):
-                self.status_label.configure(text="Task settings saved", text_color="green")
+        # Save AnkiConnect URL
+        if hasattr(self, 'anki_url_var'):
+            config["anki_connect_url"] = self.anki_url_var.get().strip()
+
+        # Save task settings for current deck
+        if hasattr(self, 'task_config_panel'):
+            decks = config.get("anki_decks", [])
+            if self._current_deck_index < len(decks):
+                decks[self._current_deck_index]["task_settings"] = self.task_config_panel.get_all_settings()
+
+        save_config(config)
+
+        if hasattr(self, 'global_save_status'):
+            self.global_save_status.configure(text="Settings saved", text_color="green")
 
     def _on_back(self):
         if self.on_back:
