@@ -114,10 +114,14 @@ class SetupWizardFrame(ctk.CTkFrame):
         self.on_back = on_back
         self._anki_connected = False
         self._checking_connection = False
-        self._editing_deck_index = None
+        self._current_deck_index = 0
+
+        # Language options setup
+        self.language_options = [f"{name} ({code})" for code, name in COMMON_LANGUAGES]
+        self.language_codes = {f"{name} ({code})": code for code, name in COMMON_LANGUAGES}
 
         self._create_widgets()
-        self._load_existing_decks()
+        self._refresh_view()
 
     def _create_widgets(self):
         # Title (fixed at top)
@@ -128,21 +132,9 @@ class SetupWizardFrame(ctk.CTkFrame):
         )
         self.title_label.pack(pady=(10, 10))
 
-        # Scrollable container for main content
-        self.scroll_container = ctk.CTkScrollableFrame(self)
-        self.scroll_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-
-        # Main content in two columns
-        self.content_frame = ctk.CTkFrame(self.scroll_container, fg_color="transparent")
-        self.content_frame.pack(fill="both", expand=True)
-        self.content_frame.grid_columnconfigure(0, weight=1)
-        self.content_frame.grid_columnconfigure(1, weight=1)
-
-        # Left column: Add new deck
-        self._create_add_deck_panel()
-
-        # Right column: Existing decks list
-        self._create_decks_list_panel()
+        # Main container (will switch between add-deck and deck-config views)
+        self.main_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         # Bottom: Back button (fixed at bottom)
         self.back_btn = ctk.CTkButton(
@@ -153,19 +145,35 @@ class SetupWizardFrame(ctk.CTkFrame):
         )
         self.back_btn.pack(side="bottom", pady=10, anchor="w", padx=10)
 
-    def _create_add_deck_panel(self):
-        add_frame = ctk.CTkFrame(self.content_frame)
-        add_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5), pady=5)
+    def _clear_main_container(self):
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
+
+    def _refresh_view(self):
+        """Refresh the UI based on whether decks exist."""
+        config = load_config()
+        decks = config.get("anki_decks", [])
+
+        self._clear_main_container()
+
+        if not decks:
+            self._create_add_deck_view()
+        else:
+            self._create_deck_config_view(decks)
+
+    def _create_add_deck_view(self):
+        """View shown when no decks exist - for adding the first deck."""
+        scroll = ctk.CTkScrollableFrame(self.main_container)
+        scroll.pack(fill="both", expand=True)
+
+        add_frame = ctk.CTkFrame(scroll)
+        add_frame.pack(fill="x", padx=20, pady=10)
 
         ctk.CTkLabel(
             add_frame,
             text="Add New Deck",
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(pady=(10, 15))
-
-        # Language names for dropdown
-        self.language_options = [f"{name} ({code})" for code, name in COMMON_LANGUAGES]
-        self.language_codes = {f"{name} ({code})": code for code, name in COMMON_LANGUAGES}
 
         # Source language
         ctk.CTkLabel(add_frame, text="Source Language (learning):").pack(anchor="w", padx=15)
@@ -225,6 +233,15 @@ class SetupWizardFrame(ctk.CTkFrame):
         # Bind parent deck change to update import deck
         self.parent_deck_var.trace_add("write", self._on_parent_deck_change)
 
+        # Create in Anki checkbox
+        self.create_in_anki_var = ctk.BooleanVar(value=True)
+        self.create_in_anki_checkbox = ctk.CTkCheckBox(
+            add_frame,
+            text="Create deck in Anki if missing",
+            variable=self.create_in_anki_var
+        )
+        self.create_in_anki_checkbox.pack(anchor="w", padx=15, pady=(10, 5))
+
         # Add deck button
         self.add_deck_btn = ctk.CTkButton(
             add_frame,
@@ -233,15 +250,6 @@ class SetupWizardFrame(ctk.CTkFrame):
             command=self._add_deck
         )
         self.add_deck_btn.pack(pady=15)
-
-        # Create in Anki button
-        self.create_anki_btn = ctk.CTkButton(
-            add_frame,
-            text="Create Decks in Anki",
-            width=150,
-            command=self._create_decks_in_anki
-        )
-        self.create_anki_btn.pack(pady=(0, 15))
 
         # Status label
         self.status_label = ctk.CTkLabel(
@@ -252,50 +260,96 @@ class SetupWizardFrame(ctk.CTkFrame):
         )
         self.status_label.pack(pady=(0, 10))
 
-    def _create_decks_list_panel(self):
-        list_frame = ctk.CTkFrame(self.content_frame)
-        list_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0), pady=5)
+    def _create_deck_config_view(self, decks: list):
+        """View shown when decks exist - deck selector + task config."""
+        # Top bar: deck selector dropdown + add/remove buttons
+        top_bar = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        top_bar.pack(fill="x", pady=(0, 10))
 
-        ctk.CTkLabel(
-            list_frame,
-            text="Configured Decks",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(pady=(10, 15))
+        ctk.CTkLabel(top_bar, text="Deck:", font=ctk.CTkFont(size=13)).pack(side="left", padx=(0, 5))
 
-        # Scrollable frame for deck list
-        self.decks_scroll = ctk.CTkScrollableFrame(list_frame, height=200)
-        self.decks_scroll.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        # Build dropdown options
+        self.deck_options = []
+        for deck in decks:
+            text = f"{deck['parent_deck_name']} ({deck['source_language_code']} → {deck['target_language_code']})"
+            self.deck_options.append(text)
 
-        # Buttons frame
-        buttons_frame = ctk.CTkFrame(list_frame, fg_color="transparent")
-        buttons_frame.pack(fill="x", padx=10, pady=(0, 15))
+        # Ensure valid index
+        if self._current_deck_index >= len(decks):
+            self._current_deck_index = 0
 
-        # Configure Tasks button
-        self.config_tasks_btn = ctk.CTkButton(
-            buttons_frame,
-            text="Configure Tasks",
-            width=130,
-            command=self._configure_selected_deck
+        self.deck_selector_var = ctk.StringVar(value=self.deck_options[self._current_deck_index])
+        self.deck_selector = ctk.CTkComboBox(
+            top_bar,
+            values=self.deck_options,
+            variable=self.deck_selector_var,
+            width=350,
+            command=self._on_deck_selected,
+            state="readonly"
         )
-        self.config_tasks_btn.pack(side="left", padx=(0, 10))
+        self.deck_selector.pack(side="left", padx=(0, 10))
 
-        # Remove selected button
+        # Add new deck button
+        self.add_new_btn = ctk.CTkButton(
+            top_bar,
+            text="+ Add",
+            width=70,
+            command=self._show_add_deck_dialog
+        )
+        self.add_new_btn.pack(side="left", padx=(0, 5))
+
+        # Remove deck button
         self.remove_btn = ctk.CTkButton(
-            buttons_frame,
+            top_bar,
             text="Remove",
-            width=80,
+            width=70,
             fg_color="darkred",
             hover_color="red",
             command=self._remove_selected_deck
         )
         self.remove_btn.pack(side="left")
 
-        self.deck_widgets = []  # Store (frame, radio_var) tuples
-        self.selected_deck_var = ctk.IntVar(value=-1)
+        # Status label (in top bar)
+        self.status_label = ctk.CTkLabel(
+            top_bar,
+            text="",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        )
+        self.status_label.pack(side="right", padx=10)
+
+        # Task configuration panel (always visible)
+        deck_config = decks[self._current_deck_index]
+        self.task_config_panel = TaskConfigPanel(
+            self.main_container,
+            deck_config,
+            on_save=self._on_task_config_save,
+            on_cancel=None  # No cancel in this view
+        )
+        self.task_config_panel.pack(fill="both", expand=True)
+
+    def _on_deck_selected(self, selection: str):
+        """Handle deck selection from dropdown."""
+        try:
+            self._current_deck_index = self.deck_options.index(selection)
+        except ValueError:
+            self._current_deck_index = 0
+        self._refresh_view()
+
+    def _show_add_deck_dialog(self):
+        """Show dialog to add a new deck."""
+        dialog = AddDeckDialog(self, on_add=self._on_new_deck_added)
+        dialog.grab_set()
+
+    def _on_new_deck_added(self):
+        """Called when a new deck is added via dialog."""
+        config = load_config()
+        decks = config.get("anki_decks", [])
+        self._current_deck_index = len(decks) - 1  # Select the newly added deck
+        self._refresh_view()
 
     def _on_language_change(self, _=None):
         source = self.language_codes.get(self.source_lang_var.get(), "")
-        # Update suggested parent deck name
         for code, name in COMMON_LANGUAGES:
             if code == source:
                 suggested_name = f"{name} Vocab Discovery"
@@ -303,7 +357,7 @@ class SetupWizardFrame(ctk.CTkFrame):
                 break
 
     def _on_parent_deck_change(self, *args):
-        if self.auto_import_var.get():
+        if hasattr(self, 'auto_import_var') and self.auto_import_var.get():
             parent = self.parent_deck_var.get()
             self.import_deck_var.set(f"{parent}::Import")
 
@@ -351,181 +405,261 @@ class SetupWizardFrame(ctk.CTkFrame):
         config["anki_decks"].append(new_deck)
         save_config(config)
 
-        self._load_existing_decks()
-        self.status_label.configure(text=f"Added: {parent_deck}", text_color="green")
+        # Optionally create in Anki
+        if hasattr(self, 'create_in_anki_var') and self.create_in_anki_var.get():
+            self._create_decks_in_anki_async(parent_deck, import_deck)
+        else:
+            self._current_deck_index = len(config["anki_decks"]) - 1
+            self._refresh_view()
 
-    def _create_decks_in_anki(self):
+    def _create_decks_in_anki_async(self, parent_deck: str, import_deck: str):
+        """Create decks in Anki asynchronously."""
         if self._checking_connection:
             return
 
-        parent_deck = self.parent_deck_var.get().strip()
-        import_deck = self.import_deck_var.get().strip()
-
-        if not parent_deck:
-            messagebox.showerror("Error", "Please enter a parent deck name.")
-            return
-
-        # Show loading state
         self._checking_connection = True
-        self.create_anki_btn.configure(state="disabled")
-        self.status_label.configure(text="⟳ Connecting to Anki...", text_color="gray")
+        if hasattr(self, 'add_deck_btn'):
+            self.add_deck_btn.configure(state="disabled")
+        if hasattr(self, 'status_label'):
+            self.status_label.configure(text="⟳ Creating decks in Anki...", text_color="gray")
 
         def check_and_create():
-            # Reset cached connection to force fresh check
             AnkiConnectionManager.reset()
             anki, is_connected = AnkiConnectionManager.get_connection()
 
             if not is_connected:
-                self.after(0, lambda: self._on_anki_connection_failed())
+                self.after(0, lambda: self._on_anki_create_done(False, "Cannot connect to Anki"))
                 return
 
             try:
                 existing_decks = anki.get_deck_names()
-                created = []
-                already_exist = []
-
                 for deck_name in [parent_deck, import_deck]:
-                    if deck_name in existing_decks:
-                        already_exist.append(deck_name)
-                    else:
-                        if anki.create_deck(deck_name):
-                            created.append(deck_name)
-
-                self.after(0, lambda: self._on_decks_created(created, already_exist))
+                    if deck_name not in existing_decks:
+                        anki.create_deck(deck_name)
+                self.after(0, lambda: self._on_anki_create_done(True, "Decks created in Anki"))
             except Exception as e:
-                self.after(0, lambda: self._on_anki_error(str(e)))
+                self.after(0, lambda: self._on_anki_create_done(False, str(e)))
 
         thread = threading.Thread(target=check_and_create, daemon=True)
         thread.start()
 
-    def _on_anki_connection_failed(self):
+    def _on_anki_create_done(self, success: bool, message: str):
         self._checking_connection = False
-        self.create_anki_btn.configure(state="normal")
-        self.status_label.configure(text="", text_color="gray")
-        messagebox.showerror("Error", "Cannot connect to Anki.\nMake sure Anki is running with AnkiConnect.")
-
-    def _on_anki_error(self, error_msg: str):
-        self._checking_connection = False
-        self.create_anki_btn.configure(state="normal")
-        self.status_label.configure(text=f"Error: {error_msg}", text_color="red")
-
-    def _on_decks_created(self, created: list, already_exist: list):
-        self._checking_connection = False
-        self.create_anki_btn.configure(state="normal")
-
-        msg_parts = []
-        if created:
-            msg_parts.append(f"Created: {', '.join(created)}")
-        if already_exist:
-            msg_parts.append(f"Already exist: {', '.join(already_exist)}")
-
-        if msg_parts:
-            self.status_label.configure(text="\n".join(msg_parts), text_color="green")
-        else:
-            self.status_label.configure(text="No decks created", text_color="orange")
-
-    def _load_existing_decks(self):
-        # Clear existing widgets
-        for widget in self.deck_widgets:
-            widget.destroy()
-        self.deck_widgets.clear()
-        self.selected_deck_var.set(-1)
-
         config = load_config()
-        decks = config.get("anki_decks", [])
-
-        if not decks:
-            no_decks_label = ctk.CTkLabel(
-                self.decks_scroll,
-                text="No decks configured",
-                text_color="gray"
-            )
-            no_decks_label.pack(pady=20)
-            self.deck_widgets.append(no_decks_label)
-            return
-
-        for i, deck in enumerate(decks):
-            text = f"{deck['source_language_code']} → {deck['target_language_code']}  |  {deck['parent_deck_name']}"
-            rb = ctk.CTkRadioButton(
-                self.decks_scroll,
-                text=text,
-                variable=self.selected_deck_var,
-                value=i,
-                font=ctk.CTkFont(size=12)
-            )
-            rb.pack(anchor="w", pady=5, padx=5)
-            self.deck_widgets.append(rb)
+        self._current_deck_index = len(config.get("anki_decks", [])) - 1
+        self._refresh_view()
+        if hasattr(self, 'status_label'):
+            color = "green" if success else "orange"
+            self.status_label.configure(text=message, text_color=color)
 
     def _remove_selected_deck(self):
-        selected_idx = self.selected_deck_var.get()
-        if selected_idx < 0:
-            messagebox.showinfo("Info", "No deck selected.")
-            return
-
         config = load_config()
         decks = config.get("anki_decks", [])
 
-        if selected_idx < len(decks):
-            removed = decks.pop(selected_idx)
+        if self._current_deck_index < len(decks):
+            removed = decks.pop(self._current_deck_index)
             config["anki_decks"] = decks
             save_config(config)
-            self._load_existing_decks()
-            self.status_label.configure(
-                text=f"Removed: {removed['parent_deck_name']}",
-                text_color="orange"
-            )
 
-    def _configure_selected_deck(self):
-        selected_idx = self.selected_deck_var.get()
-        if selected_idx < 0:
-            messagebox.showinfo("Info", "Please select a deck to configure.")
-            return
+            # Adjust index if needed
+            if self._current_deck_index >= len(decks) and len(decks) > 0:
+                self._current_deck_index = len(decks) - 1
+            elif len(decks) == 0:
+                self._current_deck_index = 0
 
+            self._refresh_view()
+            if hasattr(self, 'status_label') and decks:
+                self.status_label.configure(
+                    text=f"Removed: {removed['parent_deck_name']}",
+                    text_color="orange"
+                )
+
+    def _on_task_config_save(self, new_settings: dict):
         config = load_config()
         decks = config.get("anki_decks", [])
 
-        if selected_idx >= len(decks):
-            return
-
-        self._editing_deck_index = selected_idx
-        deck_config = decks[selected_idx]
-
-        # Hide the main content and show task config panel
-        self.scroll_container.pack_forget()
-
-        self.task_config_panel = TaskConfigPanel(
-            self,
-            deck_config,
-            on_save=self._on_task_config_save,
-            on_cancel=self._on_task_config_cancel
-        )
-        self.task_config_panel.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-
-    def _on_task_config_save(self, new_settings: dict):
-        if self._editing_deck_index is not None:
-            config = load_config()
-            decks = config.get("anki_decks", [])
-
-            if self._editing_deck_index < len(decks):
-                decks[self._editing_deck_index]["task_settings"] = new_settings
-                save_config(config)
+        if self._current_deck_index < len(decks):
+            decks[self._current_deck_index]["task_settings"] = new_settings
+            save_config(config)
+            if hasattr(self, 'status_label'):
                 self.status_label.configure(text="Task settings saved", text_color="green")
-
-        self._close_task_config_panel()
-
-    def _on_task_config_cancel(self):
-        self._close_task_config_panel()
-
-    def _close_task_config_panel(self):
-        self._editing_deck_index = None
-        if hasattr(self, 'task_config_panel'):
-            self.task_config_panel.destroy()
-        self.scroll_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        self._load_existing_decks()
 
     def _on_back(self):
         if self.on_back:
             self.on_back()
+
+
+class AddDeckDialog(ctk.CTkToplevel):
+    """Dialog for adding a new deck when decks already exist."""
+
+    def __init__(self, parent, on_add=None):
+        super().__init__(parent)
+        self.on_add = on_add
+        self._checking_connection = False
+
+        self.title("Add New Deck")
+        self.geometry("350x450")
+        self.resizable(False, False)
+
+        # Language options
+        self.language_options = [f"{name} ({code})" for code, name in COMMON_LANGUAGES]
+        self.language_codes = {f"{name} ({code})": code for code, name in COMMON_LANGUAGES}
+
+        self._create_widgets()
+
+    def _create_widgets(self):
+        # Source language
+        ctk.CTkLabel(self, text="Source Language (learning):").pack(anchor="w", padx=15, pady=(15, 0))
+        self.source_lang_var = ctk.StringVar(value=self.language_options[6])
+        self.source_lang_dropdown = ctk.CTkComboBox(
+            self,
+            values=self.language_options,
+            variable=self.source_lang_var,
+            width=300,
+            command=self._on_language_change
+        )
+        self.source_lang_dropdown.pack(padx=15, pady=(0, 10))
+
+        # Target language
+        ctk.CTkLabel(self, text="Target Language (native):").pack(anchor="w", padx=15)
+        self.target_lang_var = ctk.StringVar(value=self.language_options[0])
+        self.target_lang_dropdown = ctk.CTkComboBox(
+            self,
+            values=self.language_options,
+            variable=self.target_lang_var,
+            width=300
+        )
+        self.target_lang_dropdown.pack(padx=15, pady=(0, 10))
+
+        # Parent deck name
+        ctk.CTkLabel(self, text="Parent Deck Name:").pack(anchor="w", padx=15)
+        self.parent_deck_var = ctk.StringVar(value="Polish Vocab Discovery")
+        self.parent_deck_entry = ctk.CTkEntry(self, textvariable=self.parent_deck_var, width=300)
+        self.parent_deck_entry.pack(padx=15, pady=(0, 10))
+
+        # Auto-name import deck
+        self.auto_import_var = ctk.BooleanVar(value=True)
+        self.auto_import_checkbox = ctk.CTkCheckBox(
+            self,
+            text="Auto-name import deck (Parent::Import)",
+            variable=self.auto_import_var,
+            command=self._on_auto_import_toggle
+        )
+        self.auto_import_checkbox.pack(anchor="w", padx=15, pady=(0, 5))
+
+        # Import deck name
+        ctk.CTkLabel(self, text="Import Deck Name:").pack(anchor="w", padx=15)
+        self.import_deck_var = ctk.StringVar(value="Polish Vocab Discovery::Import")
+        self.import_deck_entry = ctk.CTkEntry(self, textvariable=self.import_deck_var, width=300, state="disabled")
+        self.import_deck_entry.pack(padx=15, pady=(0, 10))
+
+        self.parent_deck_var.trace_add("write", self._on_parent_deck_change)
+
+        # Create in Anki checkbox
+        self.create_in_anki_var = ctk.BooleanVar(value=True)
+        self.create_in_anki_checkbox = ctk.CTkCheckBox(
+            self,
+            text="Create deck in Anki if missing",
+            variable=self.create_in_anki_var
+        )
+        self.create_in_anki_checkbox.pack(anchor="w", padx=15, pady=(10, 5))
+
+        # Buttons
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=15, pady=15)
+
+        self.cancel_btn = ctk.CTkButton(btn_frame, text="Cancel", width=100, fg_color="gray", command=self.destroy)
+        self.cancel_btn.pack(side="left")
+
+        self.add_btn = ctk.CTkButton(btn_frame, text="Add Deck", width=100, command=self._add_deck)
+        self.add_btn.pack(side="right")
+
+        # Status
+        self.status_label = ctk.CTkLabel(self, text="", font=ctk.CTkFont(size=11), text_color="gray")
+        self.status_label.pack(pady=(0, 10))
+
+    def _on_language_change(self, _=None):
+        source = self.language_codes.get(self.source_lang_var.get(), "")
+        for code, name in COMMON_LANGUAGES:
+            if code == source:
+                self.parent_deck_var.set(f"{name} Vocab Discovery")
+                break
+
+    def _on_parent_deck_change(self, *args):
+        if self.auto_import_var.get():
+            self.import_deck_var.set(f"{self.parent_deck_var.get()}::Import")
+
+    def _on_auto_import_toggle(self):
+        if self.auto_import_var.get():
+            self.import_deck_entry.configure(state="disabled")
+            self._on_parent_deck_change()
+        else:
+            self.import_deck_entry.configure(state="normal")
+
+    def _add_deck(self):
+        source_code = self.language_codes.get(self.source_lang_var.get())
+        target_code = self.language_codes.get(self.target_lang_var.get())
+        parent_deck = self.parent_deck_var.get().strip()
+        import_deck = self.import_deck_var.get().strip()
+
+        if not source_code or not target_code:
+            messagebox.showerror("Error", "Please select valid languages.")
+            return
+        if source_code == target_code:
+            messagebox.showerror("Error", "Source and target languages must be different.")
+            return
+        if not parent_deck:
+            messagebox.showerror("Error", "Please enter a parent deck name.")
+            return
+
+        config = load_config()
+        for deck in config.get("anki_decks", []):
+            if deck["source_language_code"] == source_code:
+                messagebox.showerror("Error", f"A deck for {self.source_lang_var.get()} already exists.")
+                return
+
+        new_deck = {
+            "source_language_code": source_code,
+            "target_language_code": target_code,
+            "parent_deck_name": parent_deck,
+            "staging_deck_name": import_deck,
+            "task_settings": DEFAULT_TASK_SETTINGS.copy()
+        }
+        config["anki_decks"].append(new_deck)
+        save_config(config)
+
+        if self.create_in_anki_var.get():
+            self._create_in_anki_async(parent_deck, import_deck)
+        else:
+            self._finish()
+
+    def _create_in_anki_async(self, parent_deck: str, import_deck: str):
+        if self._checking_connection:
+            return
+        self._checking_connection = True
+        self.add_btn.configure(state="disabled")
+        self.status_label.configure(text="⟳ Creating in Anki...", text_color="gray")
+
+        def do_create():
+            AnkiConnectionManager.reset()
+            anki, connected = AnkiConnectionManager.get_connection()
+            if connected:
+                try:
+                    existing = anki.get_deck_names()
+                    for deck in [parent_deck, import_deck]:
+                        if deck not in existing:
+                            anki.create_deck(deck)
+                except Exception:
+                    pass
+            self.after(0, self._finish)
+
+        threading.Thread(target=do_create, daemon=True).start()
+
+    def _finish(self):
+        self._checking_connection = False
+        if self.on_add:
+            self.on_add()
+        self.destroy()
 
 
 class SetupWizardWindow(ctk.CTkToplevel):
