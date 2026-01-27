@@ -349,12 +349,13 @@ class TaskConfigRow(ctk.CTkFrame):
 class TaskConfigPanel(ctk.CTkFrame):
     """Panel for configuring all tasks for a deck."""
 
-    def __init__(self, parent, deck_config: dict):
+    def __init__(self, parent, deck_config: dict, on_change: Callable = None):
         super().__init__(parent)
         self.deck_config = deck_config
         self.task_settings = copy.deepcopy(deck_config.get("task_settings", {}))
         self.source_language_code = deck_config.get("source_language_code")
         self.task_rows = {}
+        self.on_change = on_change
 
         self._create_widgets()
 
@@ -418,8 +419,8 @@ class TaskConfigPanel(ctk.CTkFrame):
             self.task_rows[task_key] = row
 
     def _on_task_change(self):
-        # Could add validation or preview here
-        pass
+        if self.on_change:
+            self.on_change()
 
     def get_all_settings(self) -> dict:
         """Get all current task settings."""

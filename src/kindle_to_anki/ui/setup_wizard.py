@@ -39,6 +39,14 @@ COMMON_LANGUAGES = [
 
 DEFAULT_ANKI_CONNECT_URL = "http://localhost:8765"
 
+# Provider info: id -> (display_name, env_var, setup_url)
+PROVIDER_INFO = {
+    "gemini": ("Gemini", "GEMINI_API_KEY", "https://aistudio.google.com/apikey"),
+    "openai": ("OpenAI", "OPENAI_API_KEY", "https://platform.openai.com/api-keys"),
+    "grok": ("Grok (xAI)", "XAI_API_KEY", "https://console.x.ai/"),
+    "deepl": ("DeepL", "DEEPL_API_KEY", "https://www.deepl.com/your-account/keys"),
+}
+
 DEFAULT_TASK_SETTINGS = {
     "lui": {"runtime": "chat_completion_lui", "model_id": "gemini-2.5-flash", "batch_size": 30},
     "wsd": {"runtime": "chat_completion_wsd", "model_id": "gemini-2.5-flash", "batch_size": 30},
@@ -266,24 +274,34 @@ class SetupWizardFrame(ctk.CTkFrame):
         self.global_status_label.pack(fill="x", padx=10, pady=(0, 10))
 
     def _create_provider_card(self):
-        """Create the Provider configuration card (TODO)."""
+        """Create the Provider configuration card."""
         card = ctk.CTkFrame(self.scroll_container)
         card.pack(fill="x", pady=(0, 10))
+        self._provider_card = card
 
-        # Header
+        # Header row with title and validate button
+        header_frame = ctk.CTkFrame(card, fg_color="transparent")
+        header_frame.pack(fill="x", padx=10, pady=(10, 5))
+
         ctk.CTkLabel(
-            card,
-            text="Provider",
+            header_frame,
+            text="Providers",
             font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(anchor="w", padx=10, pady=(10, 5))
+        ).pack(side="left")
 
-        # TODO placeholder
-        ctk.CTkLabel(
-            card,
-            text="API provider configuration coming soon (Gemini, OpenAI, etc.)",
-            font=ctk.CTkFont(size=11),
-            text_color="gray"
-        ).pack(anchor="w", padx=10, pady=(0, 10))
+        self.validate_providers_btn = ctk.CTkButton(
+            header_frame,
+            text="Validate",
+            width=80,
+            command=self._validate_providers
+        )
+        self.validate_providers_btn.pack(side="right")
+
+        # Provider list container
+        self.provider_list_frame = ctk.CTkFrame(card, fg_color="transparent")
+        self.provider_list_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+        self._refresh_provider_list()
 
     def _create_decks_card(self):
         """Create the Decks configuration card."""
@@ -339,6 +357,122 @@ class SetupWizardFrame(ctk.CTkFrame):
                 "restart Anki, then try again."
             )
             self.global_status_label.configure(text=help_text, text_color="red")
+
+    def _get_used_providers(self) -> set[str]:
+        """Get set of provider IDs used in current config and unsaved task panel."""
+        from kindle_to_anki.core.bootstrap import bootstrap_all
+        from kindle_to_anki.core.models.registry import ModelRegistry
+        bootstrap_all()
+
+        used = set()
+
+        def extract_providers(task_settings: dict):
+            for task_name, task_config in task_settings.items():
+                model_id = task_config.get("model_id")
+                runtime = task_config.get("runtime", "")
+                if model_id:
+                    try:
+                        model = ModelRegistry.get(model_id)
+                        used.add(model.platform_id)
+                    except KeyError:
+                        pass
+                if "deepl" in runtime.lower():
+                    used.add("deepl")
+
+        # Check saved config for all decks
+        config = load_config()
+        for i, deck in enumerate(config.get("anki_decks", [])):
+            # For current deck, use unsaved panel settings if available
+            if hasattr(self, 'task_config_panel') and self.task_config_panel and i == self._current_deck_index:
+                extract_providers(self.task_config_panel.get_all_settings())
+            else:
+                extract_providers(deck.get("task_settings", {}))
+
+        return used
+
+    def _refresh_provider_list(self):
+        """Refresh the provider list display."""
+        for widget in self.provider_list_frame.winfo_children():
+            widget.destroy()
+
+        used_providers = self._get_used_providers()
+
+        for provider_id, (name, env_var, _) in PROVIDER_INFO.items():
+            row = ctk.CTkFrame(self.provider_list_frame, fg_color="transparent")
+            row.pack(fill="x", pady=2)
+
+            is_used = provider_id in used_providers
+            usage_text = "Used" if is_used else "Not used"
+            usage_color = "#2a9d8f" if is_used else "gray"
+
+            ctk.CTkLabel(row, text=name, width=100, anchor="w").pack(side="left")
+            ctk.CTkLabel(row, text=f"({env_var})", width=160, anchor="w",
+                         font=ctk.CTkFont(size=11), text_color="gray").pack(side="left")
+            ctk.CTkLabel(row, text=usage_text, width=70, anchor="w",
+                         font=ctk.CTkFont(size=11), text_color=usage_color).pack(side="left")
+
+        # Status label for validation results
+        self.provider_status_label = ctk.CTkLabel(
+            self.provider_list_frame,
+            text="",
+            font=ctk.CTkFont(size=11),
+            text_color="gray",
+            wraplength=550,
+            justify="left"
+        )
+        self.provider_status_label.pack(fill="x", pady=(5, 0))
+
+    def _validate_providers(self):
+        """Validate all used providers and show results."""
+        self.validate_providers_btn.configure(state="disabled")
+        self.provider_status_label.configure(text="⟳ Validating providers...", text_color="gray")
+
+        def do_validate():
+            from kindle_to_anki.core.bootstrap import bootstrap_all
+            from kindle_to_anki.platforms.platform_registry import PlatformRegistry
+            bootstrap_all()
+
+            used_providers = self._get_used_providers()
+            results = []
+
+            for provider_id in used_providers:
+                try:
+                    platform = PlatformRegistry.get(provider_id)
+                    is_valid = platform.validate_credentials()
+                    results.append((provider_id, is_valid))
+                except Exception:
+                    results.append((provider_id, False))
+
+            self.after(0, lambda: self._on_providers_validated(results))
+
+        threading.Thread(target=do_validate, daemon=True).start()
+
+    def _on_providers_validated(self, results: list[tuple[str, bool]]):
+        """Handle provider validation results."""
+        self.validate_providers_btn.configure(state="normal")
+
+        if not results:
+            self.provider_status_label.configure(
+                text="No providers in use. Configure a deck first.",
+                text_color="gray"
+            )
+            return
+
+        valid = [p for p, ok in results if ok]
+        invalid = [p for p, ok in results if not ok]
+
+        lines = []
+        if valid:
+            names = [PROVIDER_INFO[p][0] for p in valid]
+            lines.append(f"✓ Valid: {', '.join(names)}")
+
+        if invalid:
+            for provider_id in invalid:
+                name, env_var, url = PROVIDER_INFO[provider_id]
+                lines.append(f"✗ {name}: Set {env_var} environment variable. Get key at {url}")
+
+        color = "green" if not invalid else ("orange" if valid else "red")
+        self.provider_status_label.configure(text="\n".join(lines), text_color=color)
 
     def _setup_note_type(self):
         """Setup the note type in Anki."""
@@ -553,9 +687,14 @@ class SetupWizardFrame(ctk.CTkFrame):
         deck_config = decks[self._current_deck_index]
         self.task_config_panel = TaskConfigPanel(
             self.main_container,
-            deck_config
+            deck_config,
+            on_change=self._on_task_config_change
         )
         self.task_config_panel.pack(fill="both", expand=True)
+
+    def _on_task_config_change(self):
+        """Called when task configuration changes - refresh provider list."""
+        self._refresh_provider_list()
 
     def _on_deck_selected(self, selection: str):
         """Handle deck selection from dropdown."""
