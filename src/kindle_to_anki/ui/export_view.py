@@ -1,9 +1,16 @@
 import customtkinter as ctk
-from typing import Callable, Optional
+from tkinterdnd2 import DND_FILES
+from typing import Callable, Optional, Dict, List
+from datetime import datetime
 import threading
+import subprocess
+import sqlite3
+import shutil
+from pathlib import Path
 
 from kindle_to_anki.logging import LogLevel, UILogger, LoggerRegistry
 from kindle_to_anki.anki.anki_connect import AnkiConnect
+from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.configuration.config_manager import ConfigManager
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
@@ -28,17 +35,22 @@ from kindle_to_anki.pruning.pruning import (
 
 
 class ExportView(ctk.CTkFrame):
-    """Export vocabulary view - runs the main export pipeline with progress display."""
+    """Export vocabulary view - unified page with swappable card content."""
 
     def __init__(self, master, on_back: Callable):
         super().__init__(master)
         self.on_back = on_back
         self.is_running = False
         self.export_thread: Optional[threading.Thread] = None
+        self.notes_by_language: Dict[str, List[AnkiNote]] = {}
+        self.latest_candidate_timestamp: Optional[datetime] = None
+        self.vocab_db_path: Optional[Path] = None
 
-        self._create_widgets()
+        self._create_main_layout()
+        self._show_collect_lookups_card()
 
-    def _create_widgets(self):
+    def _create_main_layout(self):
+        """Create the main layout with header, progress bar, card area, and controls."""
         # Header with back button
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.pack(fill="x", pady=(0, 10))
@@ -58,91 +70,329 @@ class ExportView(ctk.CTkFrame):
         )
         title.pack(side="left", padx=20)
 
-        # Progress section
-        progress_frame = ctk.CTkFrame(self)
-        progress_frame.pack(fill="x", padx=10, pady=10)
+        # Progress section (always visible)
+        progress_frame = ctk.CTkFrame(self, fg_color="transparent")
+        progress_frame.pack(fill="x", padx=10, pady=(0, 10))
 
         self.status_label = ctk.CTkLabel(
             progress_frame,
-            text="Ready to export",
-            font=ctk.CTkFont(size=14)
+            text="Step 1: Collect Lookups",
+            font=ctk.CTkFont(size=13)
         )
-        self.status_label.pack(pady=10)
+        self.status_label.pack(anchor="w", pady=(0, 5))
 
-        self.progress_bar = ctk.CTkProgressBar(progress_frame, width=400)
-        self.progress_bar.pack(pady=10)
+        self.progress_bar = ctk.CTkProgressBar(progress_frame)
+        self.progress_bar.pack(fill="x", pady=(0, 5))
         self.progress_bar.set(0)
 
         self.step_label = ctk.CTkLabel(
             progress_frame,
             text="",
-            font=ctk.CTkFont(size=12),
+            font=ctk.CTkFont(size=11),
             text_color=("gray50", "gray60")
         )
-        self.step_label.pack(pady=(0, 10))
+        self.step_label.pack(anchor="w")
 
-        # Output log placeholder
-        log_frame = ctk.CTkFrame(self)
-        log_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Card container (centered)
+        self.card_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.card_container.pack(fill="both", expand=True, padx=10)
 
-        log_header = ctk.CTkLabel(
-            log_frame,
-            text="Output Log",
-            font=ctk.CTkFont(size=14, weight="bold")
+        # Bottom controls (outside card)
+        controls_frame = ctk.CTkFrame(self, fg_color="transparent")
+        controls_frame.pack(fill="x", padx=10, pady=(10, 10))
+
+        self.create_notes_btn = ctk.CTkButton(
+            controls_frame,
+            text="▶ Create Notes",
+            width=140,
+            state="disabled",
+            command=self._start_create_notes
         )
-        log_header.pack(anchor="w", padx=10, pady=(10, 5))
-
-        # Large output textbox (placeholder for future log streaming)
-        self.log_textbox = ctk.CTkTextbox(
-            log_frame,
-            font=ctk.CTkFont(family="Consolas", size=12),
-            state="disabled"
-        )
-        self.log_textbox.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-
-        # Control buttons
-        buttons_frame = ctk.CTkFrame(self, fg_color="transparent")
-        buttons_frame.pack(fill="x", padx=10, pady=10)
-
-        self.start_btn = ctk.CTkButton(
-            buttons_frame,
-            text="Start Export",
-            width=150,
-            command=self._start_export
-        )
-        self.start_btn.pack(side="left", padx=5)
+        self.create_notes_btn.pack(side="left", padx=(0, 10))
 
         self.cancel_btn = ctk.CTkButton(
-            buttons_frame,
+            controls_frame,
             text="Cancel",
             width=100,
             state="disabled",
             command=self._cancel_export
         )
-        self.cancel_btn.pack(side="left", padx=5)
+        self.cancel_btn.pack(side="left", padx=(0, 20))
 
-        # Log level dropdown
-        log_level_label = ctk.CTkLabel(buttons_frame, text="Log Level:", font=ctk.CTkFont(size=12))
-        log_level_label.pack(side="left", padx=(20, 5))
+        ctk.CTkLabel(controls_frame, text="Log Level:", font=ctk.CTkFont(size=11)).pack(side="left", padx=(10, 5))
 
         self.log_level_var = ctk.StringVar(value="INFO")
         self.log_level_dropdown = ctk.CTkOptionMenu(
-            buttons_frame,
+            controls_frame,
             variable=self.log_level_var,
             values=[level.name for level in LogLevel],
-            width=100,
+            width=90,
             command=self._on_log_level_change
         )
         self.log_level_dropdown.pack(side="left")
 
-        # Setup UI logger with callback
+        # Setup UI logger
         self._ui_logger = UILogger(level=LogLevel.INFO, callback=self._on_log_message)
         LoggerRegistry.set(self._ui_logger)
 
+    def _show_collect_lookups_card(self):
+        """Show the Collect Lookups card content."""
+        # Clear card container
+        for widget in self.card_container.winfo_children():
+            widget.destroy()
+
+        # Centered card with modest width
+        card = ctk.CTkFrame(self.card_container, corner_radius=12, width=400)
+        card.pack(expand=True, pady=10)
+        card.pack_propagate(False)
+        card.configure(width=420, height=380)
+
+        # Card content
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=20, pady=15)
+
+        # Auto-locate button
+        self.auto_locate_btn = ctk.CTkButton(
+            inner,
+            text="🔍 Auto-locate from Kindle",
+            width=250,
+            command=self._auto_locate_vocab_db
+        )
+        self.auto_locate_btn.pack(pady=(10, 10))
+
+        # Divider with "or"
+        ctk.CTkLabel(inner, text="— or —", text_color=("gray50", "gray60")).pack(pady=5)
+
+        # Drop zone frame
+        self.drop_zone = ctk.CTkFrame(
+            inner,
+            height=60,
+            corner_radius=8,
+            border_width=2,
+            border_color=("gray70", "gray30"),
+            fg_color=("gray90", "gray17")
+        )
+        self.drop_zone.pack(fill="x", pady=5)
+        self.drop_zone.pack_propagate(False)
+
+        self.drop_label = ctk.CTkLabel(
+            self.drop_zone,
+            text="📁 Drop vocab.db here or click to browse",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray50", "gray60")
+        )
+        self.drop_label.pack(expand=True)
+
+        # Make drop zone clickable
+        self.drop_zone.bind("<Button-1>", lambda e: self._browse_vocab_db())
+        self.drop_label.bind("<Button-1>", lambda e: self._browse_vocab_db())
+
+        # Register drag-and-drop
+        self.drop_zone.drop_target_register(DND_FILES)
+        self.drop_zone.dnd_bind('<<Drop>>', self._on_file_drop)
+
+        # Path entry
+        path_frame = ctk.CTkFrame(inner, fg_color="transparent")
+        path_frame.pack(fill="x", pady=(10, 5))
+
+        self.path_entry = ctk.CTkEntry(path_frame, placeholder_text="Path to vocab.db...")
+        self.path_entry.pack(side="left", fill="x", expand=True)
+
+        self.load_path_btn = ctk.CTkButton(path_frame, text="Load", width=50, command=self._load_from_path)
+        self.load_path_btn.pack(side="left", padx=(5, 0))
+
+        # Status indicator
+        self.collect_status_label = ctk.CTkLabel(inner, text="", font=ctk.CTkFont(size=11))
+        self.collect_status_label.pack(pady=(5, 5))
+
+        # Small output log
+        log_header = ctk.CTkLabel(inner, text="Output Log", font=ctk.CTkFont(size=11, weight="bold"))
+        log_header.pack(anchor="w", pady=(5, 2))
+
+        self.log_textbox = ctk.CTkTextbox(inner, font=ctk.CTkFont(family="Consolas", size=10), state="disabled", height=80)
+        self.log_textbox.pack(fill="both", expand=True)
+
+    def _show_export_card(self):
+        """Show the Export/Create Notes card content."""
+        # Clear card container
+        for widget in self.card_container.winfo_children():
+            widget.destroy()
+
+        # Card with same modest width
+        card = ctk.CTkFrame(self.card_container, corner_radius=12)
+        card.pack(fill="both", expand=True, pady=10, padx=50)
+
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=20, pady=15)
+
+        # Info about what's being processed
+        total_notes = sum(len(notes) for notes in self.notes_by_language.values())
+        languages = ", ".join(self.notes_by_language.keys())
+
+        info_label = ctk.CTkLabel(
+            inner,
+            text=f"Processing {total_notes} lookups ({languages})",
+            font=ctk.CTkFont(size=13)
+        )
+        info_label.pack(pady=(5, 10))
+
+        # Output log (larger in this view)
+        log_header = ctk.CTkLabel(inner, text="Output Log", font=ctk.CTkFont(size=12, weight="bold"))
+        log_header.pack(anchor="w", pady=(10, 5))
+
+        self.log_textbox = ctk.CTkTextbox(inner, font=ctk.CTkFont(family="Consolas", size=11), state="disabled")
+        self.log_textbox.pack(fill="both", expand=True)
+
+    def _start_create_notes(self):
+        """Switch to export card and start the export."""
+        if not self.notes_by_language:
+            self._log("No candidates loaded.")
+            return
+
+        self._show_export_card()
+        self._start_export()
+
+    def _auto_locate_vocab_db(self):
+        """Try to locate vocab.db from connected Kindle via PowerShell."""
+        self._set_collect_status("Searching for Kindle...", "info")
+        self._log("Searching for connected Kindle device...")
+        threading.Thread(target=self._auto_locate_thread, daemon=True).start()
+
+    def _auto_locate_thread(self):
+        """Background thread for auto-locating vocab.db."""
+        try:
+            copy_vocab_script = Path(__file__).parent.parent / "copy_vocab.bat"
+            project_root = Path(__file__).parent.parent.parent.parent
+            inputs_dir = project_root / "data" / "inputs"
+            inputs_dir.mkdir(parents=True, exist_ok=True)
+
+            result = subprocess.run([str(copy_vocab_script)], capture_output=True, text=True)
+
+            if result.returncode == 0:
+                src_db = inputs_dir / "vocab_powershell_copy.db"
+                dest_db = inputs_dir / "vocab.db"
+                if src_db.exists():
+                    src_db.replace(dest_db)
+                    self.after(0, lambda: self._load_vocab_db(dest_db))
+                else:
+                    self.after(0, lambda: self._set_collect_status("❌ vocab.db not found after copy", "error"))
+                    self.after(0, lambda: self._log("[ERROR] vocab.db not found after PowerShell copy"))
+            else:
+                error_msg = result.stderr.strip() if result.stderr else "Kindle not found or not connected"
+                self.after(0, lambda: self._set_collect_status(f"❌ {error_msg}", "error"))
+                self.after(0, lambda em=error_msg: self._log(f"[ERROR] Auto-locate failed: {em}"))
+        except Exception as e:
+            self.after(0, lambda: self._set_collect_status(f"❌ Error: {str(e)}", "error"))
+            self.after(0, lambda: self._log(f"[ERROR] Auto-locate exception: {str(e)}"))
+
+    def _browse_vocab_db(self):
+        """Open file dialog to browse for vocab.db."""
+        from tkinter import filedialog
+        filepath = filedialog.askopenfilename(
+            title="Select vocab.db",
+            filetypes=[("SQLite Database", "*.db"), ("All files", "*.*")]
+        )
+        if filepath:
+            self._load_vocab_db(Path(filepath))
+
+    def _on_file_drop(self, event):
+        """Handle file drop onto the drop zone."""
+        filepath = event.data.strip('{}')
+        if filepath:
+            self._load_vocab_db(Path(filepath))
+
+    def _load_from_path(self):
+        """Load vocab.db from the path entry."""
+        path = self.path_entry.get().strip()
+        if path:
+            self._load_vocab_db(Path(path))
+        else:
+            self._set_collect_status("❌ Please enter a path", "error")
+            self._log("[ERROR] No path entered")
+
+    def _load_vocab_db(self, db_path: Path):
+        """Load and validate vocab.db, then collect candidates."""
+        if not db_path.exists():
+            self._set_collect_status(f"❌ File not found", "error")
+            self._log(f"[ERROR] File not found: {db_path}")
+            return
+
+        try:
+            conn = sqlite3.connect(db_path)
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='LOOKUPS'")
+            if not cur.fetchone():
+                conn.close()
+                self._set_collect_status("❌ Invalid vocab.db", "error")
+                self._log(f"[ERROR] Invalid vocab.db: missing LOOKUPS table")
+                return
+            conn.close()
+        except Exception as e:
+            self._set_collect_status(f"❌ Error reading database", "error")
+            self._log(f"[ERROR] Error reading database: {str(e)}")
+            return
+
+        self.vocab_db_path = db_path
+        self.path_entry.delete(0, "end")
+        self.path_entry.insert(0, str(db_path))
+        self._log(f"Loading vocab.db from: {db_path}")
+
+        project_root = Path(__file__).parent.parent.parent.parent
+        inputs_dir = project_root / "data" / "inputs"
+        target_path = inputs_dir / "vocab.db"
+
+        if db_path.resolve() != target_path.resolve():
+            inputs_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(db_path, target_path)
+
+        self._set_collect_status("Loading candidates...", "info")
+        threading.Thread(target=self._collect_candidates_thread, daemon=True).start()
+
+    def _collect_candidates_thread(self):
+        """Background thread for collecting candidates."""
+        try:
+            bootstrap_all()
+            candidate_provider = CollectCandidatesProvider(
+                runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates")
+            )
+            notes_by_language, latest_timestamp = candidate_provider.collect_candidates(runtime_choice="kindle")
+
+            self.notes_by_language = notes_by_language or {}
+            self.latest_candidate_timestamp = latest_timestamp
+
+            total_notes = sum(len(notes) for notes in self.notes_by_language.values())
+            languages = ", ".join(self.notes_by_language.keys())
+
+            if total_notes > 0:
+                self.after(0, lambda: self._on_candidates_loaded(total_notes, languages))
+            else:
+                self.after(0, lambda: self._set_collect_status("⚠️ No new candidates found", "warning"))
+                self.after(0, lambda: self._log("[WARNING] No new candidates found in vocab.db"))
+        except Exception as e:
+            self.after(0, lambda: self._set_collect_status(f"❌ Error loading candidates", "error"))
+            self.after(0, lambda: self._log(f"[ERROR] Error loading candidates: {str(e)}"))
+
+    def _on_candidates_loaded(self, total_notes: int, languages: str):
+        """Called when candidates are successfully loaded."""
+        self._set_collect_status(f"✅ Loaded {total_notes} lookups ({languages})", "success")
+        self._log(f"Successfully loaded {total_notes} lookups for languages: {languages}")
+        self.create_notes_btn.configure(state="normal")
+        self.progress_bar.set(0.1)
+        self.step_label.configure(text=f"{total_notes} lookups ready")
+
+    def _set_collect_status(self, message: str, status_type: str = "info"):
+        """Update the collect status label with color."""
+        colors = {
+            "info": ("gray50", "gray60"),
+            "success": ("green", "green"),
+            "error": ("red", "red"),
+            "warning": ("orange", "orange")
+        }
+        self.collect_status_label.configure(text=message, text_color=colors.get(status_type, colors["info"]))
+
     def _on_back_clicked(self):
         if self.is_running:
-            # Could add confirmation dialog here
-            pass
+            return
         self.on_back()
 
     def _on_log_level_change(self, value: str):
@@ -169,12 +419,15 @@ class ExportView(ctk.CTkFrame):
 
     def _start_export(self):
         """Start the export process in a background thread."""
+        if not self.notes_by_language:
+            self._log("No candidates loaded.")
+            return
+
         self.is_running = True
         self.back_btn.configure(state="disabled")
-        self.start_btn.configure(state="disabled")
+        self.create_notes_btn.configure(state="disabled")
         self.cancel_btn.configure(state="normal")
 
-        # Clear log
         self.log_textbox.configure(state="normal")
         self.log_textbox.delete("1.0", "end")
         self.log_textbox.configure(state="disabled")
@@ -188,7 +441,7 @@ class ExportView(ctk.CTkFrame):
         self._log("Cancellation requested...")
 
     def _run_export(self):
-        """Run the export pipeline (mirrors main.py logic)."""
+        """Run the export pipeline."""
         try:
             self._export_pipeline()
         except Exception as e:
@@ -200,18 +453,17 @@ class ExportView(ctk.CTkFrame):
         """Called when export completes or fails."""
         self.is_running = False
         self.back_btn.configure(state="normal")
-        self.start_btn.configure(state="normal")
         self.cancel_btn.configure(state="disabled")
         self.progress_bar.set(1)
         self.status_label.configure(text="Export completed")
         self.step_label.configure(text="")
 
     def _export_pipeline(self):
-        """Main export pipeline - mirrors main.py structure."""
-        total_steps = 14
+        """Main export pipeline - uses pre-loaded candidates."""
+        total_steps = 11  # Reduced since candidates already loaded
 
-        # Step 1: Bootstrap
-        self.after(0, lambda: self._update_progress(1, total_steps, "Bootstrapping...", "Initializing runtimes"))
+        # Step 1: Bootstrap (if not done)
+        self.after(0, lambda: self._update_progress(1, total_steps, "Initializing...", "Setting up runtimes"))
         bootstrap_all()
 
         if not self.is_running:
@@ -219,7 +471,6 @@ class ExportView(ctk.CTkFrame):
 
         # Step 2: Setup providers
         self.after(0, lambda: self._update_progress(2, total_steps, "Setting up providers...", ""))
-        candidate_provider = CollectCandidatesProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("collect_candidates"))
         translation_provider = TranslationProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("translation"))
         wsd_provider = WSDProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("wsd"))
         hint_provider = HintProvider(runtimes=RuntimeRegistry.find_by_task_as_dict("hint"))
@@ -239,19 +490,15 @@ class ExportView(ctk.CTkFrame):
         if not self.is_running:
             return
 
-        # Step 4: Collect candidates
-        self.after(0, lambda: self._update_progress(4, total_steps, "Collecting candidates...", "Reading Kindle vocabulary"))
-        notes_by_language, latest_candidate_timestamp = candidate_provider.collect_candidates(runtime_choice="kindle")
+        # Use pre-loaded candidates
+        notes_by_language = self.notes_by_language
 
         if not notes_by_language or len(notes_by_language) == 0:
-            self.after(0, lambda: self._log("No candidate notes collected."))
+            self.after(0, lambda: self._log("No candidate notes to process."))
             return
 
-        if not self.is_running:
-            return
-
-        # Step 5: Connect to Anki
-        self.after(0, lambda: self._update_progress(5, total_steps, "Connecting to Anki...", ""))
+        # Step 4: Connect to Anki
+        self.after(0, lambda: self._update_progress(4, total_steps, "Connecting to Anki...", ""))
         anki_connect_instance = AnkiConnect()
 
         # Process each language
@@ -287,8 +534,8 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 6: LUI
-            self.after(0, lambda: self._update_progress(6, total_steps, "Lexical Unit Identification...", ""))
+            # Step 5: LUI
+            self.after(0, lambda: self._update_progress(5, total_steps, "Lexical Unit Identification...", ""))
             lui_setting = anki_deck.get_task_setting("lui")
             lui_prompt_id = lui_setting.get("prompt_id") or get_lui_default_prompt_id(source_language_code)
             lui_provider.identify(
@@ -307,8 +554,8 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 7: WSD
-            self.after(0, lambda: self._update_progress(7, total_steps, "Word Sense Disambiguation...", ""))
+            # Step 6: WSD
+            self.after(0, lambda: self._update_progress(6, total_steps, "Word Sense Disambiguation...", ""))
             wsd_setting = anki_deck.get_task_setting("wsd")
             wsd_prompt_id = wsd_setting.get("prompt_id") or get_default_prompt_id("wsd")
             wsd_provider.disambiguate(
@@ -335,10 +582,10 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 8: Hint generation (optional)
+            # Step 7: Hint generation (optional)
             hint_setting = anki_deck.get_task_setting("hint")
             if hint_setting.get("enabled", True):
-                self.after(0, lambda: self._update_progress(8, total_steps, "Generating hints...", ""))
+                self.after(0, lambda: self._update_progress(7, total_steps, "Generating hints...", ""))
                 hint_prompt_id = hint_setting.get("prompt_id") or get_default_prompt_id("hint")
                 hint_provider.generate(
                     notes=notes,
@@ -356,10 +603,10 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 9: Cloze scoring (optional)
+            # Step 8: Cloze scoring (optional)
             cloze_setting = anki_deck.get_task_setting("cloze_scoring")
             if cloze_setting.get("enabled", True):
-                self.after(0, lambda: self._update_progress(9, total_steps, "Scoring cloze suitability...", ""))
+                self.after(0, lambda: self._update_progress(8, total_steps, "Scoring cloze suitability...", ""))
                 cloze_prompt_id = cloze_setting.get("prompt_id") or get_default_prompt_id("cloze_scoring")
                 cloze_scoring_provider.score(
                     notes=notes,
@@ -380,10 +627,10 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 10: Usage level (optional)
+            # Step 9: Usage level (optional)
             usage_level_setting = anki_deck.get_task_setting("usage_level")
             if usage_level_setting.get("enabled", True):
-                self.after(0, lambda: self._update_progress(10, total_steps, "Estimating usage levels...", ""))
+                self.after(0, lambda: self._update_progress(9, total_steps, "Estimating usage levels...", ""))
                 usage_level_prompt_id = usage_level_setting.get("prompt_id") or get_default_prompt_id("usage_level")
                 usage_level_provider.estimate(
                     notes=notes,
@@ -401,8 +648,8 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 11: Translation
-            self.after(0, lambda: self._update_progress(11, total_steps, "Translating...", ""))
+            # Step 10: Translation
+            self.after(0, lambda: self._update_progress(10, total_steps, "Translating...", ""))
             translation_setting = anki_deck.get_task_setting("translation")
             translation_prompt_id = translation_setting.get("prompt_id") or get_default_prompt_id("translation")
             translation_provider.translate(
@@ -422,10 +669,10 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 12: Collocations (optional)
+            # Step 11: Collocations (optional)
             collocation_setting = anki_deck.get_task_setting("collocation")
             if collocation_setting.get("enabled", True):
-                self.after(0, lambda: self._update_progress(12, total_steps, "Generating collocations...", ""))
+                self.after(0, lambda: self._update_progress(11, total_steps, "Generating collocations...", ""))
                 collocation_prompt_id = collocation_setting.get("prompt_id") or get_default_prompt_id("collocation")
                 collocation_provider.generate_collocations(
                     notes=notes,
@@ -443,23 +690,23 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 13: Write import file
+            # Write import file
             self.after(0, lambda slc=source_language_code: 
-                       self._update_progress(13, total_steps, "Writing import file...", slc))
+                       self._update_progress(total_steps - 1, total_steps, "Writing import file...", slc))
             write_anki_import_file(notes, source_language_code)
 
             if not self.is_running:
                 return
 
-            # Step 14: Save to Anki
+            # Save to Anki
             self.after(0, lambda slc=source_language_code: 
-                       self._update_progress(14, total_steps, "Saving to Anki...", slc))
+                       self._update_progress(total_steps, total_steps, "Saving to Anki...", slc))
             anki_connect_instance.create_notes_batch(anki_deck, notes)
 
         # Save timestamp
-        if latest_candidate_timestamp:
+        if self.latest_candidate_timestamp:
             metadata_manager = MetadataManager()
             metadata = metadata_manager.load_metadata()
-            metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_candidate_timestamp, metadata)
+            metadata_manager.save_latest_vocab_builder_entry_timestamp(self.latest_candidate_timestamp, metadata)
 
         self.after(0, lambda: self._log("Export completed successfully!"))

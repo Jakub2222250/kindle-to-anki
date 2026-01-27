@@ -14,6 +14,7 @@ dependencies = [
     "requests",
     "thefuzz",
     "tiktoken",
+    "tkinterdnd2",
 ]
 
 [tool.setuptools.packages.find]
