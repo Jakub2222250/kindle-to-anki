@@ -1,4 +1,5 @@
 {
+  "anki_connect_url": "http://localhost:8765",
   "anki_decks": [
     {
       "source_language_code": "es",

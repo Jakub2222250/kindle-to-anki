@@ -1,17 +1,33 @@
 import json
 import urllib.request
 import urllib.error
+from pathlib import Path
 
 from kindle_to_anki.anki.anki_deck import AnkiDeck
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 
+DEFAULT_ANKI_CONNECT_URL = "http://localhost:8765"
+
+
+def _get_anki_connect_url() -> str:
+    """Load AnkiConnect URL from config, or return default."""
+    config_path = Path(__file__).resolve().parent.parent.parent.parent / "data" / "config" / "config.json"
+    if config_path.exists():
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                return config.get("anki_connect_url", DEFAULT_ANKI_CONNECT_URL)
+        except Exception:
+            pass
+    return DEFAULT_ANKI_CONNECT_URL
+
 
 class AnkiConnect:
     """Super minimal AnkiConnect wrapper for Polish Vocab Discovery deck"""
 
-    def __init__(self):
-        self.anki_url = "http://localhost:8765"
+    def __init__(self, url: str = None):
+        self.anki_url = url if url else _get_anki_connect_url()
         self.note_type = NOTE_TYPE_NAME
 
         # Confirm AnkiConnect is reachable

@@ -37,6 +37,8 @@ COMMON_LANGUAGES = [
     ("id", "Indonesian"),
 ]
 
+DEFAULT_ANKI_CONNECT_URL = "http://localhost:8765"
+
 DEFAULT_TASK_SETTINGS = {
     "lui": {"runtime": "chat_completion_lui", "model_id": "gemini-2.5-flash", "batch_size": 30},
     "wsd": {"runtime": "chat_completion_wsd", "model_id": "gemini-2.5-flash", "batch_size": 30},
@@ -58,8 +60,12 @@ def load_config() -> dict:
     config_path = get_config_path()
     if config_path.exists():
         with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {"anki_decks": []}
+            config = json.load(f)
+            # Ensure anki_connect_url exists with default
+            if "anki_connect_url" not in config:
+                config["anki_connect_url"] = DEFAULT_ANKI_CONNECT_URL
+            return config
+    return {"anki_decks": [], "anki_connect_url": DEFAULT_ANKI_CONNECT_URL}
 
 
 def save_config(config: dict):
@@ -75,26 +81,43 @@ class AnkiConnectionManager:
     _instance = None
     _anki_connect = None
     _is_connected = None
+    _url = None
 
     @classmethod
-    def get_connection(cls) -> tuple[AnkiConnect | None, bool]:
+    def get_connection(cls, url: str = None) -> tuple[AnkiConnect | None, bool]:
         """Get or create AnkiConnect instance. Returns (instance, is_connected)."""
+        if url is None:
+            url = load_config().get("anki_connect_url", DEFAULT_ANKI_CONNECT_URL)
+
+        # Reset if URL changed
+        if cls._url != url:
+            cls.reset()
+            cls._url = url
+
         if cls._anki_connect is None:
             try:
-                # Create without auto-exit on failure
+                from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
                 cls._anki_connect = object.__new__(AnkiConnect)
-                cls._anki_connect.anki_url = "http://localhost:8765"
-                cls._anki_connect.note_type = "Polish Vocab Discovery"
+                cls._anki_connect.anki_url = url
+                cls._anki_connect.note_type = NOTE_TYPE_NAME
                 cls._is_connected = cls._anki_connect.is_reachable()
             except Exception:
                 cls._is_connected = False
         return cls._anki_connect, cls._is_connected
 
     @classmethod
-    def check_connection(cls) -> bool:
+    def check_connection(cls, url: str = None) -> bool:
         """Check if Anki is reachable (refreshes connection status)."""
+        if url is None:
+            url = load_config().get("anki_connect_url", DEFAULT_ANKI_CONNECT_URL)
+
+        # Reset if URL changed
+        if cls._url != url:
+            cls.reset()
+            cls._url = url
+
         if cls._anki_connect is None:
-            cls.get_connection()
+            cls.get_connection(url)
         else:
             cls._is_connected = cls._anki_connect.is_reachable()
         return cls._is_connected
@@ -104,6 +127,7 @@ class AnkiConnectionManager:
         """Reset connection state."""
         cls._anki_connect = None
         cls._is_connected = None
+        cls._url = None
 
 
 class SetupWizardFrame(ctk.CTkFrame):
@@ -124,26 +148,202 @@ class SetupWizardFrame(ctk.CTkFrame):
         self._refresh_view()
 
     def _create_widgets(self):
-        # Title (fixed at top)
-        self.title_label = ctk.CTkLabel(
-            self,
-            text="Deck Setup",
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        self.title_label.pack(pady=(10, 10))
+        # Top bar with back button and title
+        top_bar = ctk.CTkFrame(self, fg_color="transparent")
+        top_bar.pack(fill="x", padx=10, pady=(10, 5))
 
-        # Main container (will switch between add-deck and deck-config views)
-        self.main_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-
-        # Bottom: Back button (fixed at bottom)
         self.back_btn = ctk.CTkButton(
-            self,
+            top_bar,
             text="← Back",
-            width=100,
+            width=80,
             command=self._on_back
         )
-        self.back_btn.pack(side="bottom", pady=10, anchor="w", padx=10)
+        self.back_btn.pack(side="left")
+
+        self.title_label = ctk.CTkLabel(
+            top_bar,
+            text="Setup",
+            font=ctk.CTkFont(size=20, weight="bold")
+        )
+        self.title_label.pack(side="left", padx=(15, 0))
+
+        # Scrollable content area
+        self.scroll_container = ctk.CTkScrollableFrame(self)
+        self.scroll_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        # AnkiConnect card
+        self._create_anki_connect_card()
+
+        # Provider card (TODO)
+        self._create_provider_card()
+
+        # Decks card (main container will be inside this)
+        self._create_decks_card()
+
+    def _create_anki_connect_card(self):
+        """Create the AnkiConnect configuration card."""
+        config = load_config()
+
+        card = ctk.CTkFrame(self.scroll_container)
+        card.pack(fill="x", pady=(0, 10))
+
+        # Header
+        ctk.CTkLabel(
+            card,
+            text="AnkiConnect",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=(10, 5))
+
+        # AnkiConnect URL row
+        url_frame = ctk.CTkFrame(card, fg_color="transparent")
+        url_frame.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(url_frame, text="URL:").pack(side="left", padx=(0, 5))
+
+        self.anki_url_var = ctk.StringVar(value=config.get("anki_connect_url", DEFAULT_ANKI_CONNECT_URL))
+        self.anki_url_entry = ctk.CTkEntry(url_frame, textvariable=self.anki_url_var, width=220)
+        self.anki_url_entry.pack(side="left", padx=(0, 10))
+
+        self.validate_btn = ctk.CTkButton(
+            url_frame,
+            text="Validate",
+            width=80,
+            command=self._validate_anki_connection
+        )
+        self.validate_btn.pack(side="left", padx=(0, 10))
+
+        self.setup_note_type_btn = ctk.CTkButton(
+            url_frame,
+            text="Setup/Validate Note Type",
+            width=160,
+            command=self._setup_note_type
+        )
+        self.setup_note_type_btn.pack(side="left")
+
+        # Status/info label
+        self.global_status_label = ctk.CTkLabel(
+            card,
+            text="",
+            font=ctk.CTkFont(size=11),
+            text_color="gray",
+            wraplength=600,
+            justify="left"
+        )
+        self.global_status_label.pack(fill="x", padx=10, pady=(0, 10))
+
+    def _create_provider_card(self):
+        """Create the Provider configuration card (TODO)."""
+        card = ctk.CTkFrame(self.scroll_container)
+        card.pack(fill="x", pady=(0, 10))
+
+        # Header
+        ctk.CTkLabel(
+            card,
+            text="Provider",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=(10, 5))
+
+        # TODO placeholder
+        ctk.CTkLabel(
+            card,
+            text="API provider configuration coming soon (Gemini, OpenAI, etc.)",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        ).pack(anchor="w", padx=10, pady=(0, 10))
+
+    def _create_decks_card(self):
+        """Create the Decks configuration card."""
+        card = ctk.CTkFrame(self.scroll_container)
+        card.pack(fill="both", expand=True, pady=(0, 10))
+
+        # Header
+        ctk.CTkLabel(
+            card,
+            text="Decks",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=(10, 5))
+
+        # Main container for deck content (will switch between add-deck and deck-config views)
+        self.main_container = ctk.CTkFrame(card, fg_color="transparent")
+        self.main_container.pack(fill="both", expand=True, padx=5, pady=(0, 10))
+
+    def _validate_anki_connection(self):
+        """Validate AnkiConnect connection and save URL if successful."""
+        if self._checking_connection:
+            return
+
+        url = self.anki_url_var.get().strip()
+        if not url:
+            self.global_status_label.configure(text="Please enter a URL", text_color="red")
+            return
+
+        self._checking_connection = True
+        self.validate_btn.configure(state="disabled")
+        self.global_status_label.configure(text="⟳ Checking connection...", text_color="gray")
+
+        def check():
+            AnkiConnectionManager.reset()
+            anki, connected = AnkiConnectionManager.get_connection(url)
+            self.after(0, lambda: self._on_validate_done(connected, url))
+
+        threading.Thread(target=check, daemon=True).start()
+
+    def _on_validate_done(self, connected: bool, url: str):
+        self._checking_connection = False
+        self.validate_btn.configure(state="normal")
+
+        if connected:
+            # Save the URL to config
+            config = load_config()
+            config["anki_connect_url"] = url
+            save_config(config)
+            self.global_status_label.configure(text="✓ Connected to AnkiConnect", text_color="green")
+        else:
+            help_text = (
+                "✗ Cannot connect to AnkiConnect.\n"
+                "Setup: In Anki, go to Tools → Add-ons → Get Add-ons, enter code 2055492159, "
+                "restart Anki, then try again."
+            )
+            self.global_status_label.configure(text=help_text, text_color="red")
+
+    def _setup_note_type(self):
+        """Setup the note type in Anki."""
+        if self._checking_connection:
+            return
+
+        self._checking_connection = True
+        self.setup_note_type_btn.configure(state="disabled")
+        self.global_status_label.configure(text="⟳ Setting up note type...", text_color="gray")
+
+        def do_setup():
+            url = self.anki_url_var.get().strip()
+            AnkiConnectionManager.reset()
+            anki, connected = AnkiConnectionManager.get_connection(url)
+
+            if not connected:
+                self.after(0, lambda: self._on_note_type_setup_done(False, "Cannot connect to AnkiConnect"))
+                return
+
+            try:
+                from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
+                from kindle_to_anki.anki.setup_note_type import FIELDS, load_template, get_card_templates
+
+                existing_models = anki.get_model_names()
+                if NOTE_TYPE_NAME in existing_models:
+                    self.after(0, lambda: self._on_note_type_setup_done(True, f"Note type '{NOTE_TYPE_NAME}' already exists"))
+                else:
+                    anki.create_model(NOTE_TYPE_NAME, FIELDS, load_template("style.css"), get_card_templates())
+                    self.after(0, lambda: self._on_note_type_setup_done(True, f"Note type '{NOTE_TYPE_NAME}' created successfully"))
+            except Exception as e:
+                self.after(0, lambda: self._on_note_type_setup_done(False, str(e)))
+
+        threading.Thread(target=do_setup, daemon=True).start()
+
+    def _on_note_type_setup_done(self, success: bool, message: str):
+        self._checking_connection = False
+        self.setup_note_type_btn.configure(state="normal")
+        color = "green" if success else "red"
+        self.global_status_label.configure(text=message, text_color=color)
 
     def _clear_main_container(self):
         for widget in self.main_container.winfo_children():
@@ -163,20 +363,17 @@ class SetupWizardFrame(ctk.CTkFrame):
 
     def _create_add_deck_view(self):
         """View shown when no decks exist - for adding the first deck."""
-        scroll = ctk.CTkScrollableFrame(self.main_container)
-        scroll.pack(fill="both", expand=True)
-
-        add_frame = ctk.CTkFrame(scroll)
-        add_frame.pack(fill="x", padx=20, pady=10)
+        add_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        add_frame.pack(fill="x", padx=10, pady=5)
 
         ctk.CTkLabel(
             add_frame,
             text="Add New Deck",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(pady=(10, 15))
+            font=ctk.CTkFont(size=13)
+        ).pack(anchor="w", pady=(5, 10))
 
         # Source language
-        ctk.CTkLabel(add_frame, text="Source Language (learning):").pack(anchor="w", padx=15)
+        ctk.CTkLabel(add_frame, text="Source Language (learning):").pack(anchor="w")
         self.source_lang_var = ctk.StringVar(value=self.language_options[6])  # Polish
         self.source_lang_dropdown = ctk.CTkComboBox(
             add_frame,
@@ -185,10 +382,10 @@ class SetupWizardFrame(ctk.CTkFrame):
             width=250,
             command=self._on_language_change
         )
-        self.source_lang_dropdown.pack(padx=15, pady=(0, 10))
+        self.source_lang_dropdown.pack(anchor="w", pady=(0, 10))
 
         # Target language
-        ctk.CTkLabel(add_frame, text="Target Language (native):").pack(anchor="w", padx=15)
+        ctk.CTkLabel(add_frame, text="Target Language (native):").pack(anchor="w")
         self.target_lang_var = ctk.StringVar(value=self.language_options[0])  # English
         self.target_lang_dropdown = ctk.CTkComboBox(
             add_frame,
@@ -197,17 +394,17 @@ class SetupWizardFrame(ctk.CTkFrame):
             width=250,
             command=self._on_language_change
         )
-        self.target_lang_dropdown.pack(padx=15, pady=(0, 10))
+        self.target_lang_dropdown.pack(anchor="w", pady=(0, 10))
 
         # Parent deck name
-        ctk.CTkLabel(add_frame, text="Parent Deck Name:").pack(anchor="w", padx=15)
+        ctk.CTkLabel(add_frame, text="Parent Deck Name:").pack(anchor="w")
         self.parent_deck_var = ctk.StringVar(value="Polish Vocab Discovery")
         self.parent_deck_entry = ctk.CTkEntry(
             add_frame,
             textvariable=self.parent_deck_var,
             width=250
         )
-        self.parent_deck_entry.pack(padx=15, pady=(0, 10))
+        self.parent_deck_entry.pack(anchor="w", pady=(0, 10))
 
         # Auto-name import deck checkbox
         self.auto_import_var = ctk.BooleanVar(value=True)
@@ -217,10 +414,10 @@ class SetupWizardFrame(ctk.CTkFrame):
             variable=self.auto_import_var,
             command=self._on_auto_import_toggle
         )
-        self.auto_import_checkbox.pack(anchor="w", padx=15, pady=(0, 5))
+        self.auto_import_checkbox.pack(anchor="w", pady=(0, 5))
 
         # Import deck name (readonly by default when auto-naming)
-        ctk.CTkLabel(add_frame, text="Import Deck Name:").pack(anchor="w", padx=15)
+        ctk.CTkLabel(add_frame, text="Import Deck Name:").pack(anchor="w")
         self.import_deck_var = ctk.StringVar(value="Polish Vocab Discovery::Import")
         self.import_deck_entry = ctk.CTkEntry(
             add_frame,
@@ -228,7 +425,7 @@ class SetupWizardFrame(ctk.CTkFrame):
             width=250,
             state="disabled"
         )
-        self.import_deck_entry.pack(padx=15, pady=(0, 10))
+        self.import_deck_entry.pack(anchor="w", pady=(0, 10))
 
         # Bind parent deck change to update import deck
         self.parent_deck_var.trace_add("write", self._on_parent_deck_change)
@@ -240,7 +437,7 @@ class SetupWizardFrame(ctk.CTkFrame):
             text="Create deck in Anki if missing",
             variable=self.create_in_anki_var
         )
-        self.create_in_anki_checkbox.pack(anchor="w", padx=15, pady=(10, 5))
+        self.create_in_anki_checkbox.pack(anchor="w", pady=(10, 5))
 
         # Add deck button
         self.add_deck_btn = ctk.CTkButton(
@@ -249,7 +446,7 @@ class SetupWizardFrame(ctk.CTkFrame):
             width=150,
             command=self._add_deck
         )
-        self.add_deck_btn.pack(pady=15)
+        self.add_deck_btn.pack(anchor="w", pady=10)
 
         # Status label
         self.status_label = ctk.CTkLabel(
@@ -264,9 +461,9 @@ class SetupWizardFrame(ctk.CTkFrame):
         """View shown when decks exist - deck selector + task config."""
         # Top bar: deck selector dropdown + add/remove buttons
         top_bar = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        top_bar.pack(fill="x", pady=(0, 10))
+        top_bar.pack(fill="x", padx=5, pady=(5, 10))
 
-        ctk.CTkLabel(top_bar, text="Deck:", font=ctk.CTkFont(size=13)).pack(side="left", padx=(0, 5))
+        ctk.CTkLabel(top_bar, text="Deck:").pack(side="left", padx=(0, 5))
 
         # Build dropdown options
         self.deck_options = []
