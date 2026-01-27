@@ -43,13 +43,13 @@ class ExportView(ctk.CTkFrame):
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.pack(fill="x", pady=(0, 10))
 
-        back_btn = ctk.CTkButton(
+        self.back_btn = ctk.CTkButton(
             header,
             text="← Back",
             width=80,
             command=self._on_back_clicked
         )
-        back_btn.pack(side="left")
+        self.back_btn.pack(side="left")
 
         title = ctk.CTkLabel(
             header,
@@ -170,6 +170,7 @@ class ExportView(ctk.CTkFrame):
     def _start_export(self):
         """Start the export process in a background thread."""
         self.is_running = True
+        self.back_btn.configure(state="disabled")
         self.start_btn.configure(state="disabled")
         self.cancel_btn.configure(state="normal")
 
@@ -198,6 +199,7 @@ class ExportView(ctk.CTkFrame):
     def _export_finished(self):
         """Called when export completes or fails."""
         self.is_running = False
+        self.back_btn.configure(state="normal")
         self.start_btn.configure(state="normal")
         self.cancel_btn.configure(state="disabled")
         self.progress_bar.set(1)
