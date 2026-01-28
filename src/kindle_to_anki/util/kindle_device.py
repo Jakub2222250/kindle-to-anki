@@ -82,11 +82,14 @@ Move-Item $tempVocab "OUTPUT_PATH" -Force
     ps_script = ps_script.replace("OUTPUT_PATH", output_path)
 
     try:
+        # CREATE_NO_WINDOW prevents visible PowerShell window
+        creationflags = subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
         result = subprocess.run(
             ["powershell", "-NoProfile", "-Command", ps_script],
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=60,
+            creationflags=creationflags
         )
         if result.returncode == 0:
             return True, "Successfully copied vocab.db from Kindle"
