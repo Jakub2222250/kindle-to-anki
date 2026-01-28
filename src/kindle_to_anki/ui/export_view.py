@@ -515,7 +515,8 @@ class ExportView(ctk.CTkFrame):
         try:
             self._export_pipeline()
         except Exception as e:
-            self.after(0, lambda: self._log(f"Error: {str(e)}"))
+            error_msg = str(e)
+            self.after(0, lambda msg=error_msg: self._log(f"Error: {msg}"))
         finally:
             self.after(0, self._export_finished)
 

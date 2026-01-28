@@ -23,6 +23,11 @@ def _get_anki_connect_url() -> str:
     return DEFAULT_ANKI_CONNECT_URL
 
 
+class AnkiConnectError(Exception):
+    """Raised when AnkiConnect is not reachable or encounters an error."""
+    pass
+
+
 class AnkiConnect:
     """Super minimal AnkiConnect wrapper for Polish Vocab Discovery deck"""
 
@@ -33,8 +38,7 @@ class AnkiConnect:
         # Confirm AnkiConnect is reachable
         print("\nChecking AnkiConnect reachability...")
         if not self.is_reachable():
-            print("AnkiConnect not reachable. Exiting.")
-            exit(0)
+            raise AnkiConnectError("AnkiConnect not reachable. Is Anki running with AnkiConnect plugin?")
         print("AnkiConnect is reachable.")
 
     def _invoke(self, action, params=None):
