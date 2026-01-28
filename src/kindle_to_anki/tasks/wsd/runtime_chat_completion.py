@@ -240,7 +240,6 @@ class ChatCompletionWSD:
             result = self._make_batch_wsd_call(batch, processing_timestamp, source_language_name, target_language_name, runtime_config)
 
             if not result.success:
-                logger.error(f"BATCH FAILED - {result.error}")
                 failing_inputs.extend(batch)
                 continue
 

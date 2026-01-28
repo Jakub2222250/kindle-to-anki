@@ -172,7 +172,6 @@ class ChatCompletionLUI:
             result = self._make_batch_lui_call(batch, processing_timestamp, language_name, language_code, runtime_config)
 
             if not result.success:
-                logger.error(f"BATCH FAILED - {result.error}")
                 failing_inputs.extend(batch)
                 continue
 

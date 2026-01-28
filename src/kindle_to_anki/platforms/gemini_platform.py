@@ -1,8 +1,16 @@
 # platforms/gemini_platform.py
 import os
+import time
+import logging
 from google import genai
 
 from .chat_completion_platform import ChatCompletionPlatform
+
+logger = logging.getLogger(__name__)
+
+# Track last 429 time per model for rate limiting
+_rate_limit_tracker: dict[str, float] = {}
+RATE_LIMIT_COOLDOWN_SECONDS = 60
 
 
 class GeminiPlatform(ChatCompletionPlatform):
@@ -26,6 +34,17 @@ class GeminiPlatform(ChatCompletionPlatform):
             self._client = genai.Client(api_key=self.api_key)
         return self._client
 
+    def _wait_for_rate_limit(self, model: str):
+        """Wait if we hit a 429 recently for this model."""
+        last_429_time = _rate_limit_tracker.get(model)
+        if last_429_time:
+            elapsed = time.time() - last_429_time
+            remaining = RATE_LIMIT_COOLDOWN_SECONDS - elapsed
+            if remaining > 0:
+                logger.info(f"Rate limit cooldown: waiting {remaining:.1f}s for {model}")
+                time.sleep(remaining)
+            del _rate_limit_tracker[model]
+
     def call_api(self, model: str, prompt: str, **kwargs) -> str:
         """
         Call Gemini API.
@@ -33,8 +52,18 @@ class GeminiPlatform(ChatCompletionPlatform):
         if not self.client:
             raise RuntimeError("Gemini client not initialized - API key missing")
 
-        response = self.client.models.generate_content(model=model, contents=prompt, **kwargs)
-        return response.text
+        self._wait_for_rate_limit(model)
+
+        try:
+            response = self.client.models.generate_content(model=model, contents=prompt, **kwargs)
+            return response.text
+        except Exception as e:
+            # Check for rate limit error (429) by examining the error message/code
+            err_str = str(e)
+            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                _rate_limit_tracker[model] = time.time()
+                logger.warning(f"Rate limit hit (429) for {model}, will cooldown on next call")
+            raise
 
     def validate_credentials(self):
         """
