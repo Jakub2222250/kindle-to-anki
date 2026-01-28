@@ -1,14 +1,15 @@
 from pathlib import Path
 import json
 
+from kindle_to_anki.util.paths import get_cache_dir
+
 
 class BaseCache:
     """Base class for simple caches without runtime/model/prompt keying."""
 
     def __init__(self, cache_name: str, cache_dir=None, cache_suffix='default'):
         if cache_dir is None:
-            project_root = Path(__file__).parent.parent.parent.parent
-            cache_dir = project_root / ".cache"
+            cache_dir = get_cache_dir()
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_file = self.cache_dir / f"{cache_name}_{cache_suffix}.json"

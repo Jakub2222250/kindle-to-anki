@@ -1,11 +1,23 @@
 """Central loader for versioned prompt templates."""
 
 import json
+import sys
 from pathlib import Path
 from typing import Dict, Any, List
 
+
+def get_tasks_dir() -> Path:
+    """Get tasks directory, handling both development and PyInstaller frozen builds."""
+    if getattr(sys, 'frozen', False):
+        # Running as PyInstaller bundle - prompts are next to executable
+        return Path(sys.executable).parent / "tasks"
+    else:
+        # Running in development
+        return Path(__file__).parent.parent.parent / "tasks"
+
+
 # Base path for all task prompts
-TASKS_DIR = Path(__file__).parent.parent.parent / "tasks"
+TASKS_DIR = get_tasks_dir()
 
 
 class PromptSpec:

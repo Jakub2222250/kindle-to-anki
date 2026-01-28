@@ -2,10 +2,10 @@ from kindle_to_anki.configuration.prompts import prompt_yes_no, prompt_choice_by
 import json
 import urllib.request
 import urllib.error
-from pathlib import Path
 
 from kindle_to_anki.core.bootstrap import bootstrap_all
 from kindle_to_anki.configuration.options_display import show_task_options, get_options_for_task
+from kindle_to_anki.util.paths import get_config_path
 
 
 class AnkiConnectHelper:
@@ -63,12 +63,6 @@ DEFAULT_CONFIG = {
 
 CONFIGURABLE_TASKS = ["lui", "wsd", "hint", "cloze_scoring", "usage_level", "translation", "collocation"]
 OPTIONAL_TASKS = ["hint", "cloze_scoring", "usage_level", "collocation"]
-
-
-def get_config_path() -> Path:
-    current_dir = Path(__file__).resolve().parent
-    project_root = current_dir.parent.parent.parent
-    return project_root / "data" / "config" / "config.json"
 
 
 def load_config() -> dict:

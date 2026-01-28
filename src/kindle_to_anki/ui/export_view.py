@@ -2,10 +2,10 @@ import customtkinter as ctk
 from tkinterdnd2 import DND_FILES
 from typing import Callable, Optional, Dict, List
 from datetime import datetime
+from pathlib import Path
 import threading
 import sqlite3
 import shutil
-from pathlib import Path
 
 from kindle_to_anki.logging import LogLevel, UILogger, LoggerRegistry
 from kindle_to_anki.anki.anki_connect import AnkiConnect
@@ -31,7 +31,8 @@ from kindle_to_anki.pruning.pruning import (
     prune_new_notes_against_eachother,
     prune_notes_identified_as_redundant
 )
-from kindle_to_anki.util.kindle_device import find_and_copy_vocab_db, get_inputs_dir
+from kindle_to_anki.util.kindle_device import find_and_copy_vocab_db
+from kindle_to_anki.util.paths import get_inputs_dir
 
 
 class ExportView(ctk.CTkFrame):
@@ -410,8 +411,7 @@ class ExportView(ctk.CTkFrame):
         self.path_entry.insert(0, str(db_path))
         self._log(f"Loading vocab.db from: {db_path}")
 
-        project_root = Path(__file__).parent.parent.parent.parent
-        inputs_dir = project_root / "data" / "inputs"
+        inputs_dir = get_inputs_dir()
         target_path = inputs_dir / "vocab.db"
 
         if db_path.resolve() != target_path.resolve():
