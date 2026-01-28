@@ -33,6 +33,7 @@ from kindle_to_anki.pruning.pruning import (
 )
 from kindle_to_anki.util.kindle_device import find_and_copy_vocab_db
 from kindle_to_anki.util.paths import get_inputs_dir
+from kindle_to_anki.util.cancellation import CancellationToken, CancelledException
 
 
 class ExportView(ctk.CTkFrame):
@@ -43,6 +44,7 @@ class ExportView(ctk.CTkFrame):
         self.on_back = on_back
         self.is_running = False
         self.export_thread: Optional[threading.Thread] = None
+        self._cancellation_token: Optional[CancellationToken] = None
         self.notes_by_language: Dict[str, List[AnkiNote]] = {}
         self.latest_candidate_timestamp: Optional[datetime] = None
         self.vocab_db_path: Optional[Path] = None
@@ -497,6 +499,7 @@ class ExportView(ctk.CTkFrame):
             return
 
         self.is_running = True
+        self._cancellation_token = CancellationToken(lambda: not self.is_running)
         self.back_btn.configure(state="disabled")
         self.create_notes_btn.configure(state="disabled")
         self.cancel_btn.configure(state="normal")
@@ -518,6 +521,8 @@ class ExportView(ctk.CTkFrame):
         """Run the export pipeline."""
         try:
             self._export_pipeline()
+        except CancelledException:
+            self.after(0, lambda: self._log("Export cancelled."))
         except Exception as e:
             error_msg = str(e)
             self.after(0, lambda msg=error_msg: self._log(f"Error: {msg}"))
@@ -627,7 +632,8 @@ class ExportView(ctk.CTkFrame):
                     target_language_code=target_language_code,
                     prompt_id=lui_prompt_id
                 ),
-                ignore_cache=False
+                ignore_cache=False,
+                cancellation_token=self._cancellation_token
             )
 
             if not self.is_running:
@@ -647,7 +653,8 @@ class ExportView(ctk.CTkFrame):
                     target_language_code=target_language_code,
                     prompt_id=wsd_prompt_id
                 ),
-                ignore_cache=False
+                ignore_cache=False,
+                cancellation_token=self._cancellation_token
             )
 
             # Prune after WSD
@@ -676,7 +683,8 @@ class ExportView(ctk.CTkFrame):
                         target_language_code=target_language_code,
                         prompt_id=hint_prompt_id
                     ),
-                    ignore_cache=False
+                    ignore_cache=False,
+                    cancellation_token=self._cancellation_token
                 )
 
             if not self.is_running:
@@ -697,7 +705,8 @@ class ExportView(ctk.CTkFrame):
                         target_language_code=target_language_code,
                         prompt_id=cloze_prompt_id
                     ),
-                    ignore_cache=False
+                    ignore_cache=False,
+                    cancellation_token=self._cancellation_token
                 )
             else:
                 for note in notes:
@@ -721,7 +730,8 @@ class ExportView(ctk.CTkFrame):
                         target_language_code=target_language_code,
                         prompt_id=usage_level_prompt_id
                     ),
-                    ignore_cache=False
+                    ignore_cache=False,
+                    cancellation_token=self._cancellation_token
                 )
 
             if not self.is_running:
@@ -742,7 +752,8 @@ class ExportView(ctk.CTkFrame):
                     prompt_id=translation_prompt_id
                 ),
                 ignore_cache=False,
-                use_test_cache=False
+                use_test_cache=False,
+                cancellation_token=self._cancellation_token
             )
 
             if not self.is_running:
@@ -763,7 +774,8 @@ class ExportView(ctk.CTkFrame):
                         target_language_code=target_language_code,
                         prompt_id=collocation_prompt_id
                     ),
-                    ignore_cache=False
+                    ignore_cache=False,
+                    cancellation_token=self._cancellation_token
                 )
 
             if not self.is_running:

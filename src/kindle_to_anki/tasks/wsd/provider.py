@@ -4,6 +4,7 @@ from typing import List
 from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.util.cancellation import CancellationToken, NONE_TOKEN
 from .schema import WSDInput, WSDOutput
 
 
@@ -28,7 +29,8 @@ class WSDProvider:
         runtime_choice: str = None,
         runtime_config: RuntimeConfig = None,
         ignore_cache: bool = False,
-        use_test_cache: bool = False
+        use_test_cache: bool = False,
+        cancellation_token: CancellationToken = NONE_TOKEN
     ) -> List[AnkiNote]:
         """
         Perform Word Sense Disambiguation on a list of AnkiNote objects using the selected runtime.
@@ -64,7 +66,8 @@ class WSDProvider:
             wsd_inputs,
             runtime_config,
             ignore_cache=ignore_cache,
-            use_test_cache=use_test_cache
+            use_test_cache=use_test_cache,
+            cancellation_token=cancellation_token
         )
 
         # Map WSD results back to AnkiNote objects

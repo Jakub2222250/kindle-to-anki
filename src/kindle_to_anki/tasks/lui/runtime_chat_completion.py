@@ -19,6 +19,7 @@ from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.lui_cache import LUICache
 from kindle_to_anki.core.prompts import get_lui_prompt
 from kindle_to_anki.util.json_utils import strip_markdown_code_block
+from kindle_to_anki.util.cancellation import CancellationToken, NONE_TOKEN
 
 
 class ChatCompletionLUI:
@@ -74,7 +75,7 @@ class ChatCompletionLUI:
         )
         return usage_breakdown
 
-    def identify(self, lui_inputs: List[LUIInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[LUIOutput]:
+    def identify(self, lui_inputs: List[LUIInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False, cancellation_token: CancellationToken = NONE_TOKEN) -> List[LUIOutput]:
         """
         Perform Lexical Unit Identification on a list of LUIInput objects and return LUIOutput objects.
         Returns outputs in the same order as inputs.
@@ -128,10 +129,11 @@ class ChatCompletionLUI:
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        new_outputs_by_uid, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang, runtime_config)
+        new_outputs_by_uid, failing_inputs = self._process_lui_batches(inputs_needing_lui, cache, language_name, source_lang, runtime_config, cancellation_token)
         outputs_by_uid.update(new_outputs_by_uid)
 
         while len(failing_inputs) > 0:
+            cancellation_token.raise_if_cancelled()
             logger.warning(f"{len(failing_inputs)} inputs failed LLM lexical unit identification.")
 
             if retries >= MAX_RETRIES:
@@ -141,14 +143,14 @@ class ChatCompletionLUI:
             if retries < MAX_RETRIES:
                 retries += 1
                 logger.info(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                retry_outputs_by_uid, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang, runtime_config)
+                retry_outputs_by_uid, failing_inputs = self._process_lui_batches(failing_inputs, cache, language_name, source_lang, runtime_config, cancellation_token)
                 outputs_by_uid.update(retry_outputs_by_uid)
 
         logger.info(f"{language_name} lexical unit identification (LLM) completed.")
         # Return outputs in original input order
         return [outputs_by_uid[lui_input.uid] for lui_input in lui_inputs]
 
-    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str, runtime_config: RuntimeConfig) -> Tuple[Dict[str, LUIOutput], List[LUIInput]]:
+    def _process_lui_batches(self, lui_inputs: List[LUIInput], cache: LUICache, language_name: str, language_code: str, runtime_config: RuntimeConfig, cancellation_token: CancellationToken = NONE_TOKEN) -> Tuple[Dict[str, LUIOutput], List[LUIInput]]:
         """Process inputs in batches for lexical unit identification. Returns outputs keyed by UID."""
         logger = get_logger()
 
@@ -160,6 +162,8 @@ class ChatCompletionLUI:
         outputs_by_uid: Dict[str, LUIOutput] = {}
 
         for i in range(0, len(lui_inputs), runtime_config.batch_size):
+            cancellation_token.raise_if_cancelled()
+
             batch = lui_inputs[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
 
