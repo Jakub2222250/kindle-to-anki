@@ -2,10 +2,10 @@ import customtkinter as ctk
 from tkinter import messagebox
 import threading
 import json
-from pathlib import Path
 
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.ui.task_config import TaskConfigPanel
+from kindle_to_anki.util.paths import get_config_path
 
 
 # Common languages for vocabulary learning (subset of pycountry for usability)
@@ -56,12 +56,6 @@ DEFAULT_TASK_SETTINGS = {
     "translation": {"runtime": "chat_completion_translation", "model_id": "gemini-2.5-flash", "batch_size": 30},
     "collocation": {"enabled": True, "runtime": "chat_completion_collocation", "model_id": "gemini-2.0-flash", "batch_size": 30}
 }
-
-
-def get_config_path() -> Path:
-    current_dir = Path(__file__).resolve().parent
-    project_root = current_dir.parent.parent.parent
-    return project_root / "data" / "config" / "config.json"
 
 
 def load_config() -> dict:

@@ -1,16 +1,13 @@
 from pathlib import Path
 import datetime
 
+from kindle_to_anki.util.paths import get_outputs_dir
+
 
 def write_anki_import_file(notes, language):
     print("\nWriting Anki import file...")
-    
-    # Calculate project paths
-    project_root = Path(__file__).parent.parent.parent.parent
-    data_dir = project_root / "data"
-    outputs_dir = data_dir / "outputs"
-    
-    outputs_dir.mkdir(parents=True, exist_ok=True)
+
+    outputs_dir = get_outputs_dir()
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     anki_path = outputs_dir / f"{language}_anki_import_{timestamp}.txt"
 

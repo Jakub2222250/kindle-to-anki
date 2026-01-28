@@ -21,10 +21,8 @@ VOCAB_DB_RELATIVE_PATH = Path("system") / "vocabulary" / "vocab.db"
 
 def get_inputs_dir() -> Path:
     """Get the data/inputs directory."""
-    project_root = Path(__file__).parent.parent.parent.parent
-    inputs_dir = project_root / "data" / "inputs"
-    inputs_dir.mkdir(parents=True, exist_ok=True)
-    return inputs_dir
+    from kindle_to_anki.util.paths import get_inputs_dir as _get_inputs_dir
+    return _get_inputs_dir()
 
 
 def find_and_copy_vocab_db() -> Tuple[bool, str]:

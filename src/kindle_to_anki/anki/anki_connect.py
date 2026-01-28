@@ -1,18 +1,18 @@
 import json
 import urllib.request
 import urllib.error
-from pathlib import Path
 
 from kindle_to_anki.anki.anki_deck import AnkiDeck
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
+from kindle_to_anki.util.paths import get_config_path
 
 DEFAULT_ANKI_CONNECT_URL = "http://localhost:8765"
 
 
 def _get_anki_connect_url() -> str:
     """Load AnkiConnect URL from config, or return default."""
-    config_path = Path(__file__).resolve().parent.parent.parent.parent / "data" / "config" / "config.json"
+    config_path = get_config_path()
     if config_path.exists():
         try:
             with open(config_path, 'r', encoding='utf-8') as f:

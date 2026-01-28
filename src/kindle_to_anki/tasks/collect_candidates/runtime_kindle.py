@@ -1,12 +1,13 @@
 import sqlite3
 import unicodedata
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import List
 
 from kindle_to_anki.logging import get_logger
 from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.util.paths import get_data_dir, get_inputs_dir, get_outputs_dir
 
 from .schema import CandidateOutput
 from kindle_to_anki.metadata.metdata_manager import MetadataManager
@@ -28,10 +29,9 @@ class KindleCandidateRuntime:
 
     def __init__(self):
         # Project paths
-        self.PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-        self.DATA_DIR = self.PROJECT_ROOT / "data"
-        self.INPUTS_DIR = self.DATA_DIR / "inputs"
-        self.OUTPUTS_DIR = self.DATA_DIR / "outputs"
+        self.DATA_DIR = get_data_dir()
+        self.INPUTS_DIR = get_inputs_dir()
+        self.OUTPUTS_DIR = get_outputs_dir()
 
     def collect_candidates(self) -> List[CandidateOutput]:
         """

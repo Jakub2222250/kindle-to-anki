@@ -1,20 +1,15 @@
 import json
 from pathlib import Path
 from kindle_to_anki.anki.anki_deck import AnkiDeck
+from kindle_to_anki.util.paths import get_config_path
 
 
 class ConfigManager:
 
     def __init__(self):
-        self._config_path = self._resolve_config_path()
+        self._config_path = get_config_path()
         self._config_data = None
         self._anki_decks_by_source_language = None
-
-    def _resolve_config_path(self):
-        current_dir = Path(__file__).resolve().parent
-        project_root = current_dir.parent.parent.parent
-        config_path = project_root / "data" / "config" / "config.json"
-        return config_path
 
     @property
     def config_path(self):

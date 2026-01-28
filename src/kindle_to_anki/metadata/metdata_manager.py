@@ -2,13 +2,13 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
+from kindle_to_anki.util.paths import get_metadata_dir
+
 
 class MetadataManager:
 
     def __init__(self):
-        # Determine script directory from this file's location
-        project_root = Path(__file__).parent.parent.parent.parent
-        self.metadata_path = project_root / ".metadata" / "metadata.json"
+        self.metadata_path = get_metadata_dir() / "metadata.json"
 
     def load_metadata(self):
         """Load metadata from metadata/metadata.json if it exists"""
@@ -26,10 +26,10 @@ class MetadataManager:
         """Save metadata to metadata/metadata.json"""
         print("\nSaving metadata...")
         self.metadata_path.parent.mkdir(exist_ok=True)
-        
+
         with open(self.metadata_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
-        
+
         print(f"Metadata saved to {self.metadata_path}")
 
     def save_latest_vocab_builder_entry_timestamp(self, max_timestamp: datetime, metadata):

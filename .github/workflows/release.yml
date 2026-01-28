@@ -38,11 +38,41 @@ jobs:
         run: |
           pyinstaller --onefile --windowed --name kindle-to-anki src/kindle_to_anki/ui/app.py
 
+      - name: Prepare release package
+        shell: bash
+        run: |
+          mkdir -p dist/kindle-to-anki-package
+          cp dist/kindle-to-anki${{ matrix.executable_ext }} dist/kindle-to-anki-package/
+          # Create data folder structure with sample config
+          mkdir -p dist/kindle-to-anki-package/data/config
+          mkdir -p dist/kindle-to-anki-package/data/inputs
+          mkdir -p dist/kindle-to-anki-package/data/outputs
+          cp data/config/config.sample.json dist/kindle-to-anki-package/data/config/
+          # Copy prompt files preserving task folder structure
+          for task_dir in src/kindle_to_anki/tasks/*/prompts; do
+            if [ -d "$task_dir" ]; then
+              task_name=$(basename $(dirname "$task_dir"))
+              mkdir -p "dist/kindle-to-anki-package/tasks/$task_name/prompts"
+              cp "$task_dir"/*.json "dist/kindle-to-anki-package/tasks/$task_name/prompts/" 2>/dev/null || true
+              cp "$task_dir"/*.txt "dist/kindle-to-anki-package/tasks/$task_name/prompts/" 2>/dev/null || true
+            fi
+          done
+
+      - name: Create zip archive
+        shell: bash
+        run: |
+          cd dist/kindle-to-anki-package
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a ../kindle-to-anki-windows.zip .
+          else
+            zip -r ../kindle-to-anki-linux.zip .
+          fi
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: dist/kindle-to-anki${{ matrix.executable_ext }}
+          path: dist/kindle-to-anki-${{ matrix.os == 'windows-latest' && 'windows' || 'linux' }}.zip
 
   release:
     needs: build
@@ -55,18 +85,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: kindle-to-anki-windows
-          path: artifacts/windows
+          path: artifacts
 
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
           name: kindle-to-anki-linux
-          path: artifacts/linux
+          path: artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/windows/kindle-to-anki.exe
-            artifacts/linux/kindle-to-anki
+            artifacts/kindle-to-anki-windows.zip
+            artifacts/kindle-to-anki-linux.zip
           generate_release_notes: true
