@@ -63,7 +63,7 @@ class KindleToAnkiApp(ctk.CTk, TkinterDnD.DnDWrapper):
         # Export button
         self.export_btn = ctk.CTkButton(
             self.buttons_frame,
-            text="Export Vocabulary",
+            text="Create Notes",
             width=200,
             height=40,
             command=self._on_export

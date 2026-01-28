@@ -35,7 +35,7 @@ from kindle_to_anki.pruning.pruning import (
 
 
 class ExportView(ctk.CTkFrame):
-    """Export vocabulary view - unified page with swappable card content."""
+    """Create Notes view - unified page with swappable card content."""
 
     def __init__(self, master, on_back: Callable):
         super().__init__(master)
@@ -65,7 +65,7 @@ class ExportView(ctk.CTkFrame):
 
         title = ctk.CTkLabel(
             header,
-            text="Export Vocabulary",
+            text="Create Notes",
             font=ctk.CTkFont(size=20, weight="bold")
         )
         title.pack(side="left", padx=20)
