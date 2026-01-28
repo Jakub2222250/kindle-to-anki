@@ -48,7 +48,6 @@ With Gemini's free tier, you can process hundreds of words daily at no cost. For
 
 ## Prerequisites
 
-- [Python](https://www.python.org/downloads/)
 - [Anki Desktop](https://apps.ankiweb.net/)
 - [Google AI Studio account](https://aistudio.google.com/) — free tier available
 - Kindle eReader
@@ -56,12 +55,30 @@ With Gemini's free tier, you can process hundreds of words daily at no cost. For
 
 ## Installation
 
-### 1. Install Python Dependencies
-```
-py -m pip install -e .
-```
+### Option A: Download Release (Recommended)
 
-### 2. Set Up Gemini API Key
+1. Download the latest release from the [Releases page](https://github.com/Jakub2222250/kindle-to-anki/releases):
+   - **Windows**: `kindle-to-anki.exe`
+   - **Linux**: `kindle-to-anki`
+2. Run the executable directly—no Python installation required.
+
+### Option B: Run from Source
+
+If you prefer to run from source or want to modify the code:
+
+1. Install [Python](https://www.python.org/downloads/)
+2. Install dependencies:
+   ```
+   py -m pip install -e .
+   ```
+3. Launch the app:
+   ```
+   py -m kindle_to_anki.ui.app
+   ```
+
+## Setup
+
+### 1. Set Up Gemini API Key
 Get your free API key from https://aistudio.google.com/apikey then set environment variable:
 ```
 set GEMINI_API_KEY=your-key-here
@@ -69,15 +86,13 @@ set GEMINI_API_KEY=your-key-here
 
 > **Alternative providers:** OpenAI and Grok are also supported. Set `OPENAI_API_KEY` or `GROK_API_KEY` and update the model in config.json.
 
-### 3. Install Anki Add-ons
+### 2. Install Anki Add-ons
 With Anki open, go to Tools → Add-ons → Get Add-ons and install:
 - AnkiConnect: 2055492159
 
-### 4. Configuration
-Launch the UI and use the Setup Wizard to configure your decks and task settings:
-```
-py -m kindle_to_anki.ui.app
-```
+### 3. Configuration
+Launch the app (executable or `py -m kindle_to_anki.ui.app`) and use the Setup Wizard to configure your decks and task settings.
+
 Click **Setup Wizard** to:
 - Add/remove language decks
 - Configure source and target languages
@@ -112,29 +127,36 @@ For Vocabulary Builder to capture your lookups, you need a dictionary for your t
 
 ## Getting Vocabulary Data
 
-**Option A: Automatic (Windows only)**
-Connect your Kindle via USB. The script will automatically find `vocab.db`.
+Connect your Kindle via USB. In the app's **Create Notes** screen, select **Kindle** as the source and click **Auto-locate from Kindle** to automatically find and load `vocab.db`.
 
-**Option B: Manual**
-Copy `vocab.db` from your Kindle's `Internal Storage/vocabulary/` folder to `data/inputs/`.
+Alternatively, you can drag and drop `vocab.db` directly onto the app, or manually copy it from your Kindle's `Internal Storage/vocabulary/` folder.
 
 ## Usage
 
-### Launch the UI
+### Launch the App
+Run the executable directly, or if using source code:
 ```
 py -m kindle_to_anki.ui.app
 ```
 
-### Export Vocabulary to Anki
-From the main screen, click **Export Vocabulary** to:
-- Read vocabulary from your Kindle
-- Process words through all configured tasks (disambiguation, translation, hints, etc.)
-- Create flashcards in Anki via AnkiConnect
+<!-- TODO: Screenshot of main app screen -->
 
-Progress and logs are displayed in real-time.
+### Create Notes in Anki
+From the main screen, click **Create Notes** to open the export view:
+1. Select a **Source** (Kindle, with Kobo and Manual Import planned for future releases)
+2. Load vocabulary by auto-locating from a connected Kindle, or drag-and-drop/browse for `vocab.db`
+3. Click **Create Notes** to process words through all configured tasks and create flashcards in Anki
+
+<!-- TODO: Screenshot of Create Notes view with source selector -->
+
+Progress and logs are displayed in real-time. If the export fails (e.g., Anki not running), you can retry without re-collecting lookups.
+
+<!-- TODO: Screenshot of export in progress -->
 
 ### Adjust Settings
 Click **Setup Wizard** anytime to modify task settings, models, or deck configuration.
+
+<!-- TODO: Screenshot of Setup Wizard -->
 
 ### Update Existing Cards
 To retroactively update existing Anki cards by re-running specific tasks (e.g., regenerate definitions with a new prompt, recalculate usage levels):
