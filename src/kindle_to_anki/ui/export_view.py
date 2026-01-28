@@ -3,7 +3,6 @@ from tkinterdnd2 import DND_FILES
 from typing import Callable, Optional, Dict, List
 from datetime import datetime
 import threading
-import subprocess
 import sqlite3
 import shutil
 from pathlib import Path
@@ -32,6 +31,7 @@ from kindle_to_anki.pruning.pruning import (
     prune_new_notes_against_eachother,
     prune_notes_identified_as_redundant
 )
+from kindle_to_anki.util.kindle_device import find_and_copy_vocab_db, get_inputs_dir
 
 
 class ExportView(ctk.CTkFrame):
@@ -261,28 +261,23 @@ class ExportView(ctk.CTkFrame):
     def _auto_locate_thread(self):
         """Background thread for auto-locating vocab.db."""
         try:
-            copy_vocab_script = Path(__file__).parent.parent / "copy_vocab.bat"
-            project_root = Path(__file__).parent.parent.parent.parent
-            inputs_dir = project_root / "data" / "inputs"
-            inputs_dir.mkdir(parents=True, exist_ok=True)
+            success, message = find_and_copy_vocab_db()
 
-            result = subprocess.run([str(copy_vocab_script)], capture_output=True, text=True)
-
-            if result.returncode == 0:
-                src_db = inputs_dir / "vocab_powershell_copy.db"
-                dest_db = inputs_dir / "vocab.db"
-                if src_db.exists():
-                    src_db.replace(dest_db)
-                    self.after(0, lambda: self._load_vocab_db(dest_db))
-                else:
-                    self.after(0, lambda: self._set_collect_status("❌ vocab.db not found after copy", "error"))
-                    self.after(0, lambda: self._log("[ERROR] vocab.db not found after PowerShell copy"))
+            if success:
+                inputs_dir = get_inputs_dir()
+                # Check for both possible output filenames
+                for filename in ["vocab_powershell_copy.db", "vocab_copy.db"]:
+                    src_db = inputs_dir / filename
+                    if src_db.exists():
+                        dest_db = inputs_dir / "vocab.db"
+                        src_db.replace(dest_db)
+                        self.after(0, lambda: self._load_vocab_db(dest_db))
+                        return
+                self.after(0, lambda: self._set_collect_status("❌ vocab.db not found after copy", "error"))
+                self.after(0, lambda: self._log("[ERROR] vocab.db not found after copy"))
             else:
-                self.after(0, lambda: self._set_collect_status("❌ Kindle not found or not connected", "error"))
-                if result.stderr:
-                    self.after(0, lambda: self._log(f"[ERROR] Auto-locate failed:\n{result.stderr.strip()}"))
-                else:
-                    self.after(0, lambda: self._log("[ERROR] Auto-locate failed: Kindle not found or not connected"))
+                self.after(0, lambda m=message: self._set_collect_status(f"❌ {m}", "error"))
+                self.after(0, lambda m=message: self._log(f"[ERROR] {m}"))
         except Exception as e:
             self.after(0, lambda: self._set_collect_status("❌ Auto-locate failed", "error"))
             self.after(0, lambda: self._log(f"[ERROR] Auto-locate exception: {str(e)}"))
