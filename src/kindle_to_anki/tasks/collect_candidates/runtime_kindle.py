@@ -1,6 +1,4 @@
 import sqlite3
-import subprocess
-import sys
 import unicodedata
 from pathlib import Path
 from datetime import datetime
@@ -134,38 +132,16 @@ class KindleCandidateRuntime:
         return result.strip('_') or "unknown"
 
     def _ensure_vocab_db(self, provided_db_path: str) -> Path:
-        """Ensure vocab.db is available, copying from Kindle device if needed"""
+        """Ensure vocab.db exists at the provided path."""
         logger = get_logger()
         db_path = Path(provided_db_path)
 
-        # Attempt to copy vocab.db via batch script call
-        logger.info("Attempting to copy vocab.db from Kindle device...")
+        if db_path.exists():
+            logger.info(f"Using vocab.db at {db_path}")
+            return db_path
 
-        try:
-            copy_vocab_script = Path(__file__).parent.parent.parent / "copy_vocab.bat"
-            retcode = subprocess.run([str(copy_vocab_script)], check=True).returncode
-        except subprocess.CalledProcessError as e:
-            retcode = 1
-
-        if retcode != 0:
-            logger.warning(f"Failed to copy vocab.db from Kindle device. Continuing.")
-        else:
-            # Overwrite vocab.db in inputs/ with vocab_powershell_copy.db
-            self.INPUTS_DIR.mkdir(parents=True, exist_ok=True)
-            src_db = self.INPUTS_DIR / "vocab_powershell_copy.db"
-            dest_db = self.INPUTS_DIR / "vocab.db"
-            if src_db.exists():
-                src_db.replace(dest_db)
-                logger.info(f'vocab.db copied from Kindle device successfully.')
-                db_path = dest_db
-
-        # Final check for database existence
-        if not db_path.exists():
-            logger.error(f"vocab.db not found at {db_path}")
-            logger.error("Please place your Kindle vocab.db file in the 'data/inputs' folder at the project root.")
-            sys.exit(1)
-
-        return db_path
+        logger.error(f"vocab.db not found at {db_path}")
+        raise FileNotFoundError(f"vocab.db not found at {db_path}. Please provide a valid vocab.db file.")
 
     def _get_kindle_vocab_count(self, db_path, timestamp=None):
         """Get count of kindle vocab builder entries available for import"""

@@ -1,15 +1,17 @@
 import customtkinter as ctk
+from tkinterdnd2 import TkinterDnD
 from kindle_to_anki import __version__
 from kindle_to_anki.ui.setup_wizard import SetupWizardFrame
 from kindle_to_anki.ui.export_view import ExportView
 from kindle_to_anki.ui.update_notes_view import UpdateNotesView
 
 
-class KindleToAnkiApp(ctk.CTk):
+class KindleToAnkiApp(ctk.CTk, TkinterDnD.DnDWrapper):
     """Main application window for Kindle to Anki."""
 
     def __init__(self):
         super().__init__()
+        self.TkdndVersion = TkinterDnD._require(self)
 
         self.title(f"Kindle to Anki v{__version__}")
         self.geometry("1050x700")

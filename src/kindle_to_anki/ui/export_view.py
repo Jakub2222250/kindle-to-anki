@@ -278,11 +278,13 @@ class ExportView(ctk.CTkFrame):
                     self.after(0, lambda: self._set_collect_status("❌ vocab.db not found after copy", "error"))
                     self.after(0, lambda: self._log("[ERROR] vocab.db not found after PowerShell copy"))
             else:
-                error_msg = result.stderr.strip() if result.stderr else "Kindle not found or not connected"
-                self.after(0, lambda: self._set_collect_status(f"❌ {error_msg}", "error"))
-                self.after(0, lambda em=error_msg: self._log(f"[ERROR] Auto-locate failed: {em}"))
+                self.after(0, lambda: self._set_collect_status("❌ Kindle not found or not connected", "error"))
+                if result.stderr:
+                    self.after(0, lambda: self._log(f"[ERROR] Auto-locate failed:\n{result.stderr.strip()}"))
+                else:
+                    self.after(0, lambda: self._log("[ERROR] Auto-locate failed: Kindle not found or not connected"))
         except Exception as e:
-            self.after(0, lambda: self._set_collect_status(f"❌ Error: {str(e)}", "error"))
+            self.after(0, lambda: self._set_collect_status("❌ Auto-locate failed", "error"))
             self.after(0, lambda: self._log(f"[ERROR] Auto-locate exception: {str(e)}"))
 
     def _browse_vocab_db(self):
