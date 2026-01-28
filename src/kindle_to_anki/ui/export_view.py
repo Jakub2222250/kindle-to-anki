@@ -145,34 +145,84 @@ class ExportView(ctk.CTkFrame):
         card = ctk.CTkFrame(self.card_container, corner_radius=12, width=400)
         card.pack(expand=True, pady=10)
         card.pack_propagate(False)
-        card.configure(width=420, height=380)
+        card.configure(width=420, height=420)
 
         # Card content
         inner = ctk.CTkFrame(card, fg_color="transparent")
         inner.pack(fill="both", expand=True, padx=20, pady=15)
 
+        # Source subtitle
+        source_label = ctk.CTkLabel(
+            inner,
+            text="Source",
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        source_label.pack(anchor="w", pady=(0, 8))
+
+        # Source selector (segmented button for future extensibility)
+        self.source_var = ctk.StringVar(value="kindle")
+        self.source_selector = ctk.CTkSegmentedButton(
+            inner,
+            values=["Kindle", "Kobo", "Manual Import"],
+            variable=self.source_var,
+            command=self._on_source_changed
+        )
+        self.source_selector.pack(fill="x", pady=(0, 10))
+        self.source_selector.set("Kindle")
+
+        # Provider content frame (swappable based on source)
+        self.provider_frame = ctk.CTkFrame(inner, fg_color="transparent")
+        self.provider_frame.pack(fill="both", expand=True)
+
+        self._show_kindle_provider()
+
+        # Status indicator (shared across providers)
+        self.collect_status_label = ctk.CTkLabel(inner, text="", font=ctk.CTkFont(size=11))
+        self.collect_status_label.pack(pady=(5, 5))
+
+        # Small output log
+        log_header = ctk.CTkLabel(inner, text="Output Log", font=ctk.CTkFont(size=11, weight="bold"))
+        log_header.pack(anchor="w", pady=(5, 2))
+
+        self.log_textbox = ctk.CTkTextbox(inner, font=ctk.CTkFont(family="Consolas", size=10), state="disabled", height=80)
+        self.log_textbox.pack(fill="both", expand=True)
+
+    def _on_source_changed(self, value: str):
+        """Handle source selection change."""
+        for widget in self.provider_frame.winfo_children():
+            widget.destroy()
+
+        if value == "Kindle":
+            self._show_kindle_provider()
+        elif value == "Kobo":
+            self._show_kobo_provider()
+        elif value == "Manual Import":
+            self._show_manual_import_provider()
+
+    def _show_kindle_provider(self):
+        """Show Kindle-specific provider content."""
         # Auto-locate button
         self.auto_locate_btn = ctk.CTkButton(
-            inner,
+            self.provider_frame,
             text="🔍 Auto-locate from Kindle",
             width=250,
             command=self._auto_locate_vocab_db
         )
-        self.auto_locate_btn.pack(pady=(10, 10))
+        self.auto_locate_btn.pack(pady=(5, 8))
 
         # Divider with "or"
-        ctk.CTkLabel(inner, text="— or —", text_color=("gray50", "gray60")).pack(pady=5)
+        ctk.CTkLabel(self.provider_frame, text="— or —", text_color=("gray50", "gray60")).pack(pady=3)
 
         # Drop zone frame
         self.drop_zone = ctk.CTkFrame(
-            inner,
-            height=60,
+            self.provider_frame,
+            height=55,
             corner_radius=8,
             border_width=2,
             border_color=("gray70", "gray30"),
             fg_color=("gray90", "gray17")
         )
-        self.drop_zone.pack(fill="x", pady=5)
+        self.drop_zone.pack(fill="x", pady=3)
         self.drop_zone.pack_propagate(False)
 
         self.drop_label = ctk.CTkLabel(
@@ -192,8 +242,8 @@ class ExportView(ctk.CTkFrame):
         self.drop_zone.dnd_bind('<<Drop>>', self._on_file_drop)
 
         # Path entry
-        path_frame = ctk.CTkFrame(inner, fg_color="transparent")
-        path_frame.pack(fill="x", pady=(10, 5))
+        path_frame = ctk.CTkFrame(self.provider_frame, fg_color="transparent")
+        path_frame.pack(fill="x", pady=(8, 0))
 
         self.path_entry = ctk.CTkEntry(path_frame, placeholder_text="Path to vocab.db...")
         self.path_entry.pack(side="left", fill="x", expand=True)
@@ -201,16 +251,39 @@ class ExportView(ctk.CTkFrame):
         self.load_path_btn = ctk.CTkButton(path_frame, text="Load", width=50, command=self._load_from_path)
         self.load_path_btn.pack(side="left", padx=(5, 0))
 
-        # Status indicator
-        self.collect_status_label = ctk.CTkLabel(inner, text="", font=ctk.CTkFont(size=11))
-        self.collect_status_label.pack(pady=(5, 5))
+    def _show_kobo_provider(self):
+        """Show Kobo provider placeholder."""
+        todo_label = ctk.CTkLabel(
+            self.provider_frame,
+            text="🚧 Kobo Support",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        todo_label.pack(pady=(20, 10))
 
-        # Small output log
-        log_header = ctk.CTkLabel(inner, text="Output Log", font=ctk.CTkFont(size=11, weight="bold"))
-        log_header.pack(anchor="w", pady=(5, 2))
+        desc_label = ctk.CTkLabel(
+            self.provider_frame,
+            text="Kobo e-reader integration is planned for a future release.",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray50", "gray60")
+        )
+        desc_label.pack(pady=(0, 10))
 
-        self.log_textbox = ctk.CTkTextbox(inner, font=ctk.CTkFont(family="Consolas", size=10), state="disabled", height=80)
-        self.log_textbox.pack(fill="both", expand=True)
+    def _show_manual_import_provider(self):
+        """Show Manual Import provider placeholder."""
+        todo_label = ctk.CTkLabel(
+            self.provider_frame,
+            text="🚧 Manual Import",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        todo_label.pack(pady=(20, 10))
+
+        desc_label = ctk.CTkLabel(
+            self.provider_frame,
+            text="Manual word list import is planned for a future release.",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray50", "gray60")
+        )
+        desc_label.pack(pady=(0, 10))
 
     def _show_export_card(self):
         """Show the Export/Create Notes card content."""
