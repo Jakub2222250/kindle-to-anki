@@ -18,6 +18,7 @@ from kindle_to_anki.tasks.translation.schema import TranslationInput, Translatio
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.translation_cache import TranslationCache
 from kindle_to_anki.util.json_utils import strip_markdown_code_block
+from kindle_to_anki.util.cancellation import CancellationToken, NONE_TOKEN
 
 
 class ChatCompletionTranslation:
@@ -72,7 +73,7 @@ class ChatCompletionTranslation:
         )
         return usage_breakdown
 
-    def translate(self, translation_inputs: List[TranslationInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[TranslationOutput]:
+    def translate(self, translation_inputs: List[TranslationInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False, cancellation_token: CancellationToken = NONE_TOKEN) -> List[TranslationOutput]:
         """
         Translate a list of TranslationInput objects and return TranslationOutput objects.
         """
@@ -129,9 +130,10 @@ class ChatCompletionTranslation:
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        failing_inputs = self._process_translation_batches(inputs_needing_translation, cache, source_language_name, target_language_name, runtime_config)
+        failing_inputs = self._process_translation_batches(inputs_needing_translation, cache, source_language_name, target_language_name, runtime_config, cancellation_token)
 
         while len(failing_inputs) > 0:
+            cancellation_token.raise_if_cancelled()
             logger.warning(f"{len(failing_inputs)} inputs failed LLM translation.")
 
             if retries >= MAX_RETRIES:
@@ -141,7 +143,7 @@ class ChatCompletionTranslation:
             if retries < MAX_RETRIES:
                 retries += 1
                 logger.info(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                failing_inputs = self._process_translation_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config)
+                failing_inputs = self._process_translation_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config, cancellation_token)
 
         # Fill in the translated results
         translated_outputs = []
@@ -215,7 +217,7 @@ class ChatCompletionTranslation:
 
         return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
 
-    def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[TranslationInput]:
+    def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig, cancellation_token: CancellationToken = NONE_TOKEN) -> List[TranslationInput]:
         """Process inputs in batches for translation"""
         logger = get_logger()
 
@@ -226,6 +228,8 @@ class ChatCompletionTranslation:
         failing_inputs = []
 
         for i in range(0, len(inputs_needing_translation), runtime_config.batch_size):
+            cancellation_token.raise_if_cancelled()
+
             batch = inputs_needing_translation[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
 

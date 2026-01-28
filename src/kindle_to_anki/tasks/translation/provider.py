@@ -4,6 +4,7 @@ from typing import List
 from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.util.cancellation import CancellationToken, NONE_TOKEN
 from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
 
 
@@ -28,7 +29,8 @@ class TranslationProvider:
         runtime_choice: str = None,
         runtime_config: RuntimeConfig = None,
         ignore_cache: bool = False,
-        use_test_cache: bool = False
+        use_test_cache: bool = False,
+        cancellation_token: CancellationToken = NONE_TOKEN
     ) -> List[AnkiNote]:
         """
         Translate a list of AnkiNote objects using the selected runtime.
@@ -61,7 +63,8 @@ class TranslationProvider:
             translation_inputs,
             runtime_config,
             ignore_cache=ignore_cache,
-            use_test_cache=use_test_cache
+            use_test_cache=use_test_cache,
+            cancellation_token=cancellation_token
         )
 
         # Map translation results back to AnkiNote objects

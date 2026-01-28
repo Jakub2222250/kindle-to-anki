@@ -18,6 +18,7 @@ from .schema import WSDInput, WSDOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.wsd_cache import WSDCache
 from kindle_to_anki.util.json_utils import strip_markdown_code_block
+from kindle_to_anki.util.cancellation import CancellationToken, NONE_TOKEN
 
 
 class ChatCompletionWSD:
@@ -72,7 +73,7 @@ class ChatCompletionWSD:
         )
         return usage_breakdown
 
-    def disambiguate(self, wsd_inputs: List[WSDInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[WSDOutput]:
+    def disambiguate(self, wsd_inputs: List[WSDInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False, cancellation_token: CancellationToken = NONE_TOKEN) -> List[WSDOutput]:
         """
         Perform Word Sense Disambiguation on a list of WSDInput objects and return WSDOutput objects.
         """
@@ -129,9 +130,10 @@ class ChatCompletionWSD:
         # Process inputs in batches with retry logic
         MAX_RETRIES = 1
         retries = 0
-        failing_inputs = self._process_wsd_batches(inputs_needing_wsd, cache, source_language_name, target_language_name, runtime_config)
+        failing_inputs = self._process_wsd_batches(inputs_needing_wsd, cache, source_language_name, target_language_name, runtime_config, cancellation_token)
 
         while len(failing_inputs) > 0:
+            cancellation_token.raise_if_cancelled()
             logger.warning(f"{len(failing_inputs)} inputs failed LLM Word Sense Disambiguation.")
 
             if retries >= MAX_RETRIES:
@@ -141,7 +143,7 @@ class ChatCompletionWSD:
             if retries < MAX_RETRIES:
                 retries += 1
                 logger.info(f"Retrying {len(failing_inputs)} failed inputs (attempt {retries} of {MAX_RETRIES})...")
-                failing_inputs = self._process_wsd_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config)
+                failing_inputs = self._process_wsd_batches(failing_inputs, cache, source_language_name, target_language_name, runtime_config, cancellation_token)
 
         # Fill in the WSD results
         wsd_outputs = []
@@ -217,7 +219,7 @@ class ChatCompletionWSD:
 
         return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
 
-    def _process_wsd_batches(self, inputs_needing_wsd: List[WSDInput], cache: WSDCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig) -> List[WSDInput]:
+    def _process_wsd_batches(self, inputs_needing_wsd: List[WSDInput], cache: WSDCache, source_language_name: str, target_language_name: str, runtime_config: RuntimeConfig, cancellation_token: CancellationToken = NONE_TOKEN) -> List[WSDInput]:
         """Process inputs in batches for WSD"""
         logger = get_logger()
 
@@ -228,6 +230,8 @@ class ChatCompletionWSD:
         failing_inputs = []
 
         for i in range(0, len(inputs_needing_wsd), runtime_config.batch_size):
+            cancellation_token.raise_if_cancelled()
+
             batch = inputs_needing_wsd[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
 

@@ -18,6 +18,7 @@ from .schema import ClozeScoringInput, ClozeScoringOutput
 from kindle_to_anki.language.language_helper import get_language_name_in_english
 from kindle_to_anki.caching.cloze_scoring_cache import ClozeScoringCache
 from kindle_to_anki.util.json_utils import strip_markdown_code_block
+from kindle_to_anki.util.cancellation import CancellationToken, NONE_TOKEN
 
 
 class ChatCompletionClozeScoring:
@@ -64,7 +65,7 @@ class ChatCompletionClozeScoring:
             confidence="medium",
         )
 
-    def score(self, scoring_inputs: List[ClozeScoringInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False) -> List[ClozeScoringOutput]:
+    def score(self, scoring_inputs: List[ClozeScoringInput], runtime_config: RuntimeConfig, ignore_cache: bool = False, use_test_cache: bool = False, cancellation_token: CancellationToken = NONE_TOKEN) -> List[ClozeScoringOutput]:
         if not scoring_inputs:
             return []
 
@@ -107,13 +108,14 @@ class ChatCompletionClozeScoring:
 
         MAX_RETRIES = 1
         retries = 0
-        failing_inputs = self._process_batches(inputs_needing_scoring, cache, source_language_name, runtime_config)
+        failing_inputs = self._process_batches(inputs_needing_scoring, cache, source_language_name, runtime_config, cancellation_token)
 
         while len(failing_inputs) > 0:
+            cancellation_token.raise_if_cancelled()
             if retries >= MAX_RETRIES:
                 raise RuntimeError("Cloze scoring failed after retries")
             retries += 1
-            failing_inputs = self._process_batches(failing_inputs, cache, source_language_name, runtime_config)
+            failing_inputs = self._process_batches(failing_inputs, cache, source_language_name, runtime_config, cancellation_token)
 
         scoring_outputs = []
         for i, output in enumerate(outputs):
@@ -176,13 +178,15 @@ class ChatCompletionClozeScoring:
 
         return BatchCallResult(success=True, results=parsed_results, model_id=runtime_config.model_id, timestamp=processing_timestamp)
 
-    def _process_batches(self, inputs_needing_scoring: List[ClozeScoringInput], cache: ClozeScoringCache, source_language_name: str, runtime_config: RuntimeConfig) -> List[ClozeScoringInput]:
+    def _process_batches(self, inputs_needing_scoring: List[ClozeScoringInput], cache: ClozeScoringCache, source_language_name: str, runtime_config: RuntimeConfig, cancellation_token: CancellationToken = NONE_TOKEN) -> List[ClozeScoringInput]:
         logger = get_logger()
         processing_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         total_batches = (len(inputs_needing_scoring) + runtime_config.batch_size - 1) // runtime_config.batch_size
         failing_inputs = []
 
         for i in range(0, len(inputs_needing_scoring), runtime_config.batch_size):
+            cancellation_token.raise_if_cancelled()
+
             batch = inputs_needing_scoring[i:i + runtime_config.batch_size]
             batch_num = (i // runtime_config.batch_size) + 1
             logger.info(f"Processing cloze scoring batch {batch_num}/{total_batches} ({len(batch)} inputs)")
