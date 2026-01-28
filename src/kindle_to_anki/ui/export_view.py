@@ -141,19 +141,22 @@ class ExportView(ctk.CTkFrame):
         for widget in self.card_container.winfo_children():
             widget.destroy()
 
-        # Centered card with modest width
-        card = ctk.CTkFrame(self.card_container, corner_radius=12, width=400)
-        card.pack(expand=True, pady=10)
-        card.pack_propagate(False)
-        card.configure(width=420, height=420)
+        # Outer card matching export card width
+        card = ctk.CTkFrame(self.card_container, corner_radius=12)
+        card.pack(fill="both", expand=True, pady=10, padx=50)
 
-        # Card content
         inner = ctk.CTkFrame(card, fg_color="transparent")
         inner.pack(fill="both", expand=True, padx=20, pady=15)
 
+        # Centered content frame for source/provider (narrower)
+        content_frame = ctk.CTkFrame(inner, fg_color="transparent", width=380)
+        content_frame.pack(pady=(0, 10))
+        content_frame.pack_propagate(False)
+        content_frame.configure(height=280)
+
         # Source subtitle
         source_label = ctk.CTkLabel(
-            inner,
+            content_frame,
             text="Source",
             font=ctk.CTkFont(size=12, weight="bold")
         )
@@ -162,7 +165,7 @@ class ExportView(ctk.CTkFrame):
         # Source selector (segmented button for future extensibility)
         self.source_var = ctk.StringVar(value="kindle")
         self.source_selector = ctk.CTkSegmentedButton(
-            inner,
+            content_frame,
             values=["Kindle", "Kobo", "Manual Import"],
             variable=self.source_var,
             command=self._on_source_changed
@@ -171,20 +174,20 @@ class ExportView(ctk.CTkFrame):
         self.source_selector.set("Kindle")
 
         # Provider content frame (swappable based on source)
-        self.provider_frame = ctk.CTkFrame(inner, fg_color="transparent")
+        self.provider_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
         self.provider_frame.pack(fill="both", expand=True)
 
         self._show_kindle_provider()
 
         # Status indicator (shared across providers)
-        self.collect_status_label = ctk.CTkLabel(inner, text="", font=ctk.CTkFont(size=11))
-        self.collect_status_label.pack(pady=(5, 5))
+        self.collect_status_label = ctk.CTkLabel(content_frame, text="", font=ctk.CTkFont(size=11))
+        self.collect_status_label.pack(pady=(5, 0))
 
-        # Small output log
+        # Output log (full width)
         log_header = ctk.CTkLabel(inner, text="Output Log", font=ctk.CTkFont(size=11, weight="bold"))
         log_header.pack(anchor="w", pady=(5, 2))
 
-        self.log_textbox = ctk.CTkTextbox(inner, font=ctk.CTkFont(family="Consolas", size=10), state="disabled", height=80)
+        self.log_textbox = ctk.CTkTextbox(inner, font=ctk.CTkFont(family="Consolas", size=10), state="disabled", height=100)
         self.log_textbox.pack(fill="both", expand=True)
 
     def _on_source_changed(self, value: str):
@@ -497,6 +500,7 @@ class ExportView(ctk.CTkFrame):
         self.back_btn.configure(state="disabled")
         self.create_notes_btn.configure(state="disabled")
         self.cancel_btn.configure(state="normal")
+        self.log_level_dropdown.configure(state="disabled")
 
         self.log_textbox.configure(state="normal")
         self.log_textbox.delete("1.0", "end")
@@ -525,6 +529,10 @@ class ExportView(ctk.CTkFrame):
         self.is_running = False
         self.back_btn.configure(state="normal")
         self.cancel_btn.configure(state="disabled")
+        self.log_level_dropdown.configure(state="normal")
+        # Re-enable Create Notes if there are still candidates (allows retry on failure)
+        if self.notes_by_language:
+            self.create_notes_btn.configure(state="normal")
         self.progress_bar.set(1)
         self.status_label.configure(text="Export completed")
         self.step_label.configure(text="")
