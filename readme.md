@@ -138,7 +138,7 @@ Run the executable directly, or if using source code:
 ```
 py -m kindle_to_anki.ui.app
 ```
-<img width="1052" height="732" alt="main_app" src="https://github.com/user-attachments/assets/77689808-643f-4eb0-80d5-3f73fad422cc" />
+<a href="https://github.com/user-attachments/assets/77689808-643f-4eb0-80d5-3f73fad422cc"><img width="500" alt="main_app" src="https://github.com/user-attachments/assets/77689808-643f-4eb0-80d5-3f73fad422cc" /></a>
 
 ### Create Notes in Anki
 From the main screen, click **Create Notes** to open the export view:
@@ -146,14 +146,14 @@ From the main screen, click **Create Notes** to open the export view:
 2. Load vocabulary by auto-locating from a connected Kindle, or drag-and-drop/browse for `vocab.db`
 3. Click **Create Notes** to process words through all configured tasks and create flashcards in Anki
 
-<img width="1052" height="732" alt="create_notes" src="https://github.com/user-attachments/assets/b055306c-5556-40cf-9fb5-8b95a4245d8d" />
+<a href="https://github.com/user-attachments/assets/b055306c-5556-40cf-9fb5-8b95a4245d8d"><img width="500" alt="create_notes" src="https://github.com/user-attachments/assets/b055306c-5556-40cf-9fb5-8b95a4245d8d" /></a>
 
 Progress and logs are displayed in real-time. If the export fails (e.g., Anki not running), you can retry without re-collecting lookups.
 
 ### Adjust Settings
 Click **Setup Wizard** anytime to modify task settings, models, or deck configuration.
 
-<img width="1052" height="1220" alt="setup_wizard" src="https://github.com/user-attachments/assets/4bc588bd-e74f-4132-941f-89cdc516ba4c" />
+<a href="https://github.com/user-attachments/assets/4bc588bd-e74f-4132-941f-89cdc516ba4c"><img width="500" alt="setup_wizard" src="https://github.com/user-attachments/assets/4bc588bd-e74f-4132-941f-89cdc516ba4c" /></a>
 
 ### Update Existing Cards
 To retroactively update existing Anki cards by re-running specific tasks (e.g., regenerate definitions with a new prompt, recalculate usage levels):
