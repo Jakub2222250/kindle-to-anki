@@ -31,6 +31,8 @@ from kindle_to_anki.pruning.pruning import (
     prune_new_notes_against_eachother,
     prune_notes_identified_as_redundant
 )
+from kindle_to_anki.core.models.registry import ModelRegistry
+from kindle_to_anki.core.pricing.token_pricing_policy import TokenPricingPolicy
 from kindle_to_anki.util.kindle_device import find_and_copy_vocab_db
 from kindle_to_anki.util.paths import get_inputs_dir
 from kindle_to_anki.util.cancellation import CancellationToken, CancelledException
@@ -46,8 +48,14 @@ class ExportView(ctk.CTkFrame):
         self.export_thread: Optional[threading.Thread] = None
         self._cancellation_token: Optional[CancellationToken] = None
         self.notes_by_language: Dict[str, List[AnkiNote]] = {}
+        self.pruned_notes_by_language: Dict[str, List[AnkiNote]] = {}  # After UID pruning
         self.latest_candidate_timestamp: Optional[datetime] = None
         self.vocab_db_path: Optional[Path] = None
+        self.selected_language: Optional[str] = None
+        self.note_limit: int = 30
+        self.limit_enabled: bool = True
+        self.timestamp_filter_enabled: bool = True
+        self.timestamp_cutoff: Optional[datetime] = None  # User-selected cutoff
 
         self._create_main_layout()
         self._show_collect_lookups_card()
@@ -254,6 +262,11 @@ class ExportView(ctk.CTkFrame):
         self.path_entry = ctk.CTkEntry(path_frame, placeholder_text="Path to vocab.db...")
         self.path_entry.pack(side="left", fill="x", expand=True)
 
+        # Pre-populate with existing vocab.db if available
+        default_vocab_path = get_inputs_dir() / "vocab.db"
+        if default_vocab_path.exists():
+            self.path_entry.insert(0, str(default_vocab_path))
+
         self.load_path_btn = ctk.CTkButton(path_frame, text="Load", width=50, command=self._load_from_path)
         self.load_path_btn.pack(side="left", padx=(5, 0))
 
@@ -305,12 +318,13 @@ class ExportView(ctk.CTkFrame):
         inner.pack(fill="both", expand=True, padx=20, pady=15)
 
         # Info about what's being processed
-        total_notes = sum(len(notes) for notes in self.notes_by_language.values())
-        languages = ", ".join(self.notes_by_language.keys())
+        notes_dict = getattr(self, 'notes_to_export', self.notes_by_language)
+        total_notes = sum(len(notes) for notes in notes_dict.values())
+        languages = ", ".join(notes_dict.keys())
 
         info_label = ctk.CTkLabel(
             inner,
-            text=f"Processing {total_notes} lookups ({languages})",
+            text=f"Processing {total_notes} notes ({languages})",
             font=ctk.CTkFont(size=13)
         )
         info_label.pack(pady=(5, 10))
@@ -322,11 +336,550 @@ class ExportView(ctk.CTkFrame):
         self.log_textbox = ctk.CTkTextbox(inner, font=ctk.CTkFont(family="Consolas", size=11), state="disabled")
         self.log_textbox.pack(fill="both", expand=True)
 
+    def _show_preview_card(self):
+        """Show the preview card after collecting lookups - allows deck selection and settings review."""
+        for widget in self.card_container.winfo_children():
+            widget.destroy()
+
+        self.status_label.configure(text="Step 2: Preview & Configure")
+        self.progress_bar.set(0.15)
+
+        # Card with fixed height content area
+        self.preview_card = ctk.CTkFrame(self.card_container, corner_radius=12)
+        self.preview_card.pack(fill="both", expand=True, pady=10, padx=50)
+
+        # Show loading state first
+        self.preview_loading_frame = ctk.CTkFrame(self.preview_card, fg_color="transparent")
+        self.preview_loading_frame.pack(fill="both", expand=True, padx=20, pady=40)
+
+        self.loading_status_label = ctk.CTkLabel(
+            self.preview_loading_frame,
+            text="🔗 Connecting to Anki...",
+            font=ctk.CTkFont(size=14)
+        )
+        self.loading_status_label.pack(pady=(20, 10))
+
+        self.loading_detail_label = ctk.CTkLabel(
+            self.preview_loading_frame,
+            text="Validating AnkiConnect and checking existing cards",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray50", "gray60")
+        )
+        self.loading_detail_label.pack(pady=(0, 20))
+
+        # Progress indicator
+        self.loading_progress = ctk.CTkProgressBar(self.preview_loading_frame, width=300, mode="indeterminate")
+        self.loading_progress.pack(pady=10)
+        self.loading_progress.start()
+
+        # Perform Anki connection and pruning in background
+        threading.Thread(target=self._prune_and_update_preview, daemon=True).start()
+
+    def _show_preview_content(self):
+        """Show the full preview content after Anki connection is validated."""
+        # Remove loading frame
+        if hasattr(self, 'preview_loading_frame'):
+            self.preview_loading_frame.destroy()
+
+        # Scrollable inner content
+        scroll_inner = ctk.CTkScrollableFrame(self.preview_card, fg_color="transparent")
+        scroll_inner.pack(fill="both", expand=True, padx=20, pady=15)
+
+        # Deck selector section
+        deck_frame = ctk.CTkFrame(scroll_inner, fg_color="transparent")
+        deck_frame.pack(fill="x", pady=(0, 5))
+
+        ctk.CTkLabel(deck_frame, text="Select Deck", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w")
+
+        # Get available languages with notes
+        available_languages = list(self.notes_by_language.keys())
+        self.selected_language = available_languages[0] if available_languages else None
+
+        self.deck_var = ctk.StringVar(value=self.selected_language or "")
+        self.deck_selector = ctk.CTkOptionMenu(
+            deck_frame,
+            values=available_languages,
+            variable=self.deck_var,
+            width=180,
+            command=self._on_deck_selected
+        )
+        self.deck_selector.pack(anchor="w", pady=(5, 0))
+
+        # Options section
+        ctk.CTkLabel(scroll_inner, text="Options", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
+
+        options_frame = ctk.CTkFrame(scroll_inner, corner_radius=8)
+        options_frame.pack(fill="x", pady=(0, 10))
+
+        options_inner = ctk.CTkFrame(options_frame, fg_color="transparent")
+        options_inner.pack(fill="x", padx=10, pady=10)
+
+        # Note Limit option
+        limit_row = ctk.CTkFrame(options_inner, fg_color="transparent")
+        limit_row.pack(fill="x", pady=(0, 8))
+
+        self.limit_enabled_var = ctk.BooleanVar(value=self.limit_enabled)
+        self.limit_checkbox = ctk.CTkCheckBox(
+            limit_row,
+            text="Limit to:",
+            variable=self.limit_enabled_var,
+            command=self._on_limit_checkbox_changed,
+            font=ctk.CTkFont(size=11)
+        )
+        self.limit_checkbox.pack(side="left")
+
+        self.limit_var = ctk.StringVar(value=str(self.note_limit))
+        self.limit_var.trace_add("write", lambda *_: self._on_limit_changed())
+        self.limit_entry = ctk.CTkEntry(limit_row, width=60, textvariable=self.limit_var)
+        self.limit_entry.pack(side="left", padx=(10, 5))
+
+        ctk.CTkLabel(limit_row, text="(useful with rate-limited models)", font=ctk.CTkFont(size=10), text_color=("gray50", "gray60")).pack(side="left", padx=(5, 0))
+
+        # Timestamp filter option
+        timestamp_row = ctk.CTkFrame(options_inner, fg_color="transparent")
+        timestamp_row.pack(fill="x", pady=(0, 0))
+
+        self.timestamp_filter_var = ctk.BooleanVar(value=self.timestamp_filter_enabled)
+        self.timestamp_checkbox = ctk.CTkCheckBox(
+            timestamp_row,
+            text="Only lookups since:",
+            variable=self.timestamp_filter_var,
+            command=self._on_timestamp_checkbox_changed,
+            font=ctk.CTkFont(size=11)
+        )
+        self.timestamp_checkbox.pack(side="left")
+
+        # Date/time entry
+        self.timestamp_date_var = ctk.StringVar(value="")
+        self.timestamp_date_entry = ctk.CTkEntry(timestamp_row, width=100, textvariable=self.timestamp_date_var, placeholder_text="YYYY-MM-DD")
+        self.timestamp_date_entry.pack(side="left", padx=(10, 5))
+
+        self.timestamp_time_var = ctk.StringVar(value="")
+        self.timestamp_time_entry = ctk.CTkEntry(timestamp_row, width=60, textvariable=self.timestamp_time_var, placeholder_text="HH:MM")
+        self.timestamp_time_entry.pack(side="left", padx=(0, 5))
+
+        # Bind entry changes to update filtering
+        self.timestamp_date_var.trace_add("write", lambda *_: self._on_timestamp_entry_changed())
+        self.timestamp_time_var.trace_add("write", lambda *_: self._on_timestamp_entry_changed())
+
+        # Summary section
+        self.preview_summary_frame = ctk.CTkFrame(scroll_inner, fg_color="transparent")
+        self.preview_summary_frame.pack(fill="x", pady=(5, 10))
+
+        # Options table section
+        ctk.CTkLabel(scroll_inner, text="Task Settings", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(5, 5))
+
+        # Frame for options table (not scrollable, table is small)
+        self.options_table_frame = ctk.CTkFrame(scroll_inner, corner_radius=8)
+        self.options_table_frame.pack(fill="x", pady=(0, 10))
+
+        # Enable create notes button
+        self.create_notes_btn.configure(state="normal")
+
+        # Initialize options and timestamp for selected deck, then update display
+        self._load_preview_options_for_deck()
+        self._init_timestamp_for_deck()
+        self._update_preview_display()
+
+    def _show_preview_error(self, error_message: str):
+        """Show an error state in the preview card."""
+        # Stop and remove loading indicator
+        if hasattr(self, 'loading_progress'):
+            self.loading_progress.stop()
+
+        if hasattr(self, 'loading_status_label'):
+            self.loading_status_label.configure(text="❌ Connection Failed", text_color=("red", "red"))
+
+        if hasattr(self, 'loading_detail_label'):
+            self.loading_detail_label.configure(
+                text=error_message,
+                text_color=("red", "red")
+            )
+
+        if hasattr(self, 'loading_progress'):
+            self.loading_progress.pack_forget()
+
+        # Add retry button
+        retry_btn = ctk.CTkButton(
+            self.preview_loading_frame,
+            text="Retry Connection",
+            command=lambda: self._retry_preview()
+        )
+        retry_btn.pack(pady=20)
+
+    def _retry_preview(self):
+        """Retry the preview connection."""
+        self._show_preview_card()
+
+    def _prune_and_update_preview(self):
+        """Background thread to prune notes and update preview."""
+        try:
+            self.after(0, lambda: self._update_loading_status("🔗 Connecting to Anki...", "Validating AnkiConnect connection"))
+
+            bootstrap_all()
+            config_manager = ConfigManager()
+            anki_decks_by_source_language = config_manager.get_anki_decks_by_source_language()
+
+            # Test Anki connection first
+            try:
+                anki_connect = AnkiConnect()
+                # Constructor already validates connection via is_reachable()
+            except Exception as e:
+                error_msg = f"Cannot connect to Anki. Please ensure Anki is running\nwith AnkiConnect add-on installed.\n\nError: {str(e)}"
+                self.after(0, lambda msg=error_msg: self._show_preview_error(msg))
+                return
+
+            self.after(0, lambda: self._update_loading_status("📚 Checking existing cards...", "Checking for duplicates"))
+
+            self.pruned_notes_by_language = {}
+
+            for lang_code, notes in self.notes_by_language.items():
+                anki_deck = anki_decks_by_source_language.get(lang_code)
+                if not anki_deck:
+                    self.pruned_notes_by_language[lang_code] = notes
+                    continue
+
+                language_pair_code = anki_deck.get_language_pair_code()
+
+                self.after(0, lambda lc=lang_code: self._update_loading_status(
+                    f"📚 Checking existing cards...",
+                    f"Processing {lc} deck"
+                ))
+
+                # Get existing notes and prune by UID
+                existing_notes = anki_connect.get_notes(anki_deck)
+                pruned = prune_existing_notes_by_UID(notes.copy(), existing_notes)
+
+                # Also prune notes identified as redundant
+                pruned = prune_notes_identified_as_redundant(pruned, cache_suffix=language_pair_code)
+
+                self.pruned_notes_by_language[lang_code] = pruned
+
+            # Show the full preview content
+            self.after(0, self._show_preview_content)
+
+        except Exception as e:
+            error_msg = f"Error: {str(e)}"
+            self.after(0, lambda msg=error_msg: self._show_preview_error(msg))
+
+    def _update_loading_status(self, status: str, detail: str):
+        """Update the loading status labels."""
+        if hasattr(self, 'loading_status_label'):
+            self.loading_status_label.configure(text=status)
+        if hasattr(self, 'loading_detail_label'):
+            self.loading_detail_label.configure(text=detail)
+
+    def _on_deck_selected(self, value: str):
+        """Handle deck selection change."""
+        self.selected_language = value
+        self._load_preview_options_for_deck()
+        self._init_timestamp_for_deck()
+        self._update_preview_display()
+
+    def _load_preview_options_for_deck(self):
+        """Load saved preview options for the selected deck."""
+        if not self.selected_language:
+            return
+
+        config_manager = ConfigManager()
+        anki_decks = config_manager.get_anki_decks_by_source_language()
+        anki_deck = anki_decks.get(self.selected_language)
+
+        if not anki_deck:
+            return
+
+        opts = anki_deck.preview_options
+        self.limit_enabled = opts.get("note_limit_enabled", True)
+        self.note_limit = opts.get("note_limit", 30)
+
+        # Update UI controls
+        if hasattr(self, 'limit_enabled_var'):
+            self.limit_enabled_var.set(self.limit_enabled)
+        if hasattr(self, 'limit_var'):
+            self.limit_var.set(str(self.note_limit))
+
+    def _save_preview_options_for_deck(self):
+        """Save preview options for the selected deck to config."""
+        if not self.selected_language:
+            return
+
+        try:
+            limit = int(self.limit_var.get()) if hasattr(self, 'limit_var') else self.note_limit
+        except ValueError:
+            limit = self.note_limit
+
+        preview_options = {
+            "note_limit_enabled": self.limit_enabled,
+            "note_limit": limit
+        }
+
+        config_manager = ConfigManager()
+        config_manager.save_preview_options(self.selected_language, preview_options)
+
+    def _on_limit_changed(self):
+        """Handle note limit change - refresh cost estimates and save."""
+        if hasattr(self, 'options_table_frame'):
+            self._update_preview_display()
+            self._save_preview_options_for_deck()
+
+    def _on_limit_checkbox_changed(self):
+        """Handle limit checkbox toggle."""
+        self.limit_enabled = self.limit_enabled_var.get()
+        self._update_preview_display()
+        self._save_preview_options_for_deck()
+
+    def _on_timestamp_checkbox_changed(self):
+        """Handle timestamp filter checkbox toggle."""
+        self.timestamp_filter_enabled = self.timestamp_filter_var.get()
+        state = "normal" if self.timestamp_filter_enabled else "disabled"
+        if hasattr(self, 'timestamp_date_entry'):
+            self.timestamp_date_entry.configure(state=state)
+        if hasattr(self, 'timestamp_time_entry'):
+            self.timestamp_time_entry.configure(state=state)
+        self._update_preview_display()
+
+    def _on_timestamp_entry_changed(self):
+        """Handle timestamp entry changes."""
+        self._parse_timestamp_cutoff()
+        self._update_preview_display()
+
+    def _init_timestamp_for_deck(self):
+        """Initialize timestamp cutoff from metadata for the selected deck."""
+        if not self.selected_language:
+            return
+
+        config_manager = ConfigManager()
+        anki_decks_by_source_language = config_manager.get_anki_decks_by_source_language()
+        anki_deck = anki_decks_by_source_language.get(self.selected_language)
+
+        if not anki_deck:
+            self.timestamp_cutoff = None
+            return
+
+        metadata_manager = MetadataManager()
+        last_timestamp = metadata_manager.get_last_vocab_timestamp(
+            source_language_code=self.selected_language,
+            target_language_code=anki_deck.target_language_code
+        )
+
+        self.timestamp_cutoff = last_timestamp
+
+        # Update entry fields
+        if hasattr(self, 'timestamp_date_var') and hasattr(self, 'timestamp_time_var'):
+            if last_timestamp:
+                self.timestamp_date_var.set(last_timestamp.strftime("%Y-%m-%d"))
+                self.timestamp_time_var.set(last_timestamp.strftime("%H:%M"))
+            else:
+                self.timestamp_date_var.set("")
+                self.timestamp_time_var.set("")
+
+    def _parse_timestamp_cutoff(self):
+        """Parse the timestamp cutoff from entry fields."""
+        if not hasattr(self, 'timestamp_date_var') or not hasattr(self, 'timestamp_time_var'):
+            return
+
+        date_str = self.timestamp_date_var.get().strip()
+        time_str = self.timestamp_time_var.get().strip() or "00:00"
+
+        if not date_str:
+            self.timestamp_cutoff = None
+            return
+
+        try:
+            self.timestamp_cutoff = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            pass  # Keep previous value if parse fails
+
+    def _get_filtered_notes(self) -> List[AnkiNote]:
+        """Get notes after applying timestamp filter and limit."""
+        if not self.selected_language:
+            return []
+
+        pruned_notes = self.pruned_notes_by_language.get(self.selected_language, [])
+
+        # Apply timestamp filter if enabled
+        if self.timestamp_filter_enabled and self.timestamp_cutoff:
+            pruned_notes = [
+                n for n in pruned_notes
+                if n.source_timestamp and n.source_timestamp > self.timestamp_cutoff
+            ]
+
+        # Apply limit if enabled
+        if self.limit_enabled:
+            try:
+                limit = int(self.limit_var.get()) if hasattr(self, 'limit_var') else self.note_limit
+                if limit > 0:
+                    pruned_notes = pruned_notes[:limit]
+            except ValueError:
+                pass
+
+        return pruned_notes
+
+    def _update_preview_display(self):
+        """Update the preview summary and options table for the selected deck."""
+        if not self.selected_language:
+            return
+
+        lang_code = self.selected_language
+        original_count = len(self.notes_by_language.get(lang_code, []))
+        pruned_notes = self.pruned_notes_by_language.get(lang_code, [])
+        after_uid_prune = len(pruned_notes)
+
+        # Get final filtered notes
+        filtered_notes = self._get_filtered_notes()
+        cards_to_create = len(filtered_notes)
+
+        # Update summary
+        for widget in self.preview_summary_frame.winfo_children():
+            widget.destroy()
+
+        summary_text = f"Language: {lang_code} | Lookups: {original_count} | After dedup: {after_uid_prune} | Cards to be Created: {cards_to_create}"
+        ctk.CTkLabel(self.preview_summary_frame, text=summary_text, font=ctk.CTkFont(size=11)).pack(anchor="w")
+
+        # Update step label
+        self.step_label.configure(text=f"{cards_to_create} notes will be processed")
+
+        # Update options table
+        self._populate_options_table()
+
+    def _populate_options_table(self):
+        """Populate the options table with task settings for the selected deck."""
+        # Clear existing
+        for widget in self.options_table_frame.winfo_children():
+            widget.destroy()
+
+        if not self.selected_language:
+            return
+
+        # Get deck config
+        config_manager = ConfigManager()
+        anki_decks_by_source_language = config_manager.get_anki_decks_by_source_language()
+        anki_deck = anki_decks_by_source_language.get(self.selected_language)
+
+        if not anki_deck:
+            ctk.CTkLabel(self.options_table_frame, text="No deck configured for this language").pack(padx=10, pady=10)
+            return
+
+        # Get note count for cost estimation using filtered notes
+        note_count = len(self._get_filtered_notes())
+
+        target_language_code = anki_deck.target_language_code
+
+        # Table container with padding
+        table_inner = ctk.CTkFrame(self.options_table_frame, fg_color="transparent")
+        table_inner.pack(fill="x", padx=10, pady=10)
+
+        # Configure grid columns
+        table_inner.grid_columnconfigure(0, weight=1, minsize=90)
+        table_inner.grid_columnconfigure(1, weight=2, minsize=200)
+        table_inner.grid_columnconfigure(2, weight=1, minsize=130)
+        table_inner.grid_columnconfigure(3, weight=0, minsize=70)
+
+        # Table header
+        headers = ["Task", "Runtime", "Model", "Est. Cost"]
+        for col, h in enumerate(headers):
+            ctk.CTkLabel(table_inner, text=h, font=ctk.CTkFont(size=11, weight="bold")).grid(
+                row=0, column=col, sticky="w", padx=(5, 10), pady=(0, 5)
+            )
+
+        # Task rows
+        tasks = ["lui", "wsd", "hint", "cloze_scoring", "usage_level", "translation", "collocation"]
+        total_cost = 0.0
+        row_idx = 1
+
+        for task in tasks:
+            setting = anki_deck.get_task_setting(task)
+            if not setting:
+                continue
+
+            # Check if task is enabled (some are optional)
+            if task in ["hint", "cloze_scoring", "usage_level", "collocation"]:
+                if not setting.get("enabled", True):
+                    continue
+
+            runtime_id = setting.get("runtime", "")
+            model_id = setting.get("model_id", "")
+
+            # Calculate estimated cost
+            cost_str = "$0.00"
+            if model_id:
+                model = ModelRegistry.get(model_id) if model_id else None
+                if model:
+                    runtime = RuntimeRegistry.get(runtime_id)
+                    if runtime:
+                        runtime_config = RuntimeConfig(
+                            model_id=model_id,
+                            batch_size=setting.get("batch_size", 30),
+                            source_language_code=self.selected_language,
+                            target_language_code=target_language_code
+                        )
+                        usage = runtime.estimate_usage(note_count, runtime_config)
+                        pricing = TokenPricingPolicy(
+                            input_cost_per_1m=model.input_token_cost_per_1m,
+                            output_cost_per_1m=model.output_token_cost_per_1m,
+                        )
+                        cost = pricing.estimate_cost(usage).usd
+                        total_cost += cost
+                        cost_str = f"${cost:.4f}"
+
+            # Alternating row background
+            row_bg = ("gray85", "gray25") if row_idx % 2 == 0 else None
+
+            # Create a frame for the row to hold background color
+            row_frame = ctk.CTkFrame(table_inner, fg_color=row_bg if row_bg else "transparent", corner_radius=4)
+            row_frame.grid(row=row_idx, column=0, columnspan=4, sticky="ew", pady=1)
+            row_frame.grid_columnconfigure(0, weight=1, minsize=90)
+            row_frame.grid_columnconfigure(1, weight=2, minsize=200)
+            row_frame.grid_columnconfigure(2, weight=1, minsize=130)
+            row_frame.grid_columnconfigure(3, weight=0, minsize=70)
+
+            ctk.CTkLabel(row_frame, text=task, font=ctk.CTkFont(size=11), fg_color="transparent").grid(
+                row=0, column=0, sticky="w", padx=(5, 10), pady=3
+            )
+            ctk.CTkLabel(row_frame, text=runtime_id or "n/a", font=ctk.CTkFont(size=11), fg_color="transparent").grid(
+                row=0, column=1, sticky="w", padx=(5, 10), pady=3
+            )
+            ctk.CTkLabel(row_frame, text=model_id or "n/a", font=ctk.CTkFont(size=11), fg_color="transparent").grid(
+                row=0, column=2, sticky="w", padx=(5, 10), pady=3
+            )
+            ctk.CTkLabel(row_frame, text=cost_str, font=ctk.CTkFont(size=11), fg_color="transparent").grid(
+                row=0, column=3, sticky="w", padx=(5, 10), pady=3
+            )
+            row_idx += 1
+
+        # Separator line
+        separator = ctk.CTkFrame(table_inner, height=1, fg_color=("gray70", "gray40"))
+        separator.grid(row=row_idx, column=0, columnspan=4, sticky="ew", pady=(5, 5))
+        row_idx += 1
+
+        # Total row
+        ctk.CTkLabel(table_inner, text="TOTAL", font=ctk.CTkFont(size=11, weight="bold")).grid(
+            row=row_idx, column=0, sticky="w", padx=(5, 10), pady=2
+        )
+        ctk.CTkLabel(table_inner, text="", font=ctk.CTkFont(size=11)).grid(
+            row=row_idx, column=1, sticky="w", padx=(5, 10), pady=2
+        )
+        ctk.CTkLabel(table_inner, text=f"({note_count} notes)", font=ctk.CTkFont(size=11)).grid(
+            row=row_idx, column=2, sticky="w", padx=(5, 10), pady=2
+        )
+        ctk.CTkLabel(table_inner, text=f"${total_cost:.4f}", font=ctk.CTkFont(size=11, weight="bold")).grid(
+            row=row_idx, column=3, sticky="w", padx=(5, 10), pady=2
+        )
+
     def _start_create_notes(self):
         """Switch to export card and start the export."""
-        if not self.notes_by_language:
+        if not self.pruned_notes_by_language and not self.notes_by_language:
             self._log("No candidates loaded.")
             return
+
+        if not self.selected_language:
+            self._log("No deck selected.")
+            return
+
+        # Use filtered notes from preview (applies timestamp filter and limit)
+        filtered_notes = self._get_filtered_notes()
+
+        self.notes_to_export = {self.selected_language: filtered_notes}
 
         self._show_export_card()
         self._start_export()
@@ -451,9 +1004,10 @@ class ExportView(ctk.CTkFrame):
         """Called when candidates are successfully loaded."""
         self._set_collect_status(f"✅ Loaded {total_notes} lookups ({languages})", "success")
         self._log(f"Successfully loaded {total_notes} lookups for languages: {languages}")
-        self.create_notes_btn.configure(state="normal")
         self.progress_bar.set(0.1)
         self.step_label.configure(text=f"{total_notes} lookups ready")
+        # Proceed to preview step
+        self._show_preview_card()
 
     def _set_collect_status(self, message: str, status_type: str = "info"):
         """Update the collect status label with color."""
@@ -574,8 +1128,8 @@ class ExportView(ctk.CTkFrame):
         if not self.is_running:
             return
 
-        # Use pre-loaded candidates
-        notes_by_language = self.notes_by_language
+        # Use pre-pruned and limited notes from preview step
+        notes_by_language = getattr(self, 'notes_to_export', self.notes_by_language)
 
         if not notes_by_language or len(notes_by_language) == 0:
             self.after(0, lambda: self._log("No candidate notes to process."))
@@ -601,18 +1155,12 @@ class ExportView(ctk.CTkFrame):
             self.after(0, lambda slc=source_language_code, n=len(notes): 
                        self._log(f"Processing {n} notes for {slc}"))
 
-            # Get existing notes and prune
+            # Get existing notes for later pruning after WSD (UID pruning already done in preview)
             existing_notes = anki_connect_instance.get_notes(anki_deck)
-            notes = prune_existing_notes_by_UID(notes, existing_notes)
-            if len(notes) == 0:
-                self.after(0, lambda slc=source_language_code: 
-                           self._log(f"No new notes after UID pruning for {slc}"))
-                continue
 
-            notes = prune_notes_identified_as_redundant(notes, cache_suffix=language_pair_code)
             if len(notes) == 0:
                 self.after(0, lambda slc=source_language_code: 
-                           self._log(f"No new notes after redundancy pruning for {slc}"))
+                           self._log(f"No notes to process for {slc}"))
                 continue
 
             if not self.is_running:
@@ -794,10 +1342,15 @@ class ExportView(ctk.CTkFrame):
                        self._update_progress(total_steps, total_steps, "Saving to Anki...", slc))
             anki_connect_instance.create_notes_batch(anki_deck, notes)
 
-        # Save timestamp
-        if self.latest_candidate_timestamp:
-            metadata_manager = MetadataManager()
-            metadata = metadata_manager.load_metadata()
-            metadata_manager.save_latest_vocab_builder_entry_timestamp(self.latest_candidate_timestamp, metadata)
+            # Save per-deck timestamp for future incremental imports
+            if self.latest_candidate_timestamp:
+                metadata_manager = MetadataManager()
+                metadata = metadata_manager.load_metadata()
+                metadata_manager.save_latest_vocab_builder_entry_timestamp(
+                    self.latest_candidate_timestamp, 
+                    metadata,
+                    source_language_code=source_language_code,
+                    target_language_code=target_language_code
+                )
 
         self.after(0, lambda: self._log("Export completed successfully!"))

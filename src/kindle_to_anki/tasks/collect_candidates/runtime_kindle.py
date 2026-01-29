@@ -45,19 +45,10 @@ class KindleCandidateRuntime:
 
         self._ensure_vocab_db(db_path)
 
-        metadata_manager = MetadataManager()
-        metadata = metadata_manager.load_metadata()
-
-        last_timestamp_str = metadata.get("last_vocab_entry_timestamp")
-        last_timestamp = datetime.fromisoformat(last_timestamp_str) if last_timestamp_str else None
-
-        # Get candidate data based on input parameters
-        if last_timestamp:
-            vocab_data = self._handle_incremental_import(db_path, last_timestamp)
-        else:
-            _, total_count = self._get_kindle_vocab_count(db_path)
-            logger.info(f"No previous import found, collecting all {total_count} candidates...")
-            vocab_data = self._read_vocab_from_db(db_path)
+        # Collect all candidates - per-deck timestamp filtering happens in the preview/export step
+        _, total_count = self._get_kindle_vocab_count(db_path)
+        logger.info(f"Collecting all {total_count} candidates...")
+        vocab_data = self._read_vocab_from_db(db_path)
 
         if not vocab_data:
             logger.info("No new candidates to collect.")
