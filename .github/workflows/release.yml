@@ -48,6 +48,7 @@ jobs:
           mkdir -p dist/kindle-to-anki-package/data/inputs
           mkdir -p dist/kindle-to-anki-package/data/outputs
           cp data/config/config.sample.json dist/kindle-to-anki-package/data/config/
+          cp data/config/models.yaml dist/kindle-to-anki-package/config/
           # Copy prompt files preserving task folder structure
           for task_dir in src/kindle_to_anki/tasks/*/prompts; do
             if [ -d "$task_dir" ]; then
