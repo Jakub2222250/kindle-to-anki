@@ -662,16 +662,14 @@ class ExportView(ctk.CTkFrame):
             target_language_code=anki_deck.target_language_code
         )
 
+        if not last_timestamp:
+            last_timestamp = datetime(2001, 1, 1, 12, 0, 0)
         self.timestamp_cutoff = last_timestamp
 
         # Update entry fields
         if hasattr(self, 'timestamp_date_var') and hasattr(self, 'timestamp_time_var'):
-            if last_timestamp:
-                self.timestamp_date_var.set(last_timestamp.strftime("%Y-%m-%d"))
-                self.timestamp_time_var.set(last_timestamp.strftime("%H:%M"))
-            else:
-                self.timestamp_date_var.set("")
-                self.timestamp_time_var.set("")
+            self.timestamp_date_var.set(last_timestamp.strftime("%Y-%m-%d"))
+            self.timestamp_time_var.set(last_timestamp.strftime("%H:%M"))
 
     def _parse_timestamp_cutoff(self):
         """Parse the timestamp cutoff from entry fields."""
