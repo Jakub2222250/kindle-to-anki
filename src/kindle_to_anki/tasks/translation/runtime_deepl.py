@@ -46,7 +46,7 @@ class DeepLTranslation:
         source_lang = runtime_config.source_language_code.upper()
         target_lang = runtime_config.target_language_code.upper()
 
-        print("\nStarting context translation (DeepL)...")
+        get_logger().info("Starting context translation (DeepL)...")
 
         # Setup cache
         language_pair_code = f"{runtime_config.source_language_code}-{runtime_config.target_language_code}"
@@ -70,20 +70,20 @@ class DeepLTranslation:
                 else:
                     inputs_needing_translation.append(translation_input)
                     outputs.append(None)
-            print(f"Found {cached_count} cached translations, {len(inputs_needing_translation)} need DeepL translation")
+            get_logger().info(f"Found {cached_count} cached translations, {len(inputs_needing_translation)} need DeepL translation")
         else:
             inputs_needing_translation = translation_inputs
             outputs = [None] * len(translation_inputs)
 
         if not inputs_needing_translation:
-            print("DeepL translation completed (all from cache).")
+            get_logger().info("DeepL translation completed (all from cache).")
             return [o for o in outputs if o is not None]
 
         # Process in batches
         failing_inputs = self._process_batches(inputs_needing_translation, cache, source_lang, target_lang, runtime_config)
 
         if failing_inputs:
-            print(f"{len(failing_inputs)} inputs failed DeepL translation.")
+            get_logger().warning(f"{len(failing_inputs)} inputs failed DeepL translation.")
 
         # Build final outputs
         translated_outputs = []
@@ -97,7 +97,7 @@ class DeepLTranslation:
             else:
                 translated_outputs.append(output)
 
-        print("DeepL translation completed.")
+        get_logger().info("DeepL translation completed.")
         return translated_outputs
 
     def _process_batches(self, inputs: List[TranslationInput], cache: TranslationCache, source_lang: str, target_lang: str, config: RuntimeConfig) -> List[TranslationInput]:
@@ -112,7 +112,7 @@ class DeepLTranslation:
         for i in range(0, len(inputs), batch_size):
             batch = inputs[i:i + batch_size]
             batch_num = (i // batch_size) + 1
-            print(f"\nProcessing DeepL batch {batch_num}/{total_batches} ({len(batch)} inputs)")
+            get_logger().debug(f"Processing DeepL batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             texts = [inp.context for inp in batch]
             total_chars = sum(len(t) for t in texts)
@@ -125,22 +125,22 @@ class DeepLTranslation:
                 confidence="high",
             )
             est_cost = pricing_policy.estimate_cost(usage).usd
-            print(f"  {total_chars} chars, estimated cost: ${est_cost:.6f}")
+            get_logger().debug(f"  {total_chars} chars, estimated cost: ${est_cost:.6f}")
 
             start_time = time.time()
 
             try:
                 translations = platform.translate(texts, target_lang, source_lang)
             except Exception as e:
-                print(f"  API call failed: {e}")
+                get_logger().error(f"  API call failed: {e}")
                 failing_inputs.extend(batch)
                 continue
 
             elapsed = time.time() - start_time
-            print(f"  Batch completed in {elapsed:.2f}s")
+            get_logger().debug(f"  Batch completed in {elapsed:.2f}s")
 
             for inp, trans in zip(batch, translations):
                 cache.set(inp.uid, self.id, "deepl", "", {"context_translation": trans}, processing_timestamp)
-                print(f"  SUCCESS - translated UID {inp.uid}")
+                get_logger().debug(f"  SUCCESS - translated UID {inp.uid}")
 
         return failing_inputs

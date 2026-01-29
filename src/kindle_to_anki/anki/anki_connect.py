@@ -3,6 +3,7 @@ import urllib.request
 import urllib.error
 
 from kindle_to_anki.anki.anki_deck import AnkiDeck
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.anki.anki_note import AnkiNote
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 from kindle_to_anki.util.paths import get_config_path
@@ -36,10 +37,10 @@ class AnkiConnect:
         self.note_type = NOTE_TYPE_NAME
 
         # Confirm AnkiConnect is reachable
-        print("\nChecking AnkiConnect reachability...")
+        get_logger().info("Checking AnkiConnect reachability...")
         if not self.is_reachable():
             raise AnkiConnectError("AnkiConnect not reachable. Is Anki running with AnkiConnect plugin?")
-        print("AnkiConnect is reachable.")
+        get_logger().info("AnkiConnect is reachable.")
 
     def _invoke(self, action, params=None):
         """Send request to AnkiConnect"""
@@ -100,7 +101,7 @@ class AnkiConnect:
     def get_notes(self, anki_deck: AnkiDeck):
         """Get all notes from the specified deck with Expression, Context_Sentence, and Definition fields"""
 
-        print(f"\nFetching notes from Anki deck: '{anki_deck.parent_deck_name}'...")
+        get_logger().info(f"Fetching notes from Anki deck: '{anki_deck.parent_deck_name}'...")
 
         try:
             # Find all note IDs in the deck with the specified note type
@@ -130,7 +131,7 @@ class AnkiConnect:
 
                 notes_data.append(note_data)
 
-            print("Notes fetch completed.")
+            get_logger().debug(f"Notes fetch completed. Found {len(notes_data)} notes.")
 
             return notes_data
 
@@ -139,7 +140,7 @@ class AnkiConnect:
 
     def create_notes_batch(self, anki_deck: AnkiDeck, anki_notes: list[AnkiNote]):
         """Create multiple notes in Anki from a list of AnkiNote objects"""
-        print(f"\nCreating {len(anki_notes)} notes in Anki...")
+        get_logger().info(f"Creating {len(anki_notes)} notes in Anki...")
         try:
             notes_data = []
 
@@ -183,14 +184,13 @@ class AnkiConnect:
 
             # Use addNotes action for batch creation
             result = self._invoke("addNotes", {"notes": notes_data})
-            print("Notes creation completed.")
+            get_logger().info("Notes creation completed.")
             return result  # Returns list of note IDs (or null for failed notes)
 
         except Exception as e:
             error_str = str(e)
             if "model was not found" in error_str:
-                print(f"\nError: Note type '{self.note_type}' not found in Anki.")
-                print("Run 'py -m kindle_to_anki.anki.setup_note_type' to create it.")
+                get_logger().error(f"Note type '{self.note_type}' not found in Anki. Run 'py -m kindle_to_anki.anki.setup_note_type' to create it.")
                 exit(1)
             raise Exception(f"Failed to create notes batch: {e}")
 

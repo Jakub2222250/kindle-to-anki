@@ -1,6 +1,7 @@
 import time
 
 from kindle_to_anki.anki.anki_note import AnkiNote
+from kindle_to_anki.logging import get_logger
 from thefuzz import fuzz
 
 from kindle_to_anki.caching.pruning_cache import PruningCache
@@ -9,13 +10,13 @@ from kindle_to_anki.caching.pruning_cache import PruningCache
 def prune_notes_identified_as_redundant(notes: list[AnkiNote], cache_suffix: str):
     """Remove notes that were previously identified as redundant based on cached results"""
 
-    print("\nPruning notes previously identified as redundant...")
+    get_logger().info("Pruning notes previously identified as redundant...")
 
     if len(notes) == 0:
         return notes
 
     cache = PruningCache(cache_suffix=cache_suffix)
-    print(f"Loaded pruning cache with {len(cache.cache)} entries")
+    get_logger().debug(f"Loaded pruning cache with {len(cache.cache)} entries")
 
     # Filter out notes that are cached as redundant
     non_redundant_notes = []
@@ -25,11 +26,11 @@ def prune_notes_identified_as_redundant(notes: list[AnkiNote], cache_suffix: str
         cached_result = cache.get(note.uid)
         if cached_result and cached_result.get('is_redundant', False):
             cached_redundant_count += 1
-            print(f"  Pruning cached redundant note: {note.expression}")
+            get_logger().debug(f"  Pruning cached redundant note: {note.expression}")
         else:
             non_redundant_notes.append(note)
 
-    print(f"Pruned {cached_redundant_count} notes previously identified as redundant")
+    get_logger().info(f"Pruned {cached_redundant_count} notes previously identified as redundant")
 
     return non_redundant_notes
 
@@ -37,7 +38,7 @@ def prune_notes_identified_as_redundant(notes: list[AnkiNote], cache_suffix: str
 def prune_existing_notes_by_UID(notes: list[AnkiNote], existing_notes: list[dict]):
     """Remove notes that already exist in Anki based on UID"""
 
-    print("\nPruning notes that already exist in Anki based on UID...")
+    get_logger().info("Pruning notes that already exist in Anki based on UID...")
 
     if len(notes) == 0:
         return notes
@@ -48,7 +49,7 @@ def prune_existing_notes_by_UID(notes: list[AnkiNote], existing_notes: list[dict
     new_notes = [note for note in notes if note.uid not in existing_uids]
 
     pruned_count = len(notes) - len(new_notes)
-    print(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
+    get_logger().info(f"Pruned {pruned_count} notes that already exist in Anki (based on UID)")
 
     return new_notes
 
@@ -61,7 +62,7 @@ def prune_existing_notes_by_expression(notes: list[AnkiNote], existing_notes: li
     if len(notes) == 0:
         return notes
 
-    print("\nChecking for notes with existing expressions in Anki...")
+    get_logger().info("Checking for notes with existing expressions in Anki...")
 
     existing_expressions = {note['Expression'] for note in existing_notes if note['Expression']}
     new_notes_that_are_duplicates = [note for note in notes if note.expression in existing_expressions]
@@ -69,14 +70,14 @@ def prune_existing_notes_by_expression(notes: list[AnkiNote], existing_notes: li
 
     if num_of_new_notes_that_are_duplicates > 0:
         for note in new_notes_that_are_duplicates:
-            print(f"  Found existing expression in Anki: {note.expression}")
+            get_logger().debug(f"  Found existing expression in Anki: {note.expression}")
 
         response = input(f"Process {num_of_new_notes_that_are_duplicates} notes with existing expressions? (Y/n): ").strip().lower()
         if response != 'y' and response != 'yes':
-            print(f"Skipping {num_of_new_notes_that_are_duplicates} notes with existing expressions.")
+            get_logger().info(f"Skipping {num_of_new_notes_that_are_duplicates} notes with existing expressions.")
             notes = [note for note in notes if note.expression not in existing_expressions]
     else:
-        print("No notes with existing expressions found in Anki.")
+        get_logger().debug("No notes with existing expressions found in Anki.")
 
     return notes
 
@@ -90,7 +91,7 @@ def prune_new_notes_against_eachother(notes: list[AnkiNote]):
     """Gather groups of notes with the same Expression, Part_Of_Speech, and similar Definition to prune duplicates among new notes.
        Choose the note with the highest cloze_deletion_score value, or the longest context_sentence, or the first one as a tiebreaker."""
 
-    print("\nPruning duplicate notes among new notes based on Expression, Part_Of_Speech, and Definition similarity...")
+    get_logger().info("Pruning duplicate notes among new notes based on Expression, Part_Of_Speech, and Definition similarity...")
 
     if len(notes) == 0:
         return notes
@@ -145,7 +146,7 @@ def prune_new_notes_against_eachother(notes: list[AnkiNote]):
                 pruned_notes.append(best_note)
 
     pruned_count = len(notes) - len(pruned_notes)
-    print(f"Pruned {pruned_count} duplicate notes among new notes based on similarity.")
+    get_logger().info(f"Pruned {pruned_count} duplicate notes among new notes based on similarity.")
 
     return pruned_notes
 
@@ -173,7 +174,7 @@ def choose_best_note(notes: list[AnkiNote]) -> AnkiNote:
 
 def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: list[dict], cache_suffix: str):
 
-    print("\nAutomatically pruning notes redundant to existing Anki notes based on Expression, Part_Of_Speech, and Definition similarity...")
+    get_logger().info("Automatically pruning notes redundant to existing Anki notes based on Expression, Part_Of_Speech, and Definition similarity...")
 
     # Initialize cache
     cache = PruningCache(cache_suffix=cache_suffix)
@@ -192,7 +193,7 @@ def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: li
                 if similarity_factor > 45:
                     is_redundant = True
                     matched_expression = existing_note['Expression']
-                    print(f"Note for {note.expression} detected as redundant due to high similarity_factor ({similarity_factor}%) with existing note.")
+                    get_logger().debug(f"Note for {note.expression} detected as redundant due to high similarity_factor ({similarity_factor}%) with existing note.")
                     break
 
         # Cache the result
@@ -203,9 +204,6 @@ def prune_existing_notes_automatically(notes: list[AnkiNote], existing_notes: li
 
     pruned_count = len(notes) - len(pruned_notes)
 
-    print(f"Skipping {pruned_count} redundant notes based on Expression, Part_Of_Speech, and Definition similarity.")
+    get_logger().info(f"Skipping {pruned_count} redundant notes based on Expression, Part_Of_Speech, and Definition similarity.")
 
     return pruned_notes
-
-
-
