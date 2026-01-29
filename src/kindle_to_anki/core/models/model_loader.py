@@ -12,7 +12,7 @@ from .modelspec import ModelSpec
 def get_models_config_path() -> Path:
     """Get models.yaml path, handling both development and PyInstaller frozen builds."""
     if getattr(sys, 'frozen', False):
-        return Path(sys.executable).parent / "config" / "models.yaml"
+        return Path(sys.executable).parent / "data" / "config" / "models.yaml"
     else:
         return Path(__file__).parent.parent.parent.parent.parent / "data" / "config" / "models.yaml"
 
