@@ -5,7 +5,7 @@ from kindle_to_anki.platforms.gemini_platform import GeminiPlatform
 from kindle_to_anki.platforms.deepl_platform import DeepLPlatform
 
 from kindle_to_anki.core.models.registry import ModelRegistry
-from kindle_to_anki.core.models import models
+from kindle_to_anki.core.models.model_loader import load_models_from_yaml
 
 from kindle_to_anki.core.runtimes.runtime_registry import RuntimeRegistry
 from kindle_to_anki.tasks.lui.runtime_chat_completion import ChatCompletionLUI
@@ -30,14 +30,8 @@ def bootstrap_platform_registry():
 
 
 def bootstrap_model_registry():
-    ModelRegistry.register(models.GPT_5_1)
-    ModelRegistry.register(models.GPT_5_MINI)
-    ModelRegistry.register(models.GROK_4)
-    ModelRegistry.register(models.GROK_3_MINI)
-    ModelRegistry.register(models.GEMINI_3_FLASH)
-    ModelRegistry.register(models.GEMINI_3_PRO)
-    ModelRegistry.register(models.GEMINI_2_5_FLASH)
-    ModelRegistry.register(models.GEMINI_2_0_FLASH)
+    for model in load_models_from_yaml():
+        ModelRegistry.register(model)
 
 
 def bootstrap_runtime_registry():
