@@ -6,6 +6,7 @@ from kindle_to_anki.core.pricing.usage_scope import UsageScope
 from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
 from kindle_to_anki.core.pricing.character_pricing_policy import CharacterPricingPolicy
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.logging import get_logger
 
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from kindle_to_anki.tasks.translation.schema import TranslationInput, TranslationOutput
