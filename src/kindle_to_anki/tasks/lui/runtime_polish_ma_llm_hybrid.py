@@ -3,6 +3,7 @@ from typing import List
 
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
 from kindle_to_anki.core.models.registry import ModelRegistry
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.platforms.platform_registry import PlatformRegistry
 from .schema import LUIInput, LUIOutput
 from .pl_en.ma_polish_hybrid_llm import update_notes_with_llm
@@ -57,7 +58,7 @@ class PolishMALLMHybridLUI:
         except ImportError:
             raise ImportError("morfeusz2 library is required for Polish morphological analysis. Please install it via 'pip install morfeusz2'.")
 
-        print(f"\nStarting Polish MA+LLM hybrid lexical unit identification for {len(lui_inputs)} items...")
+        get_logger().info(f"Starting Polish MA+LLM hybrid lexical unit identification for {len(lui_inputs)} items...")
 
         morf = morfeusz2.Morfeusz()
 
@@ -90,7 +91,7 @@ class PolishMALLMHybridLUI:
             else:
                 notes_requiring_llm_ma.append(note)
 
-        print(f"{num_notes_not_requiring_llm_ma} notes did not require LLM MA processing.")
+        get_logger().info(f"{num_notes_not_requiring_llm_ma} notes did not require LLM MA processing.")
 
         # Process complex cases with LLM
         if len(notes_requiring_llm_ma) > 0:
@@ -104,7 +105,7 @@ class PolishMALLMHybridLUI:
                     model = ModelRegistry.get("openai", config.model_id)
                     platform = PlatformRegistry.get(model.platform)
                 except KeyError:
-                    print(f"Warning: Model {config.model_id} not found in registry, falling back to defaults")
+                    get_logger().warning(f"Model {config.model_id} not found in registry, falling back to defaults")
 
             cache_suffix = 'pl-en_hybrid'
             if use_test_cache:

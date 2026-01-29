@@ -5,6 +5,7 @@ from kindle_to_anki.core.pricing.usage_dimension import UsageDimension
 from kindle_to_anki.core.pricing.usage_scope import UsageScope
 from kindle_to_anki.core.pricing.usage_breakdown import UsageBreakdown
 from kindle_to_anki.core.runtimes.runtime_config import RuntimeConfig
+from kindle_to_anki.logging import get_logger
 
 from .schema import TranslationInput, TranslationOutput
 from kindle_to_anki.caching.translation_cache import TranslationCache
@@ -34,7 +35,7 @@ class PolishLocalTranslation:
         if not translation_inputs:
             return []
 
-        print("\nStarting Polish context translation (local MarianMT)...")
+        get_logger().info("Starting Polish context translation (local MarianMT)...")
 
         # Setup cache
         cache_suffix = "pl-en_local"
@@ -62,14 +63,14 @@ class PolishLocalTranslation:
                     inputs_needing_translation.append(translation_input)
                     outputs.append(None)  # Placeholder
 
-            print(f"Found {cached_count} cached translations, {len(inputs_needing_translation)} inputs need local translation")
+            get_logger().info(f"Found {cached_count} cached translations, {len(inputs_needing_translation)} inputs need local translation")
         else:
             inputs_needing_translation = translation_inputs
             outputs = [None] * len(translation_inputs)
-            print("Ignoring cache as per user request. Fresh translations will be generated.")
+            get_logger().debug("Ignoring cache as per user request. Fresh translations will be generated.")
 
         if not inputs_needing_translation:
-            print("Polish context translation (local MarianMT) completed (all from cache).")
+            get_logger().info("Polish context translation (local MarianMT) completed (all from cache).")
             return [output for output in outputs if output is not None]
 
         # Process inputs in batches
@@ -93,7 +94,7 @@ class PolishLocalTranslation:
             else:
                 translated_outputs.append(output)
 
-        print("Polish context translation (local MarianMT) completed.")
+        get_logger().info("Polish context translation (local MarianMT) completed.")
         return translated_outputs
 
     def _process_translation_batches(self, inputs_needing_translation: List[TranslationInput], cache: TranslationCache):
@@ -104,7 +105,7 @@ class PolishLocalTranslation:
 
         total_batches = (len(inputs_needing_translation) + self.batch_size - 1) // self.batch_size
 
-        print(f"Translating {len(inputs_needing_translation)} inputs using local MarianMT model...")
+        get_logger().info(f"Translating {len(inputs_needing_translation)} inputs using local MarianMT model...")
 
         # Import transformers only when needed
         from transformers import MarianMTModel, MarianTokenizer
@@ -117,7 +118,7 @@ class PolishLocalTranslation:
             batch = inputs_needing_translation[i:i + self.batch_size]
             batch_num = (i // self.batch_size) + 1
 
-            print(f"  Processing translation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
+            get_logger().debug(f"  Processing translation batch {batch_num}/{total_batches} ({len(batch)} inputs)")
 
             # Extract texts for translation
             src_texts = [input_item.context for input_item in batch]
@@ -137,4 +138,4 @@ class PolishLocalTranslation:
                 # Save to cache
                 cache.set(input_item.uid, self.id, self.model_name, "", translation_result, processing_timestamp)
 
-                print(f"    SUCCESS - translated sentence for UID {input_item.uid}")
+                get_logger().debug(f"    SUCCESS - translated sentence for UID {input_item.uid}")

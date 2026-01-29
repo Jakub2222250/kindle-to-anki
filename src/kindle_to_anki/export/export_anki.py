@@ -1,11 +1,12 @@
 from pathlib import Path
 import datetime
 
+from kindle_to_anki.logging import get_logger
 from kindle_to_anki.util.paths import get_outputs_dir
 
 
 def write_anki_import_file(notes, language):
-    print("\nWriting Anki import file...")
+    get_logger().info("Writing Anki import file...")
 
     outputs_dir = get_outputs_dir()
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -20,4 +21,4 @@ def write_anki_import_file(notes, language):
         for note in notes:
             f.write(note.to_csv_line())
 
-    print(f"Created Anki import file with {len(notes)} records at {anki_path}")
+    get_logger().info(f"Created Anki import file with {len(notes)} records at {anki_path}")
