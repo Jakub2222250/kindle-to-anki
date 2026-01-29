@@ -1034,10 +1034,15 @@ class ExportView(ctk.CTkFrame):
 
     def _log(self, message: str):
         """Append message to the log textbox."""
-        self.log_textbox.configure(state="normal")
-        self.log_textbox.insert("end", message + "\n")
-        self.log_textbox.see("end")
-        self.log_textbox.configure(state="disabled")
+        try:
+            if not self.winfo_exists():
+                return
+            self.log_textbox.configure(state="normal")
+            self.log_textbox.insert("end", message + "\n")
+            self.log_textbox.see("end")
+            self.log_textbox.configure(state="disabled")
+        except Exception:
+            pass  # Widget destroyed
 
     def _update_progress(self, step: int, total: int, status: str, detail: str = ""):
         """Update progress bar and status labels."""

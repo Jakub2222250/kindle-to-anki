@@ -1,12 +1,10 @@
 # platforms/gemini_platform.py
 import os
 import time
-import logging
+from kindle_to_anki.logging import get_logger
 from google import genai
 
 from .chat_completion_platform import ChatCompletionPlatform
-
-logger = logging.getLogger(__name__)
 
 # Track last 429 time per model for rate limiting
 _rate_limit_tracker: dict[str, float] = {}
@@ -41,7 +39,7 @@ class GeminiPlatform(ChatCompletionPlatform):
             elapsed = time.time() - last_429_time
             remaining = RATE_LIMIT_COOLDOWN_SECONDS - elapsed
             if remaining > 0:
-                logger.info(f"Rate limit cooldown: waiting {remaining:.1f}s for {model}")
+                get_logger().info(f"Rate limit cooldown: waiting {remaining:.1f}s for {model}")
                 time.sleep(remaining)
             del _rate_limit_tracker[model]
 
@@ -62,7 +60,7 @@ class GeminiPlatform(ChatCompletionPlatform):
             err_str = str(e)
             if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
                 _rate_limit_tracker[model] = time.time()
-                logger.warning(f"Rate limit hit (429) for {model}, will cooldown on next call")
+                get_logger().warning(f"Rate limit hit (429) for {model}, will cooldown on next call")
             raise
 
     def validate_credentials(self):

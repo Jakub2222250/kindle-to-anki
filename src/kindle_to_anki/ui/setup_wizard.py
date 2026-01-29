@@ -47,15 +47,37 @@ PROVIDER_INFO = {
     "deepl": ("DeepL", "DEEPL_API_KEY", "https://www.deepl.com/your-account/keys"),
 }
 
-DEFAULT_TASK_SETTINGS = {
-    "lui": {"runtime": "chat_completion_lui", "model_id": "gemini-2.5-flash", "batch_size": 30},
-    "wsd": {"runtime": "chat_completion_wsd", "model_id": "gemini-2.5-flash", "batch_size": 30},
-    "hint": {"enabled": True, "runtime": "chat_completion_hint", "model_id": "gemini-2.5-flash", "batch_size": 30},
-    "cloze_scoring": {"enabled": True, "runtime": "chat_completion_cloze_scoring", "model_id": "gemini-2.5-flash", "batch_size": 30},
-    "usage_level": {"enabled": True, "runtime": "chat_completion_usage_level", "model_id": "gemini-2.5-flash", "batch_size": 30},
-    "translation": {"runtime": "chat_completion_translation", "model_id": "gemini-2.5-flash", "batch_size": 30},
-    "collocation": {"enabled": True, "runtime": "chat_completion_collocation", "model_id": "gemini-2.0-flash", "batch_size": 30}
-}
+# Preferred models for different task types (validated against models.yaml at runtime)
+_PREFERRED_MODEL_FLASH = "gemini-3-flash-preview"  # lui, wsd, translation, hint
+_PREFERRED_MODEL_SCORING = "gemini-2.5-flash"      # cloze_scoring, usage_level, collocation
+
+
+def _get_validated_model(preferred: str) -> str:
+    """Return preferred model if it exists in registry, else first available model."""
+    from kindle_to_anki.core.models.model_loader import load_models_from_yaml
+    try:
+        models = load_models_from_yaml()
+        model_ids = {m.id for m in models}
+        if preferred in model_ids:
+            return preferred
+        return models[0].id if models else preferred
+    except Exception:
+        return preferred
+
+
+def get_default_task_settings() -> dict:
+    """Get default task settings with validated model IDs."""
+    flash_model = _get_validated_model(_PREFERRED_MODEL_FLASH)
+    scoring_model = _get_validated_model(_PREFERRED_MODEL_SCORING)
+    return {
+        "lui": {"runtime": "chat_completion_lui", "model_id": flash_model, "batch_size": 30},
+        "wsd": {"runtime": "chat_completion_wsd", "model_id": flash_model, "batch_size": 30},
+        "hint": {"enabled": True, "runtime": "chat_completion_hint", "model_id": flash_model, "batch_size": 30},
+        "cloze_scoring": {"enabled": True, "runtime": "chat_completion_cloze_scoring", "model_id": scoring_model, "batch_size": 30},
+        "usage_level": {"enabled": True, "runtime": "chat_completion_usage_level", "model_id": scoring_model, "batch_size": 30},
+        "translation": {"runtime": "chat_completion_translation", "model_id": flash_model, "batch_size": 30},
+        "collocation": {"enabled": True, "runtime": "chat_completion_collocation", "model_id": scoring_model, "batch_size": 30}
+    }
 
 
 def load_config() -> dict:
@@ -761,7 +783,7 @@ class SetupWizardFrame(ctk.CTkFrame):
             "target_language_code": target_code,
             "parent_deck_name": parent_deck,
             "staging_deck_name": import_deck,
-            "task_settings": DEFAULT_TASK_SETTINGS.copy()
+            "task_settings": get_default_task_settings()
         }
 
         config["anki_decks"].append(new_deck)
@@ -994,7 +1016,7 @@ class AddDeckDialog(ctk.CTkToplevel):
             "target_language_code": target_code,
             "parent_deck_name": parent_deck,
             "staging_deck_name": import_deck,
-            "task_settings": DEFAULT_TASK_SETTINGS.copy()
+            "task_settings": get_default_task_settings()
         }
         config["anki_decks"].append(new_deck)
         save_config(config)
