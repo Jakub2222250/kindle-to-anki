@@ -32,12 +32,34 @@ class MetadataManager:
 
         print(f"Metadata saved to {self.metadata_path}")
 
-    def save_latest_vocab_builder_entry_timestamp(self, max_timestamp: datetime, metadata):
-        """Save the max timestamp from current import for future incremental imports"""
+    def _get_deck_key(self, source_language_code: str, target_language_code: str) -> str:
+        """Get the unique key for a deck based on language pair."""
+        return f"{source_language_code}-{target_language_code}"
+
+    def get_last_vocab_timestamp(self, source_language_code: str, target_language_code: str) -> datetime | None:
+        """Get the last vocab entry timestamp for a specific deck."""
+        metadata = self.load_metadata()
+
+        deck_key = self._get_deck_key(source_language_code, target_language_code)
+        deck_timestamps = metadata.get("deck_timestamps", {})
+        if deck_key in deck_timestamps:
+            return datetime.fromisoformat(deck_timestamps[deck_key])
+
+        return None
+
+    def save_latest_vocab_builder_entry_timestamp(self, max_timestamp: datetime, metadata, 
+                                                  source_language_code: str, 
+                                                  target_language_code: str):
+        """Save the max timestamp from current import for future incremental imports."""
         max_iso_timestamp = max_timestamp.isoformat()
 
         print(f"\nMax timestamp from this import: {max_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
-        metadata['last_vocab_entry_timestamp'] = max_iso_timestamp
+        deck_key = self._get_deck_key(source_language_code, target_language_code)
+        if "deck_timestamps" not in metadata:
+            metadata["deck_timestamps"] = {}
+        metadata["deck_timestamps"][deck_key] = max_iso_timestamp
+        print(f"Timestamp saved for deck {deck_key}.")
+
         self.save_metadata(metadata)
-        print("Timestamp saved. Future runs will offer to import only newer notes.")
+        print("Future runs will offer to import only newer notes.")

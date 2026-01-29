@@ -36,7 +36,8 @@ class ConfigManager:
                     target_language_code=deck_config['target_language_code'],
                     parent_deck_name=deck_config['parent_deck_name'],
                     staging_deck_name=deck_config['staging_deck_name'],
-                    task_settings=deck_config.get('task_settings', {})
+                    task_settings=deck_config.get('task_settings', {}),
+                    preview_options=deck_config.get('preview_options')
                 )
                 anki_decks_list.append(deck)
 
@@ -53,3 +54,21 @@ class ConfigManager:
         if deck:
             return deck.get_task_setting(task_name)
         return {}
+
+    def save_preview_options(self, source_language_code: str, preview_options: dict):
+        """Save preview options for a deck to the config file."""
+        config_data = self.load_config_data()
+
+        for deck_config in config_data['anki_decks']:
+            if deck_config['source_language_code'] == source_language_code:
+                deck_config['preview_options'] = preview_options
+                break
+
+        with open(self._config_path, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=2, ensure_ascii=False)
+
+        # Update cached deck object
+        if self._anki_decks_by_source_language:
+            deck = self._anki_decks_by_source_language.get(source_language_code)
+            if deck:
+                deck.preview_options = preview_options

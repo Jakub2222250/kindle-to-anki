@@ -256,11 +256,16 @@ def export_kindle_vocab(log_level: LogLevel = LogLevel.INFO):
         anki_connect_instance.create_notes_batch(anki_deck, notes)
         sleep(SLEEP_TIME)  # Opportunity to read output
 
-    # Save timestamp for future incremental imports
-    if latest_candidate_timestamp:
-        metadata_manager = MetadataManager()
-        metadata = metadata_manager.load_metadata()
-        metadata_manager.save_latest_vocab_builder_entry_timestamp(latest_candidate_timestamp, metadata)
+        # Save per-deck timestamp for future incremental imports
+        if latest_candidate_timestamp:
+            metadata_manager = MetadataManager()
+            metadata = metadata_manager.load_metadata()
+            metadata_manager.save_latest_vocab_builder_entry_timestamp(
+                latest_candidate_timestamp, 
+                metadata,
+                source_language_code=source_language_code,
+                target_language_code=target_language_code
+            )
 
     logger.info("Kindle to Anki export process completed successfully.")
 
