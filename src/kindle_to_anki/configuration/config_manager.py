@@ -36,6 +36,7 @@ class ConfigManager:
                     target_language_code=deck_config['target_language_code'],
                     parent_deck_name=deck_config['parent_deck_name'],
                     staging_deck_name=deck_config['staging_deck_name'],
+                    ready_deck_name=deck_config.get('ready_deck_name'),
                     task_settings=deck_config.get('task_settings', {}),
                     preview_options=deck_config.get('preview_options')
                 )

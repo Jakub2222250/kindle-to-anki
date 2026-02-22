@@ -111,7 +111,8 @@ def add_deck(config: dict):
         "source_language_code": source,
         "target_language_code": target,
         "parent_deck_name": parent,
-        "staging_deck_name": staging
+        "staging_deck_name": staging,
+        "ready_deck_name": f"{parent}::Ready"
     }
     config["anki_decks"].append(deck)
     print(f"Added deck: {source} -> {target}")
