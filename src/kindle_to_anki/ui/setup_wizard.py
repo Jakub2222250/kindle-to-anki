@@ -797,10 +797,6 @@ class SetupWizardFrame(ctk.CTkFrame):
             messagebox.showerror("Error", "Please select valid languages.")
             return
 
-        if source_code == target_code:
-            messagebox.showerror("Error", "Source and target languages must be different.")
-            return
-
         if not parent_deck:
             messagebox.showerror("Error", "Please enter a parent deck name.")
             return
@@ -1062,9 +1058,6 @@ class AddDeckDialog(ctk.CTkToplevel):
 
         if not source_code or not target_code:
             messagebox.showerror("Error", "Please select valid languages.")
-            return
-        if source_code == target_code:
-            messagebox.showerror("Error", "Source and target languages must be different.")
             return
         if not parent_deck:
             messagebox.showerror("Error", "Please enter a parent deck name.")

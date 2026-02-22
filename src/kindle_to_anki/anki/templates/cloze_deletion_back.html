@@ -10,14 +10,14 @@
 
 <br><br>
 
-<context>{{Context_Translation}}</context>
+{{#Context_Translation}}<context>{{Context_Translation}}</context>
 
-<br><br>
+<br><br>{{/Context_Translation}}
 
-<small><b>Collocations</b>: {{Collocations}}</small>
+{{#Collocations}}<small><b>Collocations</b>: {{Collocations}}</small>
 
-<br>
-<small><b>Hint: </b> {{Original_Language_Hint}}</small>
+<br>{{/Collocations}}
+{{#Original_Language_Hint}}<small><b>Hint: </b> {{Original_Language_Hint}}</small>{{/Original_Language_Hint}}
 
 {{#Usage_Level}}<br>
 <small><b>Usage Level: </b>{{Usage_Level}}</small>{{/Usage_Level}}

@@ -60,6 +60,9 @@ RUNTIME_LANGUAGE_RESTRICTIONS = {
 
 TASK_ORDER = ["lui", "wsd", "translation", "hint", "cloze_scoring", "usage_level", "collocation", "sort_order"]
 
+# Tasks that don't apply to mono-lingual decks (same source & target language)
+MONOLINGUAL_DISABLED_TASKS = {"translation", "hint"}
+
 
 def get_runtimes_for_task(task: str, source_language_code: str = None) -> list:
     """Get available runtimes for a task, optionally filtered by language."""
@@ -106,11 +109,13 @@ class TaskConfigRow(ctk.CTkFrame):
     """A single row for configuring one task."""
 
     def __init__(self, parent, task_key: str, task_settings: dict, 
-                 source_language_code: str = None, on_change: Callable = None):
+                 source_language_code: str = None, is_monolingual: bool = False,
+                 on_change: Callable = None):
         super().__init__(parent, fg_color="transparent")
         self.task_key = task_key
         self.task_settings = task_settings
         self.source_language_code = source_language_code
+        self.is_monolingual = is_monolingual
         self.on_change = on_change
         self.metadata = TASK_METADATA.get(task_key, {})
 
@@ -242,6 +247,10 @@ class TaskConfigRow(ctk.CTkFrame):
         # Update visual state
         self._update_enabled_state()
 
+        # Force-disable tasks that don't apply to mono-lingual decks
+        if self.is_monolingual and self.task_key in MONOLINGUAL_DISABLED_TASKS:
+            self._set_monolingual_disabled()
+
     def _on_runtime_change(self, _=None):
         self._update_model_options()
         self._notify_change()
@@ -329,12 +338,26 @@ class TaskConfigRow(ctk.CTkFrame):
             self.prompt_dropdown.configure(state="disabled")
             self.batch_entry.configure(state="disabled")
 
+    def _set_monolingual_disabled(self):
+        """Fully disable this row for mono-lingual decks."""
+        self.name_label.configure(text_color="gray")
+        self.desc_label.configure(text="N/A for mono-lingual decks")
+        self.runtime_dropdown.configure(state="disabled")
+        self.model_dropdown.configure(state="disabled")
+        self.prompt_dropdown.configure(state="disabled")
+        self.batch_entry.configure(state="disabled")
+        if hasattr(self, 'enabled_cb'):
+            self.enabled_cb.configure(state="disabled")
+            self.enabled_var.set(False)
+
     def _notify_change(self):
         if self.on_change:
             self.on_change()
 
     def get_settings(self) -> dict:
         """Get current settings for this task."""
+        if self.is_monolingual and self.task_key in MONOLINGUAL_DISABLED_TASKS:
+            return {"enabled": False}
         model_val = self.model_var.get()
         prompt_val = self.prompt_var.get()
         # Only save prompt_id if it differs from the default
@@ -360,6 +383,8 @@ class TaskConfigPanel(ctk.CTkFrame):
         self.deck_config = deck_config
         self.task_settings = copy.deepcopy(deck_config.get("task_settings", {}))
         self.source_language_code = deck_config.get("source_language_code")
+        self.target_language_code = deck_config.get("target_language_code")
+        self.is_monolingual = self.source_language_code == self.target_language_code
         self.task_rows = {}
         self.on_change = on_change
 
@@ -419,6 +444,7 @@ class TaskConfigPanel(ctk.CTkFrame):
                 task_key,
                 task_settings,
                 source_language_code=self.source_language_code,
+                is_monolingual=self.is_monolingual,
                 on_change=self._on_task_change
             )
             row.pack(fill="x", pady=5)
