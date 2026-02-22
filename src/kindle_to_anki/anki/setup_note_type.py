@@ -1,10 +1,17 @@
 """Setup the required Anki note type via AnkiConnect"""
+import sys
 from pathlib import Path
 from kindle_to_anki.anki.anki_connect import AnkiConnect
 from kindle_to_anki.anki.constants import NOTE_TYPE_NAME
 
 
-TEMPLATES_DIR = Path(__file__).parent / "templates"
+def _get_templates_dir() -> Path:
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).parent / "anki" / "templates"
+    return Path(__file__).parent / "templates"
+
+
+TEMPLATES_DIR = _get_templates_dir()
 
 FIELDS = [
     "UID",

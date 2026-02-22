@@ -519,7 +519,8 @@ class SetupWizardFrame(ctk.CTkFrame):
                     anki.create_model(NOTE_TYPE_NAME, FIELDS, load_template("style.css"), get_card_templates())
                     self.after(0, lambda: self._on_note_type_setup_done(True, f"Note type '{NOTE_TYPE_NAME}' created successfully"))
             except Exception as e:
-                self.after(0, lambda: self._on_note_type_setup_done(False, str(e)))
+                msg = str(e)
+                self.after(0, lambda: self._on_note_type_setup_done(False, msg))
 
         threading.Thread(target=do_setup, daemon=True).start()
 
@@ -822,7 +823,8 @@ class SetupWizardFrame(ctk.CTkFrame):
                         anki.create_deck(deck_name)
                 self.after(0, lambda: self._on_anki_create_done(True, "Decks created in Anki"))
             except Exception as e:
-                self.after(0, lambda: self._on_anki_create_done(False, str(e)))
+                msg = str(e)
+                self.after(0, lambda: self._on_anki_create_done(False, msg))
 
         thread = threading.Thread(target=check_and_create, daemon=True)
         thread.start()

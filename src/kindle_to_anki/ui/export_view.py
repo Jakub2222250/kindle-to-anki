@@ -909,8 +909,9 @@ class ExportView(ctk.CTkFrame):
                 self.after(0, lambda m=message: self._set_collect_status(f"❌ {m}", "error"))
                 self.after(0, lambda m=message: self._log(f"[ERROR] {m}"))
         except Exception as e:
+            msg = str(e)
             self.after(0, lambda: self._set_collect_status("❌ Auto-locate failed", "error"))
-            self.after(0, lambda: self._log(f"[ERROR] Auto-locate exception: {str(e)}"))
+            self.after(0, lambda: self._log(f"[ERROR] Auto-locate exception: {msg}"))
 
     def _browse_vocab_db(self):
         """Open file dialog to browse for vocab.db."""
@@ -995,8 +996,9 @@ class ExportView(ctk.CTkFrame):
                 self.after(0, lambda: self._set_collect_status("⚠️ No new candidates found", "warning"))
                 self.after(0, lambda: self._log("[WARNING] No new candidates found in vocab.db"))
         except Exception as e:
+            msg = str(e)
             self.after(0, lambda: self._set_collect_status(f"❌ Error loading candidates", "error"))
-            self.after(0, lambda: self._log(f"[ERROR] Error loading candidates: {str(e)}"))
+            self.after(0, lambda: self._log(f"[ERROR] Error loading candidates: {msg}"))
 
     def _on_candidates_loaded(self, total_notes: int, languages: str):
         """Called when candidates are successfully loaded."""
