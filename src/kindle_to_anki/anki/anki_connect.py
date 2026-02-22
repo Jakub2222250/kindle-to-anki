@@ -119,6 +119,19 @@ class AnkiConnect:
         learning_cfg["rev"]["perDay"] = 9999
         self._invoke("saveDeckConfig", {"config": learning_cfg})
 
+    def find_cards(self, query: str) -> list[int]:
+        """Find card IDs matching an Anki search query."""
+        result = self._invoke("findCards", {"query": query})
+        return result if result else []
+
+    def get_cards_info(self, card_ids: list[int]) -> list[dict]:
+        """Get detailed info for a list of card IDs."""
+        return self._invoke("cardsInfo", {"cards": card_ids}) or []
+
+    def change_deck(self, card_ids: list[int], deck_name: str):
+        """Move cards to a different deck."""
+        self._invoke("changeDeck", {"cards": card_ids, "deck": deck_name})
+
     def create_model(self, model_name, fields, css, card_templates):
         """Create a new note type/model"""
         return self._invoke("createModel", {

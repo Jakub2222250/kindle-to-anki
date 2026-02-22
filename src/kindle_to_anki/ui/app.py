@@ -4,6 +4,7 @@ from kindle_to_anki import __version__
 from kindle_to_anki.ui.setup_wizard import SetupWizardFrame
 from kindle_to_anki.ui.export_view import ExportView
 from kindle_to_anki.ui.update_notes_view import UpdateNotesView
+from kindle_to_anki.ui.schedule_view import ScheduleView
 
 
 class KindleToAnkiApp(ctk.CTk, TkinterDnD.DnDWrapper):
@@ -80,6 +81,16 @@ class KindleToAnkiApp(ctk.CTk, TkinterDnD.DnDWrapper):
         )
         self.update_btn.pack(pady=10)
 
+        # Schedule Cards button
+        self.schedule_btn = ctk.CTkButton(
+            self.buttons_frame,
+            text="Schedule Cards",
+            width=200,
+            height=40,
+            command=self._on_schedule
+        )
+        self.schedule_btn.pack(pady=10)
+
         # Status label
         self.status_label = ctk.CTkLabel(
             self.main_frame,
@@ -111,6 +122,14 @@ class KindleToAnkiApp(ctk.CTk, TkinterDnD.DnDWrapper):
         self.update_notes_frame = UpdateNotesView(self, on_back=self._show_main_view)
         self.update_notes_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.current_frame = self.update_notes_frame
+
+    def _on_schedule(self):
+        if self.current_frame:
+            self.current_frame.destroy()
+
+        self.schedule_frame = ScheduleView(self, on_back=self._show_main_view)
+        self.schedule_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.current_frame = self.schedule_frame
 
 
 def main():
