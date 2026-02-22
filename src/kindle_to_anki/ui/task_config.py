@@ -58,7 +58,7 @@ RUNTIME_LANGUAGE_RESTRICTIONS = {
     "polish_local_translation": ["pl"],
 }
 
-TASK_ORDER = ["lui", "wsd", "translation", "hint", "cloze_scoring", "usage_level", "collocation", "sort_order"]
+TASK_ORDER = ["lui", "wsd", "translation", "hint", "cloze_scoring", "usage_level", "collocation"]
 
 # Tasks that don't apply to mono-lingual decks (same source & target language)
 MONOLINGUAL_DISABLED_TASKS = {"translation", "hint"}

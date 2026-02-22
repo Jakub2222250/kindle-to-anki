@@ -791,7 +791,7 @@ class ExportView(ctk.CTkFrame):
                 continue
 
             # Check if task is enabled (some are optional)
-            if task in ["hint", "cloze_scoring", "usage_level", "collocation"]:
+            if task in ["hint", "cloze_scoring", "usage_level", "collocation", "translation"]:
                 if not setting.get("enabled", True):
                     continue
 
@@ -1290,24 +1290,25 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 10: Translation
-            self.after(0, lambda: self._update_progress(10, total_steps, "Translating...", ""))
+            # Step 10: Translation (skip for mono-lingual decks)
             translation_setting = anki_deck.get_task_setting("translation")
-            translation_prompt_id = translation_setting.get("prompt_id") or get_default_prompt_id("translation")
-            translation_provider.translate(
-                notes=notes,
-                runtime_choice=translation_setting["runtime"],
-                runtime_config=RuntimeConfig(
-                    model_id=translation_setting["model_id"],
-                    batch_size=translation_setting["batch_size"],
-                    source_language_code=source_language_code,
-                    target_language_code=target_language_code,
-                    prompt_id=translation_prompt_id
-                ),
-                ignore_cache=False,
-                use_test_cache=False,
-                cancellation_token=self._cancellation_token
-            )
+            if translation_setting.get("enabled", True):
+                self.after(0, lambda: self._update_progress(10, total_steps, "Translating...", ""))
+                translation_prompt_id = translation_setting.get("prompt_id") or get_default_prompt_id("translation")
+                translation_provider.translate(
+                    notes=notes,
+                    runtime_choice=translation_setting["runtime"],
+                    runtime_config=RuntimeConfig(
+                        model_id=translation_setting["model_id"],
+                        batch_size=translation_setting["batch_size"],
+                        source_language_code=source_language_code,
+                        target_language_code=target_language_code,
+                        prompt_id=translation_prompt_id
+                    ),
+                    ignore_cache=False,
+                    use_test_cache=False,
+                    cancellation_token=self._cancellation_token
+                )
 
             if not self.is_running:
                 return
