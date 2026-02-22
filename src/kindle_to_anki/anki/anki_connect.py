@@ -89,6 +89,49 @@ class AnkiConnect:
         result = self._invoke("createDeck", {"deck": deck_name})
         return result is not None
 
+    def setup_deck_options(self, parent_deck: str, import_deck: str, ready_deck: str):
+        """Configure deck options: Ready for learning (20 new/day, 9999 reviews), parent+import for no reviews."""
+        default_config = self._invoke("getDeckConfig", {"deck": parent_deck})
+        default_id = default_config["id"]
+
+        # Create separate option groups so we don't affect other decks
+        learning_id = self._invoke("cloneDeckConfigId", {
+            "name": f"{parent_deck} - Learning",
+            "cloneFrom": default_id
+        })
+        no_review_id = self._invoke("cloneDeckConfigId", {
+            "name": f"{parent_deck} - No Reviews",
+            "cloneFrom": default_id
+        })
+
+        self._invoke("setDeckConfigId", {"decks": [parent_deck, import_deck], "configId": no_review_id})
+        self._invoke("setDeckConfigId", {"decks": [ready_deck], "configId": learning_id})
+
+        # Configure no-review decks (parent + import)
+        no_review_cfg = self._invoke("getDeckConfig", {"deck": parent_deck})
+        no_review_cfg["new"]["perDay"] = 0
+        no_review_cfg["rev"]["perDay"] = 0
+        self._invoke("saveDeckConfig", {"config": no_review_cfg})
+
+        # Configure Ready deck for learning
+        learning_cfg = self._invoke("getDeckConfig", {"deck": ready_deck})
+        learning_cfg["new"]["perDay"] = 20
+        learning_cfg["rev"]["perDay"] = 9999
+        self._invoke("saveDeckConfig", {"config": learning_cfg})
+
+    def find_cards(self, query: str) -> list[int]:
+        """Find card IDs matching an Anki search query."""
+        result = self._invoke("findCards", {"query": query})
+        return result if result else []
+
+    def get_cards_info(self, card_ids: list[int]) -> list[dict]:
+        """Get detailed info for a list of card IDs."""
+        return self._invoke("cardsInfo", {"cards": card_ids}) or []
+
+    def change_deck(self, card_ids: list[int], deck_name: str):
+        """Move cards to a different deck."""
+        self._invoke("changeDeck", {"cards": card_ids, "deck": deck_name})
+
     def create_model(self, model_name, fields, css, card_templates):
         """Create a new note type/model"""
         return self._invoke("createModel", {

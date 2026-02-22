@@ -612,6 +612,27 @@ class SetupWizardFrame(ctk.CTkFrame):
         )
         self.import_deck_entry.pack(anchor="w", pady=(0, 10))
 
+        # Auto-name ready deck checkbox
+        self.auto_ready_var = ctk.BooleanVar(value=True)
+        self.auto_ready_checkbox = ctk.CTkCheckBox(
+            add_frame,
+            text="Auto-name ready deck (Parent::Ready)",
+            variable=self.auto_ready_var,
+            command=self._on_auto_ready_toggle
+        )
+        self.auto_ready_checkbox.pack(anchor="w", pady=(0, 5))
+
+        # Ready deck name (readonly by default when auto-naming)
+        ctk.CTkLabel(add_frame, text="Ready Deck Name:").pack(anchor="w")
+        self.ready_deck_var = ctk.StringVar(value="Polish Vocab Discovery::Ready")
+        self.ready_deck_entry = ctk.CTkEntry(
+            add_frame,
+            textvariable=self.ready_deck_var,
+            width=250,
+            state="disabled"
+        )
+        self.ready_deck_entry.pack(anchor="w", pady=(0, 10))
+
         # Bind parent deck change to update import deck
         self.parent_deck_var.trace_add("write", self._on_parent_deck_change)
 
@@ -745,6 +766,9 @@ class SetupWizardFrame(ctk.CTkFrame):
         if hasattr(self, 'auto_import_var') and self.auto_import_var.get():
             parent = self.parent_deck_var.get()
             self.import_deck_var.set(f"{parent}::Import")
+        if hasattr(self, 'auto_ready_var') and self.auto_ready_var.get():
+            parent = self.parent_deck_var.get()
+            self.ready_deck_var.set(f"{parent}::Ready")
 
     def _on_auto_import_toggle(self):
         if self.auto_import_var.get():
@@ -753,11 +777,19 @@ class SetupWizardFrame(ctk.CTkFrame):
         else:
             self.import_deck_entry.configure(state="normal")
 
+    def _on_auto_ready_toggle(self):
+        if self.auto_ready_var.get():
+            self.ready_deck_entry.configure(state="disabled")
+            self._on_parent_deck_change()
+        else:
+            self.ready_deck_entry.configure(state="normal")
+
     def _add_deck(self):
         source_code = self.language_codes.get(self.source_lang_var.get())
         target_code = self.language_codes.get(self.target_lang_var.get())
         parent_deck = self.parent_deck_var.get().strip()
         import_deck = self.import_deck_var.get().strip()
+        ready_deck = self.ready_deck_var.get().strip()
 
         if not source_code or not target_code:
             messagebox.showerror("Error", "Please select valid languages.")
@@ -784,6 +816,7 @@ class SetupWizardFrame(ctk.CTkFrame):
             "target_language_code": target_code,
             "parent_deck_name": parent_deck,
             "staging_deck_name": import_deck,
+            "ready_deck_name": ready_deck,
             "task_settings": get_default_task_settings()
         }
 
@@ -818,10 +851,12 @@ class SetupWizardFrame(ctk.CTkFrame):
 
             try:
                 existing_decks = anki.get_deck_names()
-                for deck_name in [parent_deck, import_deck]:
+                ready_deck = f"{parent_deck}::Ready"
+                for deck_name in [parent_deck, import_deck, ready_deck]:
                     if deck_name not in existing_decks:
                         anki.create_deck(deck_name)
-                self.after(0, lambda: self._on_anki_create_done(True, "Decks created in Anki"))
+                anki.setup_deck_options(parent_deck, import_deck, ready_deck)
+                self.after(0, lambda: self._on_anki_create_done(True, "Decks created and configured in Anki"))
             except Exception as e:
                 msg = str(e)
                 self.after(0, lambda: self._on_anki_create_done(False, msg))
@@ -893,7 +928,7 @@ class AddDeckDialog(ctk.CTkToplevel):
         self._checking_connection = False
 
         self.title("Add New Deck")
-        self.geometry("350x450")
+        self.geometry("350x560")
         self.resizable(False, False)
 
         # Language options
@@ -948,6 +983,22 @@ class AddDeckDialog(ctk.CTkToplevel):
         self.import_deck_entry = ctk.CTkEntry(self, textvariable=self.import_deck_var, width=300, state="disabled")
         self.import_deck_entry.pack(padx=15, pady=(0, 10))
 
+        # Auto-name ready deck
+        self.auto_ready_var = ctk.BooleanVar(value=True)
+        self.auto_ready_checkbox = ctk.CTkCheckBox(
+            self,
+            text="Auto-name ready deck (Parent::Ready)",
+            variable=self.auto_ready_var,
+            command=self._on_auto_ready_toggle
+        )
+        self.auto_ready_checkbox.pack(anchor="w", padx=15, pady=(0, 5))
+
+        # Ready deck name
+        ctk.CTkLabel(self, text="Ready Deck Name:").pack(anchor="w", padx=15)
+        self.ready_deck_var = ctk.StringVar(value="Polish Vocab Discovery::Ready")
+        self.ready_deck_entry = ctk.CTkEntry(self, textvariable=self.ready_deck_var, width=300, state="disabled")
+        self.ready_deck_entry.pack(padx=15, pady=(0, 10))
+
         self.parent_deck_var.trace_add("write", self._on_parent_deck_change)
 
         # Create in Anki checkbox
@@ -983,6 +1034,8 @@ class AddDeckDialog(ctk.CTkToplevel):
     def _on_parent_deck_change(self, *args):
         if self.auto_import_var.get():
             self.import_deck_var.set(f"{self.parent_deck_var.get()}::Import")
+        if self.auto_ready_var.get():
+            self.ready_deck_var.set(f"{self.parent_deck_var.get()}::Ready")
 
     def _on_auto_import_toggle(self):
         if self.auto_import_var.get():
@@ -991,11 +1044,19 @@ class AddDeckDialog(ctk.CTkToplevel):
         else:
             self.import_deck_entry.configure(state="normal")
 
+    def _on_auto_ready_toggle(self):
+        if self.auto_ready_var.get():
+            self.ready_deck_entry.configure(state="disabled")
+            self._on_parent_deck_change()
+        else:
+            self.ready_deck_entry.configure(state="normal")
+
     def _add_deck(self):
         source_code = self.language_codes.get(self.source_lang_var.get())
         target_code = self.language_codes.get(self.target_lang_var.get())
         parent_deck = self.parent_deck_var.get().strip()
         import_deck = self.import_deck_var.get().strip()
+        ready_deck = self.ready_deck_var.get().strip()
 
         if not source_code or not target_code:
             messagebox.showerror("Error", "Please select valid languages.")
@@ -1018,6 +1079,7 @@ class AddDeckDialog(ctk.CTkToplevel):
             "target_language_code": target_code,
             "parent_deck_name": parent_deck,
             "staging_deck_name": import_deck,
+            "ready_deck_name": ready_deck,
             "task_settings": get_default_task_settings()
         }
         config["anki_decks"].append(new_deck)
@@ -1041,9 +1103,11 @@ class AddDeckDialog(ctk.CTkToplevel):
             if connected:
                 try:
                     existing = anki.get_deck_names()
-                    for deck in [parent_deck, import_deck]:
+                    ready_deck = f"{parent_deck}::Ready"
+                    for deck in [parent_deck, import_deck, ready_deck]:
                         if deck not in existing:
                             anki.create_deck(deck)
+                    anki.setup_deck_options(parent_deck, import_deck, ready_deck)
                 except Exception:
                     pass
             self.after(0, self._finish)

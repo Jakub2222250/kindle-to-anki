@@ -6,6 +6,7 @@
       "target_language_code": "en",
       "parent_deck_name": "Spanish Vocab Discovery",
       "staging_deck_name": "Spanish Vocab Discovery::Import",
+      "ready_deck_name": "Spanish Vocab Discovery::Ready",
       "task_settings": {
         "lui": {
           "runtime": "chat_completion_lui",
