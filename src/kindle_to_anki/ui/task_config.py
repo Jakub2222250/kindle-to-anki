@@ -43,6 +43,12 @@ TASK_METADATA = {
         "name": "Collocation",
         "description": "Generates common word combinations",
         "optional": True
+    },
+    "sort_order": {
+        "name": "New Card Sort Order",
+        "description": "Recomputes sort order from usage level and timestamp",
+        "optional": True,
+        "local": True
     }
 }
 
@@ -52,7 +58,7 @@ RUNTIME_LANGUAGE_RESTRICTIONS = {
     "polish_local_translation": ["pl"],
 }
 
-TASK_ORDER = ["lui", "wsd", "translation", "hint", "cloze_scoring", "usage_level", "collocation"]
+TASK_ORDER = ["lui", "wsd", "translation", "hint", "cloze_scoring", "usage_level", "collocation", "sort_order"]
 
 
 def get_runtimes_for_task(task: str, source_language_code: str = None) -> list:

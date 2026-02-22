@@ -230,7 +230,27 @@ class AnkiNote:
         except (ValueError, TypeError):
             level = 0
         inverted = 99 - level
-        ts = self.source_timestamp.strftime("%Y%m%d%H%M%S") if self.source_timestamp else "99999999999999"
+        ts = (self.source_timestamp or datetime.now()).strftime("%Y%m%d%H%M%S")
+        return f"{inverted:02d}_{ts}"
+
+    @staticmethod
+    def compute_sort_order_from_fields(usage_level_str: str, lookup_time_str: str, fallback_ts: datetime = None) -> str:
+        """Compute sort order from Anki field string values."""
+        try:
+            level = int(usage_level_str)
+        except (ValueError, TypeError):
+            level = 0
+        inverted = 99 - level
+        ts = (fallback_ts or datetime.now()).strftime("%Y%m%d%H%M%S")
+        if lookup_time_str:
+            for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%y %H:%M:%S", "%d/%m/%Y %H:%M:%S",
+                        "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%x %X"):
+                try:
+                    dt = datetime.strptime(lookup_time_str.strip(), fmt)
+                    ts = dt.strftime("%Y%m%d%H%M%S")
+                    break
+                except ValueError:
+                    continue
         return f"{inverted:02d}_{ts}"
 
     def to_csv_line(self):

@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from datetime import datetime
 from typing import Callable, Optional
 import json
 import threading
@@ -18,6 +19,7 @@ from kindle_to_anki.tasks.collocation.schema import CollocationInput
 from kindle_to_anki.tasks.translation.schema import TranslationInput
 from kindle_to_anki.tasks.cloze_scoring.schema import ClozeScoringInput
 from kindle_to_anki.tasks.usage_level.schema import UsageLevelInput
+from kindle_to_anki.anki.anki_note import AnkiNote
 
 
 # Task configuration for building inputs and processing outputs
@@ -84,6 +86,8 @@ class UpdateTaskRow(ctk.CTkFrame):
         self._create_widgets()
 
     def _create_widgets(self):
+        self.is_local = self.metadata.get("local", False)
+
         self.grid_columnconfigure(0, weight=0, minsize=30)
         self.grid_columnconfigure(1, weight=1, minsize=160)
         self.grid_columnconfigure(2, weight=0, minsize=180)
@@ -125,6 +129,13 @@ class UpdateTaskRow(ctk.CTkFrame):
         )
         self.desc_label.pack(anchor="w")
         col += 1
+
+        if self.is_local:
+            # Local tasks: placeholder labels instead of dropdowns
+            for _ in range(4):
+                ctk.CTkLabel(self, text="—", text_color="gray").grid(row=0, column=col, padx=5, sticky="w")
+                col += 1
+            return
 
         # Runtime dropdown
         runtime_ids = [rt.id for rt in self.available_runtimes]
@@ -232,6 +243,10 @@ class UpdateTaskRow(ctk.CTkFrame):
             self._update_enabled_state()
 
     def _on_enabled_change(self):
+        if self.is_local:
+            enabled = self.enabled_var.get()
+            self.name_label.configure(text_color=("gray10", "gray90") if enabled else "gray")
+            return
         self._update_enabled_state()
 
     def _update_enabled_state(self):
@@ -272,6 +287,8 @@ class UpdateTaskRow(ctk.CTkFrame):
 
     def get_settings(self) -> dict:
         """Get current settings for this task."""
+        if self.is_local:
+            return {"enabled": self.enabled_var.get(), "local": True}
         model_val = self.model_var.get()
         prompt_val = self.prompt_var.get()
         return {
@@ -1038,37 +1055,89 @@ class UpdateNotesView(ctk.CTkFrame):
 
             self.after(0, lambda n=len(notes_to_process): self._log(f"Processing {n} notes"))
 
-            # Get runtime
-            runtime_id = settings.get("runtime")
-            runtimes = RuntimeRegistry.find_by_task_as_dict(task_key)
-            runtime = runtimes.get(runtime_id)
+            # Local tasks don't need a runtime
+            if settings.get("local"):
+                runtime = None
+                runtime_id = None
+                runtime_config = None
+            else:
+                # Get runtime
+                runtime_id = settings.get("runtime")
+                runtimes = RuntimeRegistry.find_by_task_as_dict(task_key)
+                runtime = runtimes.get(runtime_id)
 
-            if not runtime:
-                self.after(0, lambda rid=runtime_id: self._log(f"Runtime '{rid}' not found"))
-                continue
+                if not runtime:
+                    self.after(0, lambda rid=runtime_id: self._log(f"Runtime '{rid}' not found"))
+                    continue
 
-            runtime_config = RuntimeConfig(
-                model_id=settings.get("model_id"),
-                batch_size=settings.get("batch_size", 30),
-                source_language_code=deck.source_language_code,
-                target_language_code=deck.target_language_code,
-                prompt_id=settings.get("prompt_id"),
-            )
+                runtime_config = RuntimeConfig(
+                    model_id=settings.get("model_id"),
+                    batch_size=settings.get("batch_size", 30),
+                    source_language_code=deck.source_language_code,
+                    target_language_code=deck.target_language_code,
+                    prompt_id=settings.get("prompt_id"),
+                )
 
             # Run task
-            self._run_single_task(
-                task_key=task_key,
-                notes_info=notes_to_process,
-                runtime=runtime,
-                runtime_config=runtime_config,
-                anki=anki,
-                runtime_id=runtime_id,
-                batch_size=settings.get("batch_size", 30),
-                task_idx=task_idx,
-                total_tasks=total_tasks,
-            )
+            if settings.get("local"):
+                self._run_local_task(
+                    task_key=task_key,
+                    notes_info=notes_to_process,
+                    anki=anki,
+                    task_idx=task_idx,
+                    total_tasks=total_tasks,
+                )
+            else:
+                self._run_single_task(
+                    task_key=task_key,
+                    notes_info=notes_to_process,
+                    runtime=runtime,
+                    runtime_config=runtime_config,
+                    anki=anki,
+                    runtime_id=runtime_id,
+                    batch_size=settings.get("batch_size", 30),
+                    task_idx=task_idx,
+                    total_tasks=total_tasks,
+                )
 
         self.after(0, lambda: self._log("\n=== All tasks completed ==="))
+
+    def _run_local_task(self, task_key: str, notes_info: list, anki: AnkiConnect, task_idx: int, total_tasks: int):
+        """Run a local (no-runtime) task on the provided notes."""
+        if task_key == "sort_order":
+            self._run_sort_order_task(notes_info, anki, task_idx, total_tasks)
+        else:
+            self.after(0, lambda: self._log(f"Unknown local task: {task_key}"))
+
+    def _run_sort_order_task(self, notes_info: list, anki: AnkiConnect, task_idx: int, total_tasks: int):
+        """Recompute New_Card_Sort_Order for all provided notes."""
+        actions = []
+        for note in notes_info:
+            if not self.is_running:
+                return
+            fields = note.get('fields', {})
+            note_id = note.get('noteId')
+            usage_level = fields.get('Usage_Level', {}).get('value', '').strip()
+            lookup_time = fields.get('Lookup_Time', {}).get('value', '').strip()
+            # Anki note IDs encode creation time (milliseconds since epoch)
+            creation_ts = datetime.fromtimestamp(note_id / 1000) if note_id else None
+            new_value = AnkiNote.compute_sort_order_from_fields(usage_level, lookup_time, creation_ts)
+            actions.append({
+                "action": "updateNoteFields",
+                "params": {"note": {"id": note_id, "fields": {"New_Card_Sort_Order": new_value}}}
+            })
+
+        if actions:
+            try:
+                successful, errors = anki.update_notes_by_id(actions)
+                self.after(0, lambda s=successful: self._log(f"Updated {s} notes"))
+                if errors:
+                    for err in errors:
+                        self.after(0, lambda e=err: self._log(f"  Error: Note {e['note_id']}: {e['error']}"))
+            except Exception as e:
+                self.after(0, lambda ex=e: self._log(f"  Batch update failed: {ex}"))
+        else:
+            self.after(0, lambda: self._log("No notes to update"))
 
     def _run_single_task(
         self,
