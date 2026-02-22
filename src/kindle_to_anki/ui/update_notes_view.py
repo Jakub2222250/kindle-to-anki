@@ -1110,7 +1110,7 @@ class UpdateNotesView(ctk.CTkFrame):
             self.after(0, lambda: self._log(f"Unknown local task: {task_key}"))
 
     def _run_sort_order_task(self, notes_info: list, anki: AnkiConnect, task_idx: int, total_tasks: int):
-        """Recompute New_Card_Sort_Order for all provided notes."""
+        """Recompute Sort_Order for all provided notes."""
         actions = []
         for note in notes_info:
             if not self.is_running:
@@ -1124,7 +1124,7 @@ class UpdateNotesView(ctk.CTkFrame):
             new_value = AnkiNote.compute_sort_order_from_fields(usage_level, lookup_time, creation_ts)
             actions.append({
                 "action": "updateNoteFields",
-                "params": {"note": {"id": note_id, "fields": {"New_Card_Sort_Order": new_value}}}
+                "params": {"note": {"id": note_id, "fields": {"Sort_Order": new_value}}}
             })
 
         if actions:

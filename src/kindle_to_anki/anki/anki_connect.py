@@ -214,7 +214,7 @@ class AnkiConnect:
                     "Raw_Context_Text": anki_note.raw_context_text,
                     "Raw_Lookup_String": anki_note.raw_lookup_string,
                     "Lookup_Time": anki_note.get_lookup_time(),
-                    "New_Card_Sort_Order": anki_note.sort_order
+                    "Sort_Order": anki_note.sort_order
                 }
 
                 note_data = {

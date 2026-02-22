@@ -38,7 +38,7 @@ FIELDS = [
     "Raw_Context_Text",
     "Raw_Lookup_String",
     "Lookup_Time",
-    "New_Card_Sort_Order",
+    "Sort_Order",
 ]
 
 CARD_TEMPLATES = [

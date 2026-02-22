@@ -528,6 +528,8 @@ class SetupWizardFrame(ctk.CTkFrame):
         self._checking_connection = False
         self.setup_note_type_btn.configure(state="normal")
         color = "green" if success else "red"
+        if success:
+            message += "\nNote: In Anki, set Sort_Order as the sort field (Fields → Sort_Order → Sort by this field)"
         self.global_status_label.configure(text=message, text_color=color)
 
     def _clear_main_container(self):
