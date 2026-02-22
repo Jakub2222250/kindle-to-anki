@@ -38,6 +38,7 @@ FIELDS = [
     "Raw_Context_Text",
     "Raw_Lookup_String",
     "Lookup_Time",
+    "Sort_Order",
 ]
 
 CARD_TEMPLATES = [

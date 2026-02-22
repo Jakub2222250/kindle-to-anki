@@ -72,6 +72,7 @@ class AnkiNote:
         self.cloze_enabled = None
         self.generation_metadata = {}
         self.usage_level = ""
+        self.sort_order = self._compute_sort_order()
 
         # Generate book abbreviation for tagging
         self.book_abbrev = self.generate_book_abbrev(self.source_book_name)
@@ -112,6 +113,7 @@ class AnkiNote:
             return
         if data.get('usage_level') is not None:
             self.usage_level = str(data['usage_level'])
+            self.sort_order = self._compute_sort_order()
 
     def generate_book_abbrev(self, book_name):
         """Generate book abbreviation for use as tag"""
@@ -220,6 +222,37 @@ class AnkiNote:
             task_meta["prompt"] = prompt_id
         self.generation_metadata[task_id] = task_meta
 
+    def _compute_sort_order(self):
+        """Compute sort order from usage_level and timestamp.
+        Lower value = higher priority. Higher usage_level cards first, then oldest first."""
+        try:
+            level = int(self.usage_level)
+        except (ValueError, TypeError):
+            level = 0
+        inverted = 99 - level
+        ts = (self.source_timestamp or datetime.now()).strftime("%Y%m%d%H%M%S")
+        return f"{inverted:02d}_{ts}"
+
+    @staticmethod
+    def compute_sort_order_from_fields(usage_level_str: str, lookup_time_str: str, fallback_ts: datetime = None) -> str:
+        """Compute sort order from Anki field string values."""
+        try:
+            level = int(usage_level_str)
+        except (ValueError, TypeError):
+            level = 0
+        inverted = 99 - level
+        ts = (fallback_ts or datetime.now()).strftime("%Y%m%d%H%M%S")
+        if lookup_time_str:
+            for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%y %H:%M:%S", "%d/%m/%Y %H:%M:%S",
+                        "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%x %X"):
+                try:
+                    dt = datetime.strptime(lookup_time_str.strip(), fmt)
+                    ts = dt.strftime("%Y%m%d%H%M%S")
+                    break
+                except ValueError:
+                    continue
+        return f"{inverted:02d}_{ts}"
+
     def to_csv_line(self):
         """Convert the note to a tab-separated CSV line"""
         return (f"{self.uid}\t"
@@ -246,4 +279,5 @@ class AnkiNote:
                 f"{self.raw_context_text}\t"
                 f"{self.raw_lookup_string}\t"
                 f"{self.get_lookup_time()}\t"
+                f"{self.sort_order}\t"
                 f"{self.tags}\n")
