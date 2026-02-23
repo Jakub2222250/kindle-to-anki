@@ -208,6 +208,7 @@ You can optionally create a `Language::Quarantine` subdeck for less relevant car
 |---------|-------|--------|
 | New cards/day | 9999 | Permissive — avoids artificially limiting child decks |
 | Max reviews/day | 9999 | Permissive — avoids artificially limiting child decks |
+| New card gather order | Ascending position | Works with `Sort_Order` to present most useful words first |
 
 **Import deck** — option group: *"Language - Staging"*
 
@@ -222,7 +223,6 @@ You can optionally create a `Language::Quarantine` subdeck for less relevant car
 |---------|-------|--------|
 | New cards/day | 20 | Sustainable pace (~1 min/day of future reviews per new card) |
 | Max reviews/day | 9999 | Never limit reviews; limiting creates a backlog |
-| New card gather order | Ascending position | Works with `Sort_Order` to present most useful words first |
 
 ### Filtering by Usage Level
 

@@ -115,6 +115,7 @@ class AnkiConnect:
         # Configure parent deck (permissive so child decks aren't artificially limited)
         parent_cfg = self._invoke("getDeckConfig", {"deck": parent_deck})
         parent_cfg["new"]["perDay"] = 9999
+        parent_cfg["newGatherPriority"] = 1  # Ascending position
         parent_cfg["rev"]["perDay"] = 9999
         self._invoke("saveDeckConfig", {"config": parent_cfg})
 
