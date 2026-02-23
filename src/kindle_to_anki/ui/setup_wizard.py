@@ -517,20 +517,31 @@ class SetupWizardFrame(ctk.CTkFrame):
                     self.after(0, lambda: self._on_note_type_setup_done(True, f"Note type '{NOTE_TYPE_NAME}' already exists"))
                 else:
                     anki.create_model(NOTE_TYPE_NAME, FIELDS, load_template("style.css"), get_card_templates())
-                    self.after(0, lambda: self._on_note_type_setup_done(True, f"Note type '{NOTE_TYPE_NAME}' created successfully"))
+                    self.after(0, lambda: self._on_note_type_setup_done(True, f"Note type '{NOTE_TYPE_NAME}' created successfully", created=True))
             except Exception as e:
                 msg = str(e)
                 self.after(0, lambda: self._on_note_type_setup_done(False, msg))
 
         threading.Thread(target=do_setup, daemon=True).start()
 
-    def _on_note_type_setup_done(self, success: bool, message: str):
+    def _on_note_type_setup_done(self, success: bool, message: str, created: bool = False):
         self._checking_connection = False
         self.setup_note_type_btn.configure(state="normal")
         color = "green" if success else "red"
-        if success:
-            message += "\nNote: In Anki, set Sort_Order as the sort field (Fields → Sort_Order → Sort by this field)"
         self.global_status_label.configure(text=message, text_color=color)
+        if created:
+            messagebox.showinfo(
+                "Manual Step Required",
+                "The note type was created, but Anki requires you to manually set the sort field.\n\n"
+                "Please do the following in Anki:\n"
+                "  1. Go to Tools → Manage Note Types\n"
+                "  2. Select the newly created note type\n"
+                "  3. Click 'Fields...'\n"
+                "  4. Select 'Sort_Order' and click 'Sort by this field...'\n\n"
+                "This is critical — the Sort_Order field is computed from each card's\n"
+                "analyzed Usage Level, and setting it as the sort field ensures new\n"
+                "cards are learned in the optimal order (most useful words first)."
+            )
 
     def _clear_main_container(self):
         for widget in self.main_container.winfo_children():
@@ -839,6 +850,10 @@ class SetupWizardFrame(ctk.CTkFrame):
         if hasattr(self, 'status_label'):
             self.status_label.configure(text="⟳ Creating decks in Anki...", text_color="gray")
 
+        def _update_status(text):
+            if hasattr(self, 'status_label'):
+                self.after(0, lambda: self.status_label.configure(text=text, text_color="gray"))
+
         def check_and_create():
             AnkiConnectionManager.reset()
             anki, is_connected = AnkiConnectionManager.get_connection()
@@ -848,13 +863,15 @@ class SetupWizardFrame(ctk.CTkFrame):
                 return
 
             try:
+                _update_status("⟳ Creating decks in Anki...")
                 existing_decks = anki.get_deck_names()
                 ready_deck = f"{parent_deck}::Ready"
                 for deck_name in [parent_deck, import_deck, ready_deck]:
                     if deck_name not in existing_decks:
                         anki.create_deck(deck_name)
+                _update_status("⟳ Applying deck settings...")
                 anki.setup_deck_options(parent_deck, import_deck, ready_deck)
-                self.after(0, lambda: self._on_anki_create_done(True, "Decks created and configured in Anki"))
+                self.after(0, lambda: self._on_anki_create_done(True, "✓ Decks created and configured in Anki"))
             except Exception as e:
                 msg = str(e)
                 self.after(0, lambda: self._on_anki_create_done(False, msg))
@@ -1092,16 +1109,21 @@ class AddDeckDialog(ctk.CTkToplevel):
         self.add_btn.configure(state="disabled")
         self.status_label.configure(text="⟳ Creating in Anki...", text_color="gray")
 
+        def _update_status(text):
+            self.after(0, lambda: self.status_label.configure(text=text, text_color="gray"))
+
         def do_create():
             AnkiConnectionManager.reset()
             anki, connected = AnkiConnectionManager.get_connection()
             if connected:
                 try:
+                    _update_status("⟳ Creating decks in Anki...")
                     existing = anki.get_deck_names()
                     ready_deck = f"{parent_deck}::Ready"
                     for deck in [parent_deck, import_deck, ready_deck]:
                         if deck not in existing:
                             anki.create_deck(deck)
+                    _update_status("⟳ Applying deck settings...")
                     anki.setup_deck_options(parent_deck, import_deck, ready_deck)
                 except Exception:
                     pass

@@ -90,7 +90,7 @@ class AnkiConnect:
         return result is not None
 
     def setup_deck_options(self, parent_deck: str, import_deck: str, ready_deck: str):
-        """Configure deck options: Ready for learning (20 new/day, 9999 reviews), parent+import for no reviews."""
+        """Configure deck options: Ready for learning (20 new/day, ascending gather, 9999 reviews), parent+import permissive (9999/9999)."""
         default_config = self._invoke("getDeckConfig", {"deck": parent_deck})
         default_id = default_config["id"]
 
@@ -107,15 +107,16 @@ class AnkiConnect:
         self._invoke("setDeckConfigId", {"decks": [parent_deck, import_deck], "configId": no_review_id})
         self._invoke("setDeckConfigId", {"decks": [ready_deck], "configId": learning_id})
 
-        # Configure no-review decks (parent + import)
+        # Configure parent + import decks (permissive limits so child decks aren't artificially limited)
         no_review_cfg = self._invoke("getDeckConfig", {"deck": parent_deck})
-        no_review_cfg["new"]["perDay"] = 0
-        no_review_cfg["rev"]["perDay"] = 0
+        no_review_cfg["new"]["perDay"] = 9999
+        no_review_cfg["rev"]["perDay"] = 9999
         self._invoke("saveDeckConfig", {"config": no_review_cfg})
 
         # Configure Ready deck for learning
         learning_cfg = self._invoke("getDeckConfig", {"deck": ready_deck})
         learning_cfg["new"]["perDay"] = 20
+        learning_cfg["newGatherPriority"] = 1  # Ascending position
         learning_cfg["rev"]["perDay"] = 9999
         self._invoke("saveDeckConfig", {"config": learning_cfg})
 

@@ -53,27 +53,18 @@ class ScheduleView(ctk.CTkFrame):
         settings_frame = ctk.CTkFrame(content, fg_color="transparent")
         settings_frame.pack(fill="x", pady=(0, 10))
 
-        ctk.CTkLabel(settings_frame, text="Usage level threshold:").pack(side="left", padx=(0, 5))
-        self.threshold_var = ctk.StringVar(value="3")
-        self.threshold_entry = ctk.CTkComboBox(
+        ctk.CTkLabel(settings_frame, text="Minimum usage level:").pack(side="left", padx=(0, 5))
+        self.min_level_var = ctk.StringVar(value="3")
+        self.min_level_entry = ctk.CTkComboBox(
             settings_frame, values=["1", "2", "3", "4", "5"],
-            variable=self.threshold_var, width=60, state="readonly"
+            variable=self.min_level_var, width=60, state="readonly"
         )
-        self.threshold_entry.pack(side="left", padx=(0, 20))
-
-        ctk.CTkLabel(settings_frame, text="Note limit (at/below threshold):").pack(side="left", padx=(0, 5))
-        self.limit_var = ctk.StringVar(value="20")
-        self.limit_entry = ctk.CTkEntry(settings_frame, textvariable=self.limit_var, width=70)
-        self.limit_entry.pack(side="left")
+        self.min_level_entry.pack(side="left")
 
         # Info text
         info = ctk.CTkLabel(
             content,
-            text=(
-                "Cards with usage level ABOVE the threshold are always moved to Ready (no limit).\n"
-                "Cards AT or BELOW the threshold are moved up to the limit, prioritized by highest usage level, then oldest first.\n"
-                "Only unsuspended cards not already in the Ready deck are considered."
-            ),
+            text="All unsuspended cards with usage level ≥ the selected value will be moved to the Ready deck.",
             font=ctk.CTkFont(size=11),
             text_color="gray",
             wraplength=650,
@@ -109,16 +100,11 @@ class ScheduleView(ctk.CTkFrame):
                 break
         return self._decks[idx] if self._decks else None
 
-    def _get_params(self):
+    def _get_min_level(self):
         try:
-            threshold = int(self.threshold_var.get())
+            return int(self.min_level_var.get())
         except ValueError:
-            threshold = 3
-        try:
-            limit = int(self.limit_var.get())
-        except ValueError:
-            limit = 20
-        return threshold, limit
+            return 3
 
     def _set_working(self, working: bool):
         self._working = working
@@ -137,8 +123,8 @@ class ScheduleView(ctk.CTkFrame):
         self.results_text.delete("1.0", "end")
         self.results_text.configure(state="disabled")
 
-    def _fetch_candidates(self, anki: AnkiConnect, deck, threshold: int, limit: int):
-        """Fetch and sort candidate notes. Returns (above_threshold, limited_below, total_notes)."""
+    def _fetch_candidates(self, anki: AnkiConnect, deck, min_level: int):
+        """Fetch candidate notes with usage_level >= min_level. Returns (candidates, total_notes)."""
         ready_deck = deck.ready_deck_name
         parent_deck = deck.parent_deck_name
 
@@ -147,7 +133,7 @@ class ScheduleView(ctk.CTkFrame):
         card_ids = anki.find_cards(query)
 
         if not card_ids:
-            return [], [], 0
+            return [], 0
 
         cards_info = anki.get_cards_info(card_ids)
 
@@ -167,35 +153,18 @@ class ScheduleView(ctk.CTkFrame):
             except (ValueError, TypeError):
                 usage_level = 0
 
-            # Note ID in Anki is epoch milliseconds — use as creation time
-            from datetime import datetime
-            try:
-                created = datetime.fromtimestamp(note_id / 1000).strftime("%Y-%m-%d %H:%M")
-            except Exception:
-                created = ""
-
             notes[note_id] = {
                 "note_id": note_id,
                 "card_ids": [card["cardId"]],
                 "expression": fields.get("Expression", {}).get("value", "").strip(),
                 "usage_level": usage_level,
-                "created": created,
             }
 
-        # Split into above/at-or-below threshold
-        above = []
-        at_or_below = []
-        for entry in notes.values():
-            if entry["usage_level"] > threshold:
-                above.append(entry)
-            else:
-                at_or_below.append(entry)
+        # Filter to notes meeting the minimum usage level
+        candidates = [n for n in notes.values() if n["usage_level"] >= min_level]
+        candidates.sort(key=lambda n: (-n["usage_level"], n["note_id"]))
 
-        # Sort at_or_below: highest usage_level first, then oldest created first
-        at_or_below.sort(key=lambda n: (-n["usage_level"], n["note_id"]))
-        limited = at_or_below[:limit]
-
-        return above, limited, len(notes)
+        return candidates, len(notes)
 
     def _preview(self):
         if self._working or not self._decks:
@@ -205,7 +174,7 @@ class ScheduleView(ctk.CTkFrame):
         if not deck:
             return
 
-        threshold, limit = self._get_params()
+        min_level = self._get_min_level()
         self._set_working(True)
         self._clear_log()
         self.status_label.configure(text="⟳ Previewing...", text_color="gray")
@@ -215,41 +184,32 @@ class ScheduleView(ctk.CTkFrame):
                 AnkiConnectionManager.reset()
                 anki, connected = AnkiConnectionManager.get_connection()
                 if not connected:
-                    self.after(0, lambda: self._on_preview_done(None, None, 0, "Cannot connect to AnkiConnect"))
+                    self.after(0, lambda: self._on_preview_done(None, 0, "Cannot connect to AnkiConnect"))
                     return
 
-                above, limited, total = self._fetch_candidates(anki, deck, threshold, limit)
-                self.after(0, lambda: self._on_preview_done(above, limited, total, None))
+                candidates, total = self._fetch_candidates(anki, deck, min_level)
+                self.after(0, lambda: self._on_preview_done(candidates, total, None))
             except Exception as e:
-                self.after(0, lambda: self._on_preview_done(None, None, 0, str(e)))
+                self.after(0, lambda: self._on_preview_done(None, 0, str(e)))
 
         threading.Thread(target=do_preview, daemon=True).start()
 
-    def _on_preview_done(self, above, limited, total, error):
+    def _on_preview_done(self, candidates, total, error):
         self._set_working(False)
         if error:
             self.status_label.configure(text=f"✗ {error}", text_color="red")
             return
 
-        to_move = len(above) + len(limited)
         self.status_label.configure(
-            text=f"Found {total} candidate notes. Will move {to_move} to Ready ({len(above)} above threshold, {len(limited)} at/below).",
+            text=f"Found {total} candidate notes. Will move {len(candidates)} to Ready (usage level ≥ {self.min_level_var.get()}).",
             text_color="green"
         )
 
-        if above:
-            self._log(f"--- Above threshold ({len(above)} notes, all moved) ---")
-            col = max(len(n['expression']) for n in above) + 4
-            for n in above:
+        if candidates:
+            col = max(len(n['expression']) for n in candidates) + 4
+            for n in candidates:
                 self._log(f"  [{n['usage_level']}] {n['expression']:<{col}}")
-
-        if limited:
-            self._log(f"\n--- At/below threshold ({len(limited)}/{self.limit_var.get()} limit) ---")
-            col = max(len(n['expression']) for n in limited) + 4
-            for n in limited:
-                self._log(f"  [{n['usage_level']}] {n['expression']:<{col}} (created: {n['created']})")
-
-        if not above and not limited:
+        else:
             self._log("No notes to schedule.")
 
     def _schedule(self):
@@ -260,7 +220,7 @@ class ScheduleView(ctk.CTkFrame):
         if not deck:
             return
 
-        threshold, limit = self._get_params()
+        min_level = self._get_min_level()
         self._set_working(True)
         self._clear_log()
         self.status_label.configure(text="⟳ Scheduling cards...", text_color="gray")
@@ -273,16 +233,15 @@ class ScheduleView(ctk.CTkFrame):
                     self.after(0, lambda: self._on_schedule_done(0, "Cannot connect to AnkiConnect"))
                     return
 
-                above, limited, total = self._fetch_candidates(anki, deck, threshold, limit)
+                candidates, total = self._fetch_candidates(anki, deck, min_level)
                 to_move_ids = []
-                for n in above + limited:
+                for n in candidates:
                     to_move_ids.extend(n["card_ids"])
 
                 if to_move_ids:
                     anki.change_deck(to_move_ids, deck.ready_deck_name)
 
-                note_count = len(above) + len(limited)
-                self.after(0, lambda: self._on_schedule_done(note_count, None))
+                self.after(0, lambda: self._on_schedule_done(len(candidates), None))
             except Exception as e:
                 self.after(0, lambda: self._on_schedule_done(0, str(e)))
 
