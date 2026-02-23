@@ -49,6 +49,12 @@ TASK_METADATA = {
         "description": "Recomputes sort order from usage level and timestamp",
         "optional": True,
         "local": True
+    },
+    "reposition": {
+        "name": "Reposition New Cards",
+        "description": "Sorts new cards by Sort_Order and moves them to Ready deck",
+        "optional": True,
+        "local": True
     }
 }
 

@@ -751,7 +751,7 @@ class UpdateNotesView(ctk.CTkFrame):
 
         bootstrap_all()
 
-        for task_key in TASK_ORDER:
+        for task_key in list(TASK_ORDER) + [k for k in TASK_METADATA if k not in TASK_ORDER]:
             task_settings = deck.get_task_setting(task_key) if deck else {}
             row = UpdateTaskRow(
                 self.task_rows_frame,
@@ -1100,17 +1100,14 @@ class UpdateNotesView(ctk.CTkFrame):
                     total_tasks=total_tasks,
                 )
 
-        # Reposition new cards if usage_level was recalculated (affects Sort_Order)
-        if "usage_level" in task_keys:
-            self.after(0, lambda: self._log("\nRepositioning new cards by Sort_Order..."))
-            anki.reposition_new_cards(deck)
-
         self.after(0, lambda: self._log("\n=== All tasks completed ==="))
 
     def _run_local_task(self, task_key: str, notes_info: list, anki: AnkiConnect, task_idx: int, total_tasks: int):
         """Run a local (no-runtime) task on the provided notes."""
         if task_key == "sort_order":
             self._run_sort_order_task(notes_info, anki, task_idx, total_tasks)
+        elif task_key == "reposition":
+            self._run_reposition_task(anki)
         else:
             self.after(0, lambda: self._log(f"Unknown local task: {task_key}"))
 
@@ -1143,6 +1140,14 @@ class UpdateNotesView(ctk.CTkFrame):
                 self.after(0, lambda ex=e: self._log(f"  Batch update failed: {ex}"))
         else:
             self.after(0, lambda: self._log("No notes to update"))
+
+    def _run_reposition_task(self, anki: AnkiConnect):
+        """Reposition new cards by Sort_Order and move to Ready deck."""
+        deck = self.get_selected_deck()
+        if not deck:
+            self.after(0, lambda: self._log("No deck selected"))
+            return
+        anki.reposition_new_cards(deck)
 
     def _run_single_task(
         self,

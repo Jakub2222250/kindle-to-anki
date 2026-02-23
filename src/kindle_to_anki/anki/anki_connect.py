@@ -146,7 +146,7 @@ class AnkiConnect:
 
     def reposition_new_cards(self, anki_deck: AnkiDeck):
         """Sort new cards in the parent deck by Sort_Order, then move them to the ready deck."""
-        new_card_ids = self.find_cards(f"deck:{anki_deck.parent_deck_name} is:new")
+        new_card_ids = self.find_cards(f'"deck:{anki_deck.parent_deck_name}" is:new')
         if not new_card_ids:
             get_logger().info("No new cards to reposition.")
             return
@@ -159,17 +159,16 @@ class AnkiConnect:
         pairs.sort(key=lambda x: x[1])
         sorted_ids = [p[0] for p in pairs]
 
-        self._invoke("reposition", {
-            "cards": sorted_ids,
-            "startingPosition": 0,
-            "step": 1,
-            "randomize": False,
-            "shiftExisting": True
-        })
+        # Set each card's due (position) value directly — AnkiConnect has no native reposition action
+        actions = [
+            {
+                "action": "setSpecificValueOfCard",
+                "params": {"card": card_id, "keys": ["due"], "newValues": [i]}
+            }
+            for i, card_id in enumerate(sorted_ids)
+        ]
+        self._invoke("multi", {"actions": actions})
         get_logger().info(f"Repositioned {len(sorted_ids)} new cards by Sort_Order.")
-
-        self.change_deck(sorted_ids, anki_deck.ready_deck_name)
-        get_logger().info(f"Moved {len(sorted_ids)} cards to '{anki_deck.ready_deck_name}'.")
 
     def create_model(self, model_name, fields, css, card_templates):
         """Create a new note type/model"""
