@@ -167,28 +167,55 @@ This interactive script lets you:
 - Preview changes before applying them
 - Update cards in batches
 
-## Anki Usage
+## Anki Configuration
 
-### Recommended Settings
+The Setup Wizard automatically creates decks and applies most settings below. Items marked ⚠️ require manual configuration in Anki.
 
-If you're new to Anki, these settings work well for vocabulary learning:
+### FSRS ⚠️
 
-1. **Enable FSRS** (modern spaced repetition algorithm):
-   - Go to deck options (gear icon next to deck) → FSRS section
-   - Enable "FSRS" toggle
-   - Click "Optimize" after you have 1000+ reviews for personalized intervals
+**FSRS** (Free Spaced Repetition Scheduler) is highly recommended over Anki's legacy SM-2 algorithm. It produces more accurate scheduling intervals based on your actual review history.
 
-2. **Daily limits** (in deck options):
-   - New cards/day: **20** (adjust based on your time—each new card adds ~1 min/day of future reviews)
-   - Maximum reviews/day: **9999** (don't limit reviews; limiting creates a backlog)
+- Go to deck options (gear icon) → scroll to **FSRS** section → enable the toggle
+- After accumulating 1000+ reviews, click **Optimize** for personalized intervals
 
-3. **Learning steps** (in deck options → New Cards):
-   - Learning steps: `1m 10m` (default is fine for most users)
-   - Graduating interval: `1` day
+### Note Type ⚠️
 
-4. **Display settings** (Tools → Preferences → Review):
-   - Show remaining card count: helpful for motivation
-   - Show next review time above buttons: helps you understand the algorithm
+The note type is created automatically via the Setup Wizard. However, the sort field must be set manually:
+
+1. Go to **Tools → Manage Note Types**
+2. Select the note type → click **Fields...**
+3. Select **Sort_Order** → click **Sort by this field...**
+
+This is critical — `Sort_Order` is computed from each card's analyzed Usage Level, ensuring new cards are presented in optimal order (most useful words first). Without this, Anki defaults to alphabetical ordering.
+
+### Deck Structure
+
+The Setup Wizard creates three decks per language:
+
+| Deck | Purpose |
+|------|---------|
+| `Language` | Parent deck — organizational container |
+| `Language::Import` | Staging area where new cards land |
+| `Language::Ready` | Vetted cards for active study |
+
+You can optionally create a `Language::Quarantine` subdeck for less relevant cards you want to learn later.
+
+### Deck Settings (applied automatically)
+
+**Parent + Import decks** — option group: *"Language - No Reviews"*
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| New cards/day | 9999 | Permissive — avoids artificially limiting child decks |
+| Max reviews/day | 9999 | Permissive — avoids artificially limiting child decks |
+
+**Ready deck** — option group: *"Language - Learning"*
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| New cards/day | 20 | Sustainable pace (~1 min/day of future reviews per new card) |
+| Max reviews/day | 9999 | Never limit reviews; limiting creates a backlog |
+| New card gather order | Ascending position | Works with `Sort_Order` to present most useful words first |
 
 ### Filtering by Usage Level
 
