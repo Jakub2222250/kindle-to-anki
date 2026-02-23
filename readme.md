@@ -202,12 +202,19 @@ You can optionally create a `Language::Quarantine` subdeck for less relevant car
 
 ### Deck Settings (applied automatically)
 
-**Parent + Import decks** — option group: *"Language - No Reviews"*
+**Parent deck** — option group: *"Language - Parent"*
 
 | Setting | Value | Reason |
 |---------|-------|--------|
 | New cards/day | 9999 | Permissive — avoids artificially limiting child decks |
 | Max reviews/day | 9999 | Permissive — avoids artificially limiting child decks |
+
+**Import deck** — option group: *"Language - Staging"*
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| New cards/day | 0 | Staging only — cards aren't studied here |
+| Max reviews/day | 0 | Staging only — cards aren't studied here |
 
 **Ready deck** — option group: *"Language - Learning"*
 

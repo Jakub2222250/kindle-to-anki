@@ -90,28 +90,39 @@ class AnkiConnect:
         return result is not None
 
     def setup_deck_options(self, parent_deck: str, import_deck: str, ready_deck: str):
-        """Configure deck options: Ready for learning (20 new/day, ascending gather, 9999 reviews), parent+import permissive (9999/9999)."""
+        """Configure deck options: parent permissive (9999/9999), import locked (0/0), ready for learning (20 new, ascending, 9999 reviews)."""
         default_config = self._invoke("getDeckConfig", {"deck": parent_deck})
         default_id = default_config["id"]
 
         # Create separate option groups so we don't affect other decks
+        parent_id = self._invoke("cloneDeckConfigId", {
+            "name": f"{parent_deck} - Parent",
+            "cloneFrom": default_id
+        })
+        staging_id = self._invoke("cloneDeckConfigId", {
+            "name": f"{parent_deck} - Staging",
+            "cloneFrom": default_id
+        })
         learning_id = self._invoke("cloneDeckConfigId", {
             "name": f"{parent_deck} - Learning",
             "cloneFrom": default_id
         })
-        no_review_id = self._invoke("cloneDeckConfigId", {
-            "name": f"{parent_deck} - No Reviews",
-            "cloneFrom": default_id
-        })
 
-        self._invoke("setDeckConfigId", {"decks": [parent_deck, import_deck], "configId": no_review_id})
+        self._invoke("setDeckConfigId", {"decks": [parent_deck], "configId": parent_id})
+        self._invoke("setDeckConfigId", {"decks": [import_deck], "configId": staging_id})
         self._invoke("setDeckConfigId", {"decks": [ready_deck], "configId": learning_id})
 
-        # Configure parent + import decks (permissive limits so child decks aren't artificially limited)
-        no_review_cfg = self._invoke("getDeckConfig", {"deck": parent_deck})
-        no_review_cfg["new"]["perDay"] = 9999
-        no_review_cfg["rev"]["perDay"] = 9999
-        self._invoke("saveDeckConfig", {"config": no_review_cfg})
+        # Configure parent deck (permissive so child decks aren't artificially limited)
+        parent_cfg = self._invoke("getDeckConfig", {"deck": parent_deck})
+        parent_cfg["new"]["perDay"] = 9999
+        parent_cfg["rev"]["perDay"] = 9999
+        self._invoke("saveDeckConfig", {"config": parent_cfg})
+
+        # Configure import deck (no new cards or reviews — staging only)
+        staging_cfg = self._invoke("getDeckConfig", {"deck": import_deck})
+        staging_cfg["new"]["perDay"] = 0
+        staging_cfg["rev"]["perDay"] = 0
+        self._invoke("saveDeckConfig", {"config": staging_cfg})
 
         # Configure Ready deck for learning
         learning_cfg = self._invoke("getDeckConfig", {"deck": ready_deck})
