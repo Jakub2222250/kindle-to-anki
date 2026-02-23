@@ -113,6 +113,8 @@ You may want to manually validate auto-generated notes before committing to lear
 
 In `config.json`, set `parent_deck_name` to your parent deck (e.g., `Polish Vocab Discovery`) and `staging_deck_name` to the import subdeck (e.g., `Polish Vocab Discovery::Import`).
 
+After card creation, new cards are automatically sorted by their `Sort_Order` field (usage level + lookup time) and moved from the Import subdeck to the Ready subdeck. This also happens in Update Notes when usage levels are recalculated.
+
 Install the **Advanced Browser** add-on (874215009) to sort by creation date and other useful fields.
 
 ## Kindle Dictionary Setup

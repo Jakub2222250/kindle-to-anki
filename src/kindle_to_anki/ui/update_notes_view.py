@@ -1100,6 +1100,11 @@ class UpdateNotesView(ctk.CTkFrame):
                     total_tasks=total_tasks,
                 )
 
+        # Reposition new cards if usage_level was recalculated (affects Sort_Order)
+        if "usage_level" in task_keys:
+            self.after(0, lambda: self._log("\nRepositioning new cards by Sort_Order..."))
+            anki.reposition_new_cards(deck)
+
         self.after(0, lambda: self._log("\n=== All tasks completed ==="))
 
     def _run_local_task(self, task_key: str, notes_info: list, anki: AnkiConnect, task_idx: int, total_tasks: int):

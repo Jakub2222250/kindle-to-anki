@@ -1348,6 +1348,9 @@ class ExportView(ctk.CTkFrame):
                        self._update_progress(total_steps, total_steps, "Saving to Anki...", slc))
             anki_connect_instance.create_notes_batch(anki_deck, notes)
 
+            # Reposition new cards by Sort_Order and move to ready deck
+            anki_connect_instance.reposition_new_cards(anki_deck)
+
             # Save per-deck timestamp for future incremental imports
             if self.latest_candidate_timestamp:
                 metadata_manager = MetadataManager()

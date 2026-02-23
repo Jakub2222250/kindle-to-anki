@@ -115,7 +115,6 @@ class AnkiConnect:
         # Configure parent deck (permissive so child decks aren't artificially limited)
         parent_cfg = self._invoke("getDeckConfig", {"deck": parent_deck})
         parent_cfg["new"]["perDay"] = 9999
-        parent_cfg["newGatherPriority"] = 1  # Ascending position
         parent_cfg["rev"]["perDay"] = 9999
         self._invoke("saveDeckConfig", {"config": parent_cfg})
 
@@ -144,6 +143,33 @@ class AnkiConnect:
     def change_deck(self, card_ids: list[int], deck_name: str):
         """Move cards to a different deck."""
         self._invoke("changeDeck", {"cards": card_ids, "deck": deck_name})
+
+    def reposition_new_cards(self, anki_deck: AnkiDeck):
+        """Sort new cards in the parent deck by Sort_Order, then move them to the ready deck."""
+        new_card_ids = self.find_cards(f"deck:{anki_deck.parent_deck_name} is:new")
+        if not new_card_ids:
+            get_logger().info("No new cards to reposition.")
+            return
+
+        cards_info = self.get_cards_info(new_card_ids)
+        pairs = [
+            (c["cardId"], c["fields"]["Sort_Order"]["value"])
+            for c in cards_info
+        ]
+        pairs.sort(key=lambda x: x[1])
+        sorted_ids = [p[0] for p in pairs]
+
+        self._invoke("reposition", {
+            "cards": sorted_ids,
+            "startingPosition": 0,
+            "step": 1,
+            "randomize": False,
+            "shiftExisting": True
+        })
+        get_logger().info(f"Repositioned {len(sorted_ids)} new cards by Sort_Order.")
+
+        self.change_deck(sorted_ids, anki_deck.ready_deck_name)
+        get_logger().info(f"Moved {len(sorted_ids)} cards to '{anki_deck.ready_deck_name}'.")
 
     def create_model(self, model_name, fields, css, card_templates):
         """Create a new note type/model"""
