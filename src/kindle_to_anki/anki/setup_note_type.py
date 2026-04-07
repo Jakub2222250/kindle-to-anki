@@ -39,6 +39,9 @@ FIELDS = [
     "Raw_Lookup_String",
     "Lookup_Time",
     "Sort_Order",
+    "TTSEnabled",
+    "TTSLang",
+    "TTSCustom",
 ]
 
 CARD_TEMPLATES = [
