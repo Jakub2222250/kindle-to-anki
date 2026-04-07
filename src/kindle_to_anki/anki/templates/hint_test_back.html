@@ -4,10 +4,6 @@
 
 {{Expression}}
 
-{{#TTSEnabled}}
-[anki:tts lang={{TTSLang}} {{TTSCustom}}]{{Expression}}[/anki:tts]
-{{/TTSEnabled}}
-
 <br><br>
 
 <context>{{Context_Sentence}}</context>
@@ -30,3 +26,8 @@
 
 <br><br>
 <small><i>{{Tags}}</i></small>
+
+<br><br>
+{{#TTSEnabled}}
+[anki:tts lang={{TTSLang}} {{TTSCustom}}]{{Expression}}[/anki:tts]
+{{/TTSEnabled}}
