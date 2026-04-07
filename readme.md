@@ -17,7 +17,10 @@ This tool takes your Kindle Vocabulary Builder lookups and creates flashcards op
 - **Smart duplicate handling**: Automatically detects duplicates, but keeps repeated words when they appear in different contexts with different meanings.
 - **Incremental imports**: Only processes new vocabulary entries since your last import.
 - **Resilient processing**: Caches API responses to avoid repeated calls if something fails mid-run.
-- **Text-to-speech**: Optional TTS on cards using Anki's built-in `[anki:tts]` tags. Configure per deck in the Setup Wizard. On Windows, you may need to install speech packs: Settings → Time & Language → Language & Region → add/download the speech package for your target language.
+- **Text-to-speech**: Optional TTS on cards using Anki's built-in `[anki:tts]` tags. Configure per deck in the Setup Wizard. TTS uses your device's built-in speech engine, so you may need to install a language pack for your target language:
+  - **Windows**: Settings → Time & Language → Language & Region → add/download the speech package for your target language.
+  - **Android**: Settings → System → Language & Input → Text-to-Speech → install the voice data for your target language (varies by manufacturer).
+  - **iOS**: Settings → Accessibility → Spoken Content → Voices → download the voice for your target language.
 
 ## Card Types
 
