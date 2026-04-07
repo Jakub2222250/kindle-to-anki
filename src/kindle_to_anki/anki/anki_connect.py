@@ -252,7 +252,10 @@ class AnkiConnect:
                     "Raw_Context_Text": anki_note.raw_context_text,
                     "Raw_Lookup_String": anki_note.raw_lookup_string,
                     "Lookup_Time": anki_note.get_lookup_time(),
-                    "Sort_Order": anki_note.sort_order
+                    "Sort_Order": anki_note.sort_order,
+                    "TTSEnabled": anki_deck.tts_settings.get("enabled", ""),
+                    "TTSLang": anki_deck.tts_settings.get("lang", ""),
+                    "TTSCustom": anki_deck.tts_settings.get("custom", ""),
                 }
 
                 note_data = {

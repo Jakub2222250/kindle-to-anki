@@ -649,6 +649,24 @@ class SetupWizardFrame(ctk.CTkFrame):
         # Bind parent deck change to update import deck
         self.parent_deck_var.trace_add("write", self._on_parent_deck_change)
 
+        # TTS Settings
+        ctk.CTkLabel(add_frame, text="TTS Settings:", font=ctk.CTkFont(weight="bold")).pack(anchor="w", pady=(10, 5))
+
+        tts_row = ctk.CTkFrame(add_frame, fg_color="transparent")
+        tts_row.pack(anchor="w", pady=(0, 10))
+
+        ctk.CTkLabel(tts_row, text="Enabled:").grid(row=0, column=0, padx=(0, 5), sticky="w")
+        self.tts_enabled_add_var = ctk.StringVar(value="")
+        ctk.CTkEntry(tts_row, textvariable=self.tts_enabled_add_var, width=60).grid(row=0, column=1, padx=(0, 15), sticky="w")
+
+        ctk.CTkLabel(tts_row, text="Lang:").grid(row=0, column=2, padx=(0, 5), sticky="w")
+        self.tts_lang_add_var = ctk.StringVar(value="")
+        ctk.CTkEntry(tts_row, textvariable=self.tts_lang_add_var, width=100, placeholder_text="e.g. es_MX").grid(row=0, column=3, padx=(0, 15), sticky="w")
+
+        ctk.CTkLabel(tts_row, text="Custom:").grid(row=0, column=4, padx=(0, 5), sticky="w")
+        self.tts_custom_add_var = ctk.StringVar(value="")
+        ctk.CTkEntry(tts_row, textvariable=self.tts_custom_add_var, width=150, placeholder_text="e.g. voices=AwesomeTTS").grid(row=0, column=5, sticky="w")
+
         # Create in Anki checkbox
         self.create_in_anki_var = ctk.BooleanVar(value=True)
         self.create_in_anki_checkbox = ctk.CTkCheckBox(
@@ -743,6 +761,33 @@ class SetupWizardFrame(ctk.CTkFrame):
         )
         self.task_config_panel.pack(fill="both", expand=True)
 
+        # TTS Settings
+        tts_frame = ctk.CTkFrame(self.main_container)
+        tts_frame.pack(fill="x", padx=5, pady=(10, 0))
+
+        ctk.CTkLabel(
+            tts_frame,
+            text="TTS Settings (applied to new cards)",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=(10, 5))
+
+        tts_fields = ctk.CTkFrame(tts_frame, fg_color="transparent")
+        tts_fields.pack(fill="x", padx=10, pady=(0, 10))
+
+        tts_config = deck_config.get("tts_settings", {})
+
+        ctk.CTkLabel(tts_fields, text="TTSEnabled:", anchor="w").grid(row=0, column=0, padx=(0, 5), pady=3, sticky="w")
+        self.tts_enabled_var = ctk.StringVar(value=tts_config.get("enabled", ""))
+        ctk.CTkEntry(tts_fields, textvariable=self.tts_enabled_var, width=80).grid(row=0, column=1, padx=(0, 20), pady=3, sticky="w")
+
+        ctk.CTkLabel(tts_fields, text="TTSLang:", anchor="w").grid(row=0, column=2, padx=(0, 5), pady=3, sticky="w")
+        self.tts_lang_var = ctk.StringVar(value=tts_config.get("lang", ""))
+        ctk.CTkEntry(tts_fields, textvariable=self.tts_lang_var, width=120, placeholder_text="e.g. es_MX").grid(row=0, column=3, padx=(0, 20), pady=3, sticky="w")
+
+        ctk.CTkLabel(tts_fields, text="TTSCustom:", anchor="w").grid(row=0, column=4, padx=(0, 5), pady=3, sticky="w")
+        self.tts_custom_var = ctk.StringVar(value=tts_config.get("custom", ""))
+        ctk.CTkEntry(tts_fields, textvariable=self.tts_custom_var, width=200, placeholder_text="e.g. voices=AwesomeTTS").grid(row=0, column=5, pady=3, sticky="w")
+
     def _on_task_config_change(self):
         """Called when task configuration changes - refresh provider list."""
         self._refresh_provider_list()
@@ -826,7 +871,12 @@ class SetupWizardFrame(ctk.CTkFrame):
             "parent_deck_name": parent_deck,
             "staging_deck_name": import_deck,
             "ready_deck_name": ready_deck,
-            "task_settings": get_default_task_settings()
+            "task_settings": get_default_task_settings(),
+            "tts_settings": {
+                "enabled": self.tts_enabled_add_var.get() if hasattr(self, 'tts_enabled_add_var') else "",
+                "lang": self.tts_lang_add_var.get() if hasattr(self, 'tts_lang_add_var') else "",
+                "custom": self.tts_custom_add_var.get() if hasattr(self, 'tts_custom_add_var') else "",
+            },
         }
 
         config["anki_decks"].append(new_deck)
@@ -924,6 +974,16 @@ class SetupWizardFrame(ctk.CTkFrame):
             if self._current_deck_index < len(decks):
                 decks[self._current_deck_index]["task_settings"] = self.task_config_panel.get_all_settings()
 
+        # Save TTS settings for current deck
+        if hasattr(self, 'tts_enabled_var'):
+            decks = config.get("anki_decks", [])
+            if self._current_deck_index < len(decks):
+                decks[self._current_deck_index]["tts_settings"] = {
+                    "enabled": self.tts_enabled_var.get(),
+                    "lang": self.tts_lang_var.get(),
+                    "custom": self.tts_custom_var.get(),
+                }
+
         save_config(config)
 
         if hasattr(self, 'global_save_status'):
@@ -943,7 +1003,7 @@ class AddDeckDialog(ctk.CTkToplevel):
         self._checking_connection = False
 
         self.title("Add New Deck")
-        self.geometry("350x560")
+        self.geometry("450x640")
         self.resizable(False, False)
 
         # Language options
@@ -1015,6 +1075,24 @@ class AddDeckDialog(ctk.CTkToplevel):
         self.ready_deck_entry.pack(padx=15, pady=(0, 10))
 
         self.parent_deck_var.trace_add("write", self._on_parent_deck_change)
+
+        # TTS Settings
+        ctk.CTkLabel(self, text="TTS Settings:", font=ctk.CTkFont(weight="bold")).pack(anchor="w", padx=15, pady=(10, 5))
+
+        tts_row = ctk.CTkFrame(self, fg_color="transparent")
+        tts_row.pack(anchor="w", padx=15, pady=(0, 10))
+
+        ctk.CTkLabel(tts_row, text="Enabled:").grid(row=0, column=0, padx=(0, 5), sticky="w")
+        self.tts_enabled_dlg_var = ctk.StringVar(value="")
+        ctk.CTkEntry(tts_row, textvariable=self.tts_enabled_dlg_var, width=60).grid(row=0, column=1, padx=(0, 10), sticky="w")
+
+        ctk.CTkLabel(tts_row, text="Lang:").grid(row=0, column=2, padx=(0, 5), sticky="w")
+        self.tts_lang_dlg_var = ctk.StringVar(value="")
+        ctk.CTkEntry(tts_row, textvariable=self.tts_lang_dlg_var, width=80, placeholder_text="e.g. es_MX").grid(row=0, column=3, padx=(0, 10), sticky="w")
+
+        ctk.CTkLabel(tts_row, text="Custom:").grid(row=0, column=4, padx=(0, 5), sticky="w")
+        self.tts_custom_dlg_var = ctk.StringVar(value="")
+        ctk.CTkEntry(tts_row, textvariable=self.tts_custom_dlg_var, width=120, placeholder_text="e.g. voices=AwesomeTTS").grid(row=0, column=5, sticky="w")
 
         # Create in Anki checkbox
         self.create_in_anki_var = ctk.BooleanVar(value=True)
@@ -1092,7 +1170,12 @@ class AddDeckDialog(ctk.CTkToplevel):
             "parent_deck_name": parent_deck,
             "staging_deck_name": import_deck,
             "ready_deck_name": ready_deck,
-            "task_settings": get_default_task_settings()
+            "task_settings": get_default_task_settings(),
+            "tts_settings": {
+                "enabled": self.tts_enabled_dlg_var.get(),
+                "lang": self.tts_lang_dlg_var.get(),
+                "custom": self.tts_custom_dlg_var.get(),
+            },
         }
         config["anki_decks"].append(new_deck)
         save_config(config)
