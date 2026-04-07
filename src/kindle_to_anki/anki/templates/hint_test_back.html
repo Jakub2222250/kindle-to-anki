@@ -14,8 +14,7 @@
 
 <br><br>{{/Context_Translation}}
 
-{{Definition}} <br><small>({{Part_Of_Speech}}
-{{#Aspect}}, {{Aspect}}{{/Aspect}})</small>
+{{Definition}} <br><small>({{Part_Of_Speech}}{{#Aspect}}, {{Aspect}}{{/Aspect}})</small>
 
 <br><br>
 
@@ -26,3 +25,8 @@
 
 <br><br>
 <small><i>{{Tags}}</i></small>
+
+<br><br>
+{{#TTSEnabled}}
+[anki:tts lang={{TTSLang}} {{TTSCustom}}]{{Expression}}[/anki:tts]
+{{/TTSEnabled}}
