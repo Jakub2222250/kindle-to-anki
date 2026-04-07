@@ -586,6 +586,58 @@ class UpdateNotesView(ctk.CTkFrame):
         )
         self.skip_matching_metadata_cb.pack(anchor="w")
 
+        # TTS Fields Section
+        tts_section = ctk.CTkFrame(content_frame)
+        tts_section.pack(fill="x", pady=(0, 15))
+
+        tts_title = ctk.CTkLabel(
+            tts_section,
+            text="TTS Fields",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        tts_title.pack(anchor="w", padx=15, pady=(15, 10))
+
+        tts_frame = ctk.CTkFrame(tts_section, fg_color="transparent")
+        tts_frame.pack(fill="x", padx=15, pady=(0, 15))
+
+        self.tts_update_var = ctk.BooleanVar(value=False)
+        self.tts_update_cb = ctk.CTkCheckBox(
+            tts_frame,
+            text="Update TTS fields on matched notes",
+            variable=self.tts_update_var,
+            command=self._on_tts_update_change
+        )
+        self.tts_update_cb.pack(anchor="w", pady=(0, 10))
+
+        tts_fields_frame = ctk.CTkFrame(tts_frame, fg_color="transparent")
+        tts_fields_frame.pack(fill="x")
+
+        tts_enabled_label = ctk.CTkLabel(tts_fields_frame, text="TTSEnabled:", width=100, anchor="w")
+        tts_enabled_label.grid(row=0, column=0, padx=(0, 5), pady=3, sticky="w")
+        self.tts_enabled_var = ctk.StringVar(value="1")
+        self.tts_enabled_entry = ctk.CTkEntry(
+            tts_fields_frame, textvariable=self.tts_enabled_var, width=80, state="disabled"
+        )
+        self.tts_enabled_entry.grid(row=0, column=1, padx=(0, 20), pady=3, sticky="w")
+
+        tts_lang_label = ctk.CTkLabel(tts_fields_frame, text="TTSLang:", width=80, anchor="w")
+        tts_lang_label.grid(row=0, column=2, padx=(0, 5), pady=3, sticky="w")
+        self.tts_lang_var = ctk.StringVar(value="")
+        self.tts_lang_entry = ctk.CTkEntry(
+            tts_fields_frame, textvariable=self.tts_lang_var, width=120,
+            placeholder_text="e.g. es_MX", state="disabled"
+        )
+        self.tts_lang_entry.grid(row=0, column=3, padx=(0, 20), pady=3, sticky="w")
+
+        tts_custom_label = ctk.CTkLabel(tts_fields_frame, text="TTSCustom:", width=90, anchor="w")
+        tts_custom_label.grid(row=0, column=4, padx=(0, 5), pady=3, sticky="w")
+        self.tts_custom_var = ctk.StringVar(value="")
+        self.tts_custom_entry = ctk.CTkEntry(
+            tts_fields_frame, textvariable=self.tts_custom_var, width=200,
+            placeholder_text="e.g. voice name", state="disabled"
+        )
+        self.tts_custom_entry.grid(row=0, column=5, pady=3, sticky="w")
+
         # Query Preview Section
         query_section = ctk.CTkFrame(content_frame)
         query_section.pack(fill="x", pady=(0, 15))
@@ -732,6 +784,13 @@ class UpdateNotesView(ctk.CTkFrame):
         self._update_filter_preview()
         self._reset_query_stats()
 
+    def _on_tts_update_change(self):
+        """Toggle TTS field entries based on checkbox state."""
+        state = "normal" if self.tts_update_var.get() else "disabled"
+        self.tts_enabled_entry.configure(state=state)
+        self.tts_lang_entry.configure(state=state)
+        self.tts_custom_entry.configure(state=state)
+
     def _on_deck_change(self, *args):
         """Called when deck selection changes - rebuild task rows."""
         self._update_filter_preview()
@@ -843,7 +902,8 @@ class UpdateNotesView(ctk.CTkFrame):
     def _on_query_cards(self):
         """Query Anki for cards matching the filter and compute statistics."""
         selected_tasks = self.get_selected_tasks()
-        if not selected_tasks:
+        tts_update = self.tts_update_var.get()
+        if not selected_tasks and not tts_update:
             self.query_status_label.configure(text="No tasks selected", text_color="orange")
             return
 
@@ -953,7 +1013,8 @@ class UpdateNotesView(ctk.CTkFrame):
     def _on_run_tasks(self):
         """Start running selected tasks."""
         selected_tasks = self.get_selected_tasks()
-        if not selected_tasks:
+        tts_update = self.tts_update_var.get()
+        if not selected_tasks and not tts_update:
             self._log("No tasks selected")
             return
 
@@ -1100,7 +1161,44 @@ class UpdateNotesView(ctk.CTkFrame):
                     total_tasks=total_tasks,
                 )
 
+        # TTS field update
+        if self.tts_update_var.get() and self.is_running:
+            self._run_tts_update(notes_info, anki)
+
         self.after(0, lambda: self._log("\n=== All tasks completed ==="))
+
+    def _run_tts_update(self, notes_info: list, anki: AnkiConnect):
+        """Update TTS fields on all matched notes."""
+        self.after(0, lambda: self._log("\n--- TTS Fields ---"))
+        tts_enabled = self.tts_enabled_var.get()
+        tts_lang = self.tts_lang_var.get()
+        tts_custom = self.tts_custom_var.get()
+
+        actions = []
+        for note in notes_info:
+            if not self.is_running:
+                return
+            note_id = note.get('noteId')
+            actions.append({
+                "action": "updateNoteFields",
+                "params": {"note": {"id": note_id, "fields": {
+                    "TTSEnabled": tts_enabled,
+                    "TTSLang": tts_lang,
+                    "TTSCustom": tts_custom,
+                }}}
+            })
+
+        if actions:
+            try:
+                successful, errors = anki.update_notes_by_id(actions)
+                self.after(0, lambda s=successful: self._log(f"Updated TTS fields on {s} notes"))
+                if errors:
+                    for err in errors:
+                        self.after(0, lambda e=err: self._log(f"  Error: Note {e['note_id']}: {e['error']}"))
+            except Exception as e:
+                self.after(0, lambda ex=e: self._log(f"  TTS update failed: {ex}"))
+        else:
+            self.after(0, lambda: self._log("No notes to update"))
 
     def _run_local_task(self, task_key: str, notes_info: list, anki: AnkiConnect, task_idx: int, total_tasks: int):
         """Run a local (no-runtime) task on the provided notes."""
