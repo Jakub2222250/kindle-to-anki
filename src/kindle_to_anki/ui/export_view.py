@@ -56,6 +56,7 @@ class ExportView(ctk.CTkFrame):
         self.limit_enabled: bool = True
         self.timestamp_filter_enabled: bool = True
         self.timestamp_cutoff: Optional[datetime] = None  # User-selected cutoff
+        self.sort_newest_first: bool = False
 
         self._create_main_layout()
         self._show_collect_lookups_card()
@@ -462,6 +463,22 @@ class ExportView(ctk.CTkFrame):
         self.timestamp_date_var.trace_add("write", lambda *_: self._on_timestamp_entry_changed())
         self.timestamp_time_var.trace_add("write", lambda *_: self._on_timestamp_entry_changed())
 
+        # Sort order option
+        sort_row = ctk.CTkFrame(options_inner, fg_color="transparent")
+        sort_row.pack(fill="x", pady=(8, 0))
+
+        self.sort_newest_first_var = ctk.BooleanVar(value=self.sort_newest_first)
+        self.sort_newest_first_checkbox = ctk.CTkCheckBox(
+            sort_row,
+            text="Learn newest lookups first",
+            variable=self.sort_newest_first_var,
+            command=self._on_sort_order_checkbox_changed,
+            font=ctk.CTkFont(size=11)
+        )
+        self.sort_newest_first_checkbox.pack(side="left")
+
+        ctk.CTkLabel(sort_row, text="(default: oldest first)", font=ctk.CTkFont(size=10), text_color=("gray50", "gray60")).pack(side="left", padx=(5, 0))
+
         # Summary section
         self.preview_summary_frame = ctk.CTkFrame(scroll_inner, fg_color="transparent")
         self.preview_summary_frame.pack(fill="x", pady=(5, 10))
@@ -591,12 +608,15 @@ class ExportView(ctk.CTkFrame):
         opts = anki_deck.preview_options
         self.limit_enabled = opts.get("note_limit_enabled", True)
         self.note_limit = opts.get("note_limit", 30)
+        self.sort_newest_first = opts.get("sort_newest_first", False)
 
         # Update UI controls
         if hasattr(self, 'limit_enabled_var'):
             self.limit_enabled_var.set(self.limit_enabled)
         if hasattr(self, 'limit_var'):
             self.limit_var.set(str(self.note_limit))
+        if hasattr(self, 'sort_newest_first_var'):
+            self.sort_newest_first_var.set(self.sort_newest_first)
 
     def _save_preview_options_for_deck(self):
         """Save preview options for the selected deck to config."""
@@ -610,7 +630,8 @@ class ExportView(ctk.CTkFrame):
 
         preview_options = {
             "note_limit_enabled": self.limit_enabled,
-            "note_limit": limit
+            "note_limit": limit,
+            "sort_newest_first": self.sort_newest_first
         }
 
         config_manager = ConfigManager()
@@ -626,6 +647,11 @@ class ExportView(ctk.CTkFrame):
         """Handle limit checkbox toggle."""
         self.limit_enabled = self.limit_enabled_var.get()
         self._update_preview_display()
+        self._save_preview_options_for_deck()
+
+    def _on_sort_order_checkbox_changed(self):
+        """Handle sort order checkbox toggle."""
+        self.sort_newest_first = self.sort_newest_first_var.get()
         self._save_preview_options_for_deck()
 
     def _on_timestamp_checkbox_changed(self):
@@ -1286,6 +1312,11 @@ class ExportView(ctk.CTkFrame):
                     ignore_cache=False,
                     cancellation_token=self._cancellation_token
                 )
+
+            # Recompute sort_order with deck's newest_first preference
+            newest_first = anki_deck.preview_options.get("sort_newest_first", False)
+            for note in notes:
+                note.sort_order = note._compute_sort_order(newest_first=newest_first)
 
             if not self.is_running:
                 return
