@@ -1211,6 +1211,8 @@ class UpdateNotesView(ctk.CTkFrame):
 
     def _run_sort_order_task(self, notes_info: list, anki: AnkiConnect, task_idx: int, total_tasks: int):
         """Recompute Sort_Order for all provided notes."""
+        deck = self.get_selected_deck()
+        newest_first = deck.preview_options.get("sort_newest_first", False) if deck else False
         actions = []
         for note in notes_info:
             if not self.is_running:
@@ -1221,7 +1223,7 @@ class UpdateNotesView(ctk.CTkFrame):
             lookup_time = fields.get('Lookup_Time', {}).get('value', '').strip()
             # Anki note IDs encode creation time (milliseconds since epoch)
             creation_ts = datetime.fromtimestamp(note_id / 1000) if note_id else None
-            new_value = AnkiNote.compute_sort_order_from_fields(usage_level, lookup_time, creation_ts)
+            new_value = AnkiNote.compute_sort_order_from_fields(usage_level, lookup_time, creation_ts, newest_first=newest_first)
             actions.append({
                 "action": "updateNoteFields",
                 "params": {"note": {"id": note_id, "fields": {"Sort_Order": new_value}}}

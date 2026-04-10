@@ -113,7 +113,6 @@ class AnkiNote:
             return
         if data.get('usage_level') is not None:
             self.usage_level = str(data['usage_level'])
-            self.sort_order = self._compute_sort_order()
 
     def generate_book_abbrev(self, book_name):
         """Generate book abbreviation for use as tag"""
@@ -222,19 +221,22 @@ class AnkiNote:
             task_meta["prompt"] = prompt_id
         self.generation_metadata[task_id] = task_meta
 
-    def _compute_sort_order(self):
+    def _compute_sort_order(self, newest_first: bool = False):
         """Compute sort order from usage_level and timestamp.
-        Lower value = higher priority. Higher usage_level cards first, then oldest first."""
+        Lower value = higher priority. Higher usage_level cards first.
+        Time order depends on newest_first (default oldest first)."""
         try:
             level = int(self.usage_level)
         except (ValueError, TypeError):
             level = 0
         inverted = 99 - level
         ts = (self.source_timestamp or datetime.now()).strftime("%Y%m%d%H%M%S")
+        if newest_first:
+            ts = f"{99999999999999 - int(ts):014d}"
         return f"{inverted:02d}_{ts}"
 
     @staticmethod
-    def compute_sort_order_from_fields(usage_level_str: str, lookup_time_str: str, fallback_ts: datetime = None) -> str:
+    def compute_sort_order_from_fields(usage_level_str: str, lookup_time_str: str, fallback_ts: datetime = None, newest_first: bool = False) -> str:
         """Compute sort order from Anki field string values."""
         try:
             level = int(usage_level_str)
@@ -251,6 +253,8 @@ class AnkiNote:
                     break
                 except ValueError:
                     continue
+        if newest_first:
+            ts = f"{99999999999999 - int(ts):014d}"
         return f"{inverted:02d}_{ts}"
 
     def to_csv_line(self):
