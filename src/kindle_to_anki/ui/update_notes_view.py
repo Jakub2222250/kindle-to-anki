@@ -638,6 +638,49 @@ class UpdateNotesView(ctk.CTkFrame):
         )
         self.tts_custom_entry.grid(row=0, column=5, pady=3, sticky="w")
 
+        # Sort Order Section
+        sort_section = ctk.CTkFrame(content_frame)
+        sort_section.pack(fill="x", pady=(0, 15))
+
+        sort_title = ctk.CTkLabel(
+            sort_section,
+            text="Sort Order",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        sort_title.pack(anchor="w", padx=15, pady=(15, 10))
+
+        sort_frame = ctk.CTkFrame(sort_section, fg_color="transparent")
+        sort_frame.pack(fill="x", padx=15, pady=(0, 15))
+
+        # Newest first checkbox - reads from deck preview_options
+        deck = self.get_selected_deck()
+        newest_first = deck.preview_options.get("sort_newest_first", False) if deck else False
+
+        self.sort_newest_first_var = ctk.BooleanVar(value=newest_first)
+        self.sort_newest_first_cb = ctk.CTkCheckBox(
+            sort_frame,
+            text="Learn newest lookups first (default: oldest first)",
+            variable=self.sort_newest_first_var,
+            command=self._on_sort_newest_first_change
+        )
+        self.sort_newest_first_cb.pack(anchor="w", pady=(0, 5))
+
+        self.sort_recompute_var = ctk.BooleanVar(value=False)
+        self.sort_recompute_cb = ctk.CTkCheckBox(
+            sort_frame,
+            text="Recompute Sort_Order on matched notes",
+            variable=self.sort_recompute_var
+        )
+        self.sort_recompute_cb.pack(anchor="w", pady=(0, 5))
+
+        self.sort_reposition_var = ctk.BooleanVar(value=False)
+        self.sort_reposition_cb = ctk.CTkCheckBox(
+            sort_frame,
+            text="Reposition new cards by Sort_Order",
+            variable=self.sort_reposition_var
+        )
+        self.sort_reposition_cb.pack(anchor="w")
+
         # Query Preview Section
         query_section = ctk.CTkFrame(content_frame)
         query_section.pack(fill="x", pady=(0, 15))
@@ -791,11 +834,26 @@ class UpdateNotesView(ctk.CTkFrame):
         self.tts_lang_entry.configure(state=state)
         self.tts_custom_entry.configure(state=state)
 
+    def _on_sort_newest_first_change(self):
+        """Save sort_newest_first to deck preview_options."""
+        deck = self.get_selected_deck()
+        if not deck:
+            return
+        deck.preview_options["sort_newest_first"] = self.sort_newest_first_var.get()
+        selected_display = self.deck_var.get()
+        selected_lang = self.deck_display_to_lang.get(selected_display)
+        if selected_lang:
+            self.config_manager.save_preview_options(selected_lang, deck.preview_options)
+
     def _on_deck_change(self, *args):
         """Called when deck selection changes - rebuild task rows."""
         self._update_filter_preview()
         self._build_task_rows()
         self._reset_query_stats()
+        # Refresh sort order checkbox from deck config
+        deck = self.get_selected_deck()
+        newest_first = deck.preview_options.get("sort_newest_first", False) if deck else False
+        self.sort_newest_first_var.set(newest_first)
 
     def _build_task_rows(self):
         """Build task configuration rows based on selected deck."""
@@ -903,7 +961,9 @@ class UpdateNotesView(ctk.CTkFrame):
         """Query Anki for cards matching the filter and compute statistics."""
         selected_tasks = self.get_selected_tasks()
         tts_update = self.tts_update_var.get()
-        if not selected_tasks and not tts_update:
+        sort_recompute = self.sort_recompute_var.get()
+        sort_reposition = self.sort_reposition_var.get()
+        if not selected_tasks and not tts_update and not sort_recompute and not sort_reposition:
             self.query_status_label.configure(text="No tasks selected", text_color="orange")
             return
 
@@ -1014,7 +1074,9 @@ class UpdateNotesView(ctk.CTkFrame):
         """Start running selected tasks."""
         selected_tasks = self.get_selected_tasks()
         tts_update = self.tts_update_var.get()
-        if not selected_tasks and not tts_update:
+        sort_recompute = self.sort_recompute_var.get()
+        sort_reposition = self.sort_reposition_var.get()
+        if not selected_tasks and not tts_update and not sort_recompute and not sort_reposition:
             self._log("No tasks selected")
             return
 
@@ -1164,6 +1226,18 @@ class UpdateNotesView(ctk.CTkFrame):
         # TTS field update
         if self.tts_update_var.get() and self.is_running:
             self._run_tts_update(notes_info, anki)
+
+        # Sort order recompute
+        if self.sort_recompute_var.get() and self.is_running:
+            self.after(0, lambda: self._log("\n--- Recompute Sort Order ---"))
+            newest_first = self.sort_newest_first_var.get()
+            self.after(0, lambda nf=newest_first: self._log(f"Mode: {'newest first' if nf else 'oldest first'}"))
+            self._run_sort_order_task(notes_info, anki, 0, 1)
+
+        # Reposition new cards
+        if self.sort_reposition_var.get() and self.is_running:
+            self.after(0, lambda: self._log("\n--- Reposition New Cards ---"))
+            self._run_reposition_task(anki)
 
         self.after(0, lambda: self._log("\n=== All tasks completed ==="))
 

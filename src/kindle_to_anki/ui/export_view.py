@@ -1382,7 +1382,7 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Step 14: Reposition new cards by Sort_Order and move to ready deck
+            # Step 14: Reposition new cards by Sort_Order
             self.after(0, lambda slc=source_language_code: 
                        self._update_progress(14, total_steps, "Repositioning cards...", slc))
             anki_connect_instance.reposition_new_cards(anki_deck)

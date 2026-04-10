@@ -145,7 +145,7 @@ class AnkiConnect:
         self._invoke("changeDeck", {"cards": card_ids, "deck": deck_name})
 
     def reposition_new_cards(self, anki_deck: AnkiDeck):
-        """Sort new cards in the parent deck by Sort_Order, then move them to the ready deck."""
+        """Reposition new cards in the parent deck by Sort_Order field."""
         new_card_ids = self.find_cards(f'"deck:{anki_deck.parent_deck_name}" is:new')
         if not new_card_ids:
             get_logger().info("No new cards to reposition.")

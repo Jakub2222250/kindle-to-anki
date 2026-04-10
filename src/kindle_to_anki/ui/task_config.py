@@ -44,18 +44,6 @@ TASK_METADATA = {
         "description": "Generates common word combinations",
         "optional": True
     },
-    "sort_order": {
-        "name": "New Card Sort Order",
-        "description": "Recomputes sort order from usage level and timestamp",
-        "optional": True,
-        "local": True
-    },
-    "reposition": {
-        "name": "Reposition New Cards",
-        "description": "Sorts new cards by Sort_Order and moves them to Ready deck",
-        "optional": True,
-        "local": True
-    }
 }
 
 # Language restrictions for certain runtimes (runtime_id -> list of supported source languages)
