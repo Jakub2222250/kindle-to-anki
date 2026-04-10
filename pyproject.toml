@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kindle_to_anki"
-version = "1.4.1"
+version = "1.4.2"
 requires-python = ">=3.9"
 dependencies = [
     "customtkinter",
