@@ -1103,7 +1103,7 @@ class ExportView(ctk.CTkFrame):
 
     def _export_pipeline(self):
         """Main export pipeline - uses pre-loaded candidates."""
-        total_steps = 11  # Reduced since candidates already loaded
+        total_steps = 14  # Reduced since candidates already loaded
 
         # Step 1: Bootstrap (if not done)
         self.after(0, lambda: self._update_progress(1, total_steps, "Initializing...", "Setting up runtimes"))
@@ -1335,20 +1335,25 @@ class ExportView(ctk.CTkFrame):
             if not self.is_running:
                 return
 
-            # Write import file
+            # Step 12: Write import file
             self.after(0, lambda slc=source_language_code: 
-                       self._update_progress(total_steps - 1, total_steps, "Writing import file...", slc))
+                       self._update_progress(12, total_steps, "Writing import file...", slc))
             write_anki_import_file(notes, source_language_code)
 
             if not self.is_running:
                 return
 
-            # Save to Anki
+            # Step 13: Create cards in Anki
             self.after(0, lambda slc=source_language_code: 
-                       self._update_progress(total_steps, total_steps, "Saving to Anki...", slc))
+                       self._update_progress(13, total_steps, "Creating cards...", slc))
             anki_connect_instance.create_notes_batch(anki_deck, notes)
 
-            # Reposition new cards by Sort_Order and move to ready deck
+            if not self.is_running:
+                return
+
+            # Step 14: Reposition new cards by Sort_Order and move to ready deck
+            self.after(0, lambda slc=source_language_code: 
+                       self._update_progress(14, total_steps, "Repositioning cards...", slc))
             anki_connect_instance.reposition_new_cards(anki_deck)
 
             # Save per-deck timestamp for future incremental imports
