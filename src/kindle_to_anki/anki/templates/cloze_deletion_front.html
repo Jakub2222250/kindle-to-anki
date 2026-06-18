@@ -1,3 +1,37 @@
 {{#Cloze_Enabled}}
-{{Context_Sentence_Cloze}}
+<span id="cloze-sentence">{{Context_Sentence_Cloze}}</span>
+{{#TTSEnabled}}
+<div class="tts-controls">
+  <button class="tts-btn" onclick="ttsClozePlay()">&#9654;</button>
+  <button class="tts-btn" onclick="ttsClozeStop()">&#9632;</button>
+</div>
+<script>
+var _ankiApi = typeof AnkiDroidJS !== 'undefined'
+  ? new AnkiDroidJS({ version: "0.0.3", developer: "kindle-to-anki" })
+  : null;
+
+function ttsClozePlay() {
+  var el = document.getElementById('cloze-sentence');
+  if (!el) return;
+  var text = el.textContent.replace(/\[[^\]]*\]/g, ', ').replace(/\s+/g, ' ').trim();
+  var langCode = '{{TTSLang}}'.replace(/_/g, '-');
+  if (_ankiApi) {
+    _ankiApi.ankiTtsSetLanguage(langCode);
+    _ankiApi.ankiTtsSpeak(text);
+  } else if (typeof speechSynthesis !== 'undefined') {
+    speechSynthesis.cancel();
+    var utt = new SpeechSynthesisUtterance(text);
+    utt.lang = langCode;
+    speechSynthesis.speak(utt);
+  }
+}
+function ttsClozeStop() {
+  if (_ankiApi) {
+    _ankiApi.ankiTtsStop();
+  } else if (typeof speechSynthesis !== 'undefined') {
+    speechSynthesis.cancel();
+  }
+}
+</script>
+{{/TTSEnabled}}
 {{/Cloze_Enabled}}
