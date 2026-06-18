@@ -17,6 +17,7 @@ function ttsClozePlay() {
   var langCode = '{{TTSLang}}'.replace(/_/g, '-');
   if (_ankiApi) {
     _ankiApi.ankiTtsSetLanguage(langCode);
+    _ankiApi.ankiTtsSetSpeechRate(0.8);
     _ankiApi.ankiTtsSpeak(text);
   } else if (typeof speechSynthesis !== 'undefined') {
     speechSynthesis.cancel();
