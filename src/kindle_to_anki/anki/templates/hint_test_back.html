@@ -32,13 +32,13 @@
   <div class="issues-panel">
     <button type="button" class="issues-close" aria-label="Close">×</button>
     <div class="issues-heading">Card Problems</div>
-    <label class="issues-check" title="hint_gives_away"><input type="checkbox" data-tag="hint_gives_away"> Hint gives away answer</label>
-    <label class="issues-check" title="hint_useless"><input type="checkbox" data-tag="hint_useless"> Hint is useless</label>
+    <label class="issues-check" title="hint_bad"><input type="checkbox" data-tag="hint_bad"> Bad hint</label>
     <button type="button" class="issues-action" id="issues-suspend-card">Suspend Card</button>
     <div class="issues-heading issues-note-heading">Note Problems</div>
-    <label class="issues-check" title="bad_definition"><input type="checkbox" data-tag="bad_definition"> Bad definition</label>
-    <label class="issues-check" title="low_value_word"><input type="checkbox" data-tag="low_value_word"> Low value word</label>
     <label class="issues-check" title="already_know"><input type="checkbox" data-tag="already_know"> Already know</label>
+    <label class="issues-check" title="low_value_word"><input type="checkbox" data-tag="low_value_word"> Low value</label>
+    <label class="issues-check" title="bad_definition"><input type="checkbox" data-tag="bad_definition"> Bad definition</label>
+    <label class="issues-check" title="redundant_word"><input type="checkbox" data-tag="redundant_word"> Redundant word</label>
     <button type="button" class="issues-action" id="issues-suspend-note">Suspend Note</button>
   </div>
 </div>
@@ -125,11 +125,14 @@
         setTag(input.getAttribute("data-tag"), input.checked, input);
       });
     }
-    document.getElementById("issues-suspend-card").addEventListener("click", function () {
-      api.ankiSuspendCard().then(function (suspendResult) {
-        if (succeeded(suspendResult)) closePopup();
+    var suspendCard = document.getElementById("issues-suspend-card");
+    if (suspendCard) {
+      suspendCard.addEventListener("click", function () {
+        api.ankiSuspendCard().then(function (suspendResult) {
+          if (succeeded(suspendResult)) closePopup();
+        });
       });
-    });
+    }
     document.getElementById("issues-suspend-note").addEventListener("click", function () {
       api.ankiSuspendNote().then(function (suspendResult) {
         if (succeeded(suspendResult)) closePopup();
