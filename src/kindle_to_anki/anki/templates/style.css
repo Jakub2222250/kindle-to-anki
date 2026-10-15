@@ -20,8 +20,114 @@ context {
     line-height: 1;
 }
 
-
 small {
     font-size: 16px;
     line-height: 1;
+}
+
+#issues-open {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #888;
+    font-size: 14px;
+    font-family: arial;
+    line-height: 1.2;
+    text-decoration: underline;
+}
+
+#issues-open[hidden],
+#issues-popup[hidden] {
+    display: none !important;
+}
+
+#issues-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.issues-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.issues-panel {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    width: calc(100% - 32px);
+    max-width: 420px;
+    max-height: 90%;
+    overflow: auto;
+    padding: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    text-align: left;
+}
+
+.issues-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #888;
+    border-radius: 6px;
+    background: #f4f4f4;
+    color: #222;
+    font-size: 22px;
+    line-height: 32px;
+    font-family: arial;
+}
+
+.issues-heading {
+    margin: 0 0 8px;
+    padding-right: 44px;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: arial;
+    line-height: 36px;
+}
+
+.issues-note-heading {
+    margin-top: 20px;
+    padding-right: 0;
+}
+
+.issues-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    font-size: 16px;
+    font-family: arial;
+}
+
+.issues-check input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+.issues-action {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 14px;
+    border: 1px solid #888;
+    border-radius: 6px;
+    background: #f4f4f4;
+    color: #222;
+    font-size: 16px;
+    font-family: arial;
+    line-height: 1.2;
 }

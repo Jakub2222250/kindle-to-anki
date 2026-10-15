@@ -25,6 +25,119 @@
 
 <br><br>
 <small><i>{{Tags}}</i></small>
+<br>
+<button type="button" id="issues-open" hidden>Issues...</button>
+<div id="issues-popup" hidden>
+  <div class="issues-backdrop"></div>
+  <div class="issues-panel">
+    <button type="button" class="issues-close" aria-label="Close">×</button>
+    <div class="issues-heading">Card Problems</div>
+    <label class="issues-check" title="hint_gives_away"><input type="checkbox" data-tag="hint_gives_away"> Hint gives away answer</label>
+    <label class="issues-check" title="hint_useless"><input type="checkbox" data-tag="hint_useless"> Hint is useless</label>
+    <button type="button" class="issues-action" id="issues-suspend-card">Suspend Card</button>
+    <div class="issues-heading issues-note-heading">Note Problems</div>
+    <label class="issues-check" title="bad_definition"><input type="checkbox" data-tag="bad_definition"> Bad definition</label>
+    <label class="issues-check" title="low_value_word"><input type="checkbox" data-tag="low_value_word"> Low value word</label>
+    <label class="issues-check" title="already_know"><input type="checkbox" data-tag="already_know"> Already know</label>
+    <button type="button" class="issues-action" id="issues-suspend-note">Suspend Note</button>
+  </div>
+</div>
+<script>
+(function () {
+  if (typeof AnkiDroidJS === "undefined") return;
+  var openBtn = document.getElementById("issues-open");
+  var popup = document.getElementById("issues-popup");
+  var api = new AnkiDroidJS({ version: "0.0.3", developer: "github.com/Jakub2222250/kindle-to-anki" });
+  var writeChain = Promise.resolve();
+
+  function parseTags(result) {
+    if (!result || !result.success) return null;
+    var value = result.value;
+    if (Array.isArray(value)) return value.slice();
+    if (typeof value === "string") {
+      try {
+        var parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function succeeded(result) {
+    if (!result || result.success === false || result.value === false) return false;
+    return result.success === true || result === true;
+  }
+
+  function boxes() {
+    return popup.querySelectorAll("input[data-tag]");
+  }
+
+  function refresh(tags) {
+    var inputs = boxes();
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].checked = tags.indexOf(inputs[i].getAttribute("data-tag")) !== -1;
+    }
+  }
+
+  function closePopup() {
+    popup.hidden = true;
+  }
+
+  function setTag(tag, enabled, input) {
+    writeChain = writeChain.then(function () {
+      return api.ankiGetNoteTags().then(function (result) {
+        var list = parseTags(result);
+        if (!list) {
+          input.checked = !enabled;
+          return;
+        }
+        var index = list.indexOf(tag);
+        if (enabled && index === -1) list.push(tag);
+        if (!enabled && index !== -1) list.splice(index, 1);
+        return api.ankiSetNoteTags(list).then(function (setResult) {
+          if (!succeeded(setResult)) input.checked = !enabled;
+        });
+      });
+    }).catch(function () {
+      input.checked = !enabled;
+    });
+  }
+
+  api.ankiGetNoteTags().then(function (result) {
+    var tags = parseTags(result);
+    if (!tags) return;
+    openBtn.hidden = false;
+    refresh(tags);
+    openBtn.addEventListener("click", function () {
+      api.ankiGetNoteTags().then(function (current) {
+        var latest = parseTags(current);
+        if (!latest) return;
+        refresh(latest);
+        popup.hidden = false;
+      });
+    });
+    popup.querySelector(".issues-close").addEventListener("click", closePopup);
+    popup.querySelector(".issues-backdrop").addEventListener("click", closePopup);
+    var inputs = boxes();
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].addEventListener("change", function (event) {
+        var input = event.target;
+        setTag(input.getAttribute("data-tag"), input.checked, input);
+      });
+    }
+    document.getElementById("issues-suspend-card").addEventListener("click", function () {
+      api.ankiSuspendCard().then(function (suspendResult) {
+        if (succeeded(suspendResult)) closePopup();
+      });
+    });
+    document.getElementById("issues-suspend-note").addEventListener("click", function () {
+      api.ankiSuspendNote().then(function (suspendResult) {
+        if (succeeded(suspendResult)) closePopup();
+      });
+    });
+  });
+})();
+</script>
 
 <br><br>
 {{#TTSEnabled}}
